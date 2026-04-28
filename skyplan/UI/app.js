@@ -1,7 +1,6 @@
 (function () {
     'use strict';
 
-    // Idempotent — safe to execute multiple times
     if (document.getElementById('skyplan-root')) return;
 
     // ── Inline styles ────────────────────────────────────────────────────────
@@ -42,6 +41,7 @@
 #sp-layer-zoning.active  { background: #0a4a0a; color: #88ee88; outline: 1px solid #44dd44; }
 #sp-layer-transit.active { background: #001a6e; color: #88aaff; outline: 1px solid #4488ff; }
 #sp-layer-notes.active   { background: #6a5000; color: #ffdd66; outline: 1px solid #ffcc00; }
+#sp-tool-erase.active { background: #3a1a00; color: #ffaa55; outline: 1px solid #ff8800; }
 #sp-clear { color: #ff7070; }
 #sp-close { color: #888; font-size: 16px; padding: 3px 9px; cursor: pointer; }
 #skyplan-svg {
@@ -60,6 +60,7 @@
   <button class="sp-btn sp-tool" id="sp-tool-rect">Rect</button>
   <button class="sp-btn sp-tool" id="sp-tool-circle">Circle</button>
   <button class="sp-btn sp-tool" id="sp-tool-free">Freehand</button>
+  <button class="sp-btn sp-tool" id="sp-tool-erase">Erase</button>
   <div class="sp-sep"></div>
   <button class="sp-btn sp-layer active" id="sp-layer-roads">Roads</button>
   <button class="sp-btn sp-layer" id="sp-layer-zoning">Zoning</button>
@@ -80,34 +81,24 @@
 </svg>`;
     document.body.appendChild(root);
 
-    // ── Refs & state ─────────────────────────────────────────────────────────
-    const toolbar   = document.getElementById('skyplan-toolbar');
-    const svg       = document.getElementById('skyplan-svg');
-    const drawings  = document.getElementById('sp-drawings');
-    const preview   = document.getElementById('sp-preview');
+    // ── Refs ─────────────────────────────────────────────────────────────────
+    const toolbar = document.getElementById('skyplan-toolbar');
+    const svg     = document.getElementById('skyplan-svg');
+    const preview = document.getElementById('sp-preview');
     const NS      = 'http://www.w3.org/2000/svg';
 
-    const COLORS = {
-        roads:   '#ff4444',
-        zoning:  '#44dd44',
-        transit: '#4488ff',
-        notes:   '#ffcc00',
-    };
-
-    let tool    = 'line';
-    let layer   = 'roads';
+    var currentTool = 'line';
     let drawing = false;
-    let x0 = 0, y0 = 0;
-    let freePts = [];
+    var highlightedId = null;
 
-    // toolbar drag state
-    let panelDragging  = false;
-    let toolbarDown    = false;   // mousedown happened on toolbar
-    let toolbarDownX   = 0, toolbarDownY = 0;
+    // toolbar drag
+    let panelDragging = false;
+    let toolbarDown   = false;
+    let toolbarDownX  = 0, toolbarDownY = 0;
     let dragOX = 0, dragOY = 0;
-    const DRAG_THRESHOLD = 6;     // px before toolbar drag activates
+    const DRAG_THRESHOLD = 6;
 
-    // deduplicate pointer vs mouse events (GameFace may fire both)
+    // deduplicate pointer vs mouse events
     let lastInputType = null;
 
     // ── Debug bridge ─────────────────────────────────────────────────────────
@@ -115,149 +106,148 @@
         if (typeof engine !== 'undefined') engine.trigger('skyplan.debug', String(msg));
     }
 
-    // Set SVG size explicitly — Coherent GameFace may not support inset/100% CSS
+    // ── SVG size ─────────────────────────────────────────────────────────────
     function syncViewBox() {
-        const w = window.innerWidth  || document.documentElement.clientWidth  || screen.width  || 1920;
-        const h = window.innerHeight || document.documentElement.clientHeight || screen.height || 1080;
+        const w = window.innerWidth  || document.documentElement.clientWidth  || 1920;
+        const h = window.innerHeight || document.documentElement.clientHeight || 1080;
         svg.setAttribute('width',   w);
         svg.setAttribute('height',  h);
-        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-        debug(`syncViewBox ${w}x${h}`);
+        svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
     }
     syncViewBox();
     window.addEventListener('resize', syncViewBox);
 
-    // ── Toolbar setup ─────────────────────────────────────────────────────────
-    root.querySelectorAll('.sp-tool').forEach(btn => btn.addEventListener('click', () => {
-        root.querySelectorAll('.sp-tool').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        tool = btn.id.replace('sp-tool-', '');
-    }));
+    // ── Toolbar ───────────────────────────────────────────────────────────────
+    root.querySelectorAll('.sp-tool').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            root.querySelectorAll('.sp-tool').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            var tool = btn.id.replace('sp-tool-', '');
+            currentTool = tool;
+            if (typeof engine !== 'undefined') engine.trigger('skyplan.setTool', tool);
+        });
+    });
 
-    root.querySelectorAll('.sp-layer').forEach(btn => btn.addEventListener('click', () => {
-        root.querySelectorAll('.sp-layer').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        layer = btn.id.replace('sp-layer-', '');
-    }));
+    root.querySelectorAll('.sp-layer').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            root.querySelectorAll('.sp-layer').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            var layer = btn.id.replace('sp-layer-', '');
+            if (typeof engine !== 'undefined') engine.trigger('skyplan.setLayer', layer);
+        });
+    });
 
-    document.getElementById('sp-clear').addEventListener('click', () => {
-        const g = document.getElementById(`sp-g-${layer}`);
-        while (g.firstChild) g.removeChild(g.firstChild);
-        notify();
+    document.getElementById('sp-clear').addEventListener('click', function() {
+        var active = root.querySelector('.sp-layer.active');
+        var layer  = active ? active.id.replace('sp-layer-', '') : 'roads';
+        if (typeof engine !== 'undefined') engine.trigger('skyplan.clearLayer', layer);
     });
 
     document.getElementById('sp-close').addEventListener('click', hide);
 
-    // ── Camera transform state ────────────────────────────────────────────────
-    // C# sends two SVG matrix strings each frame the camera moves:
-    //   fwd: baseline → current screen (applied to sp-drawings group)
-    //   inv: current screen → baseline (applied to incoming mouse coords)
-    // matrix(a,b,c,d,e,f): x'=a*x+c*y+e, y'=b*x+d*y+f
-    let invMat = [1, 0, 0, 1, 0, 0]; // [a,b,c,d,e,f] — identity until C# sends first transform
+    // ── Shape DOM management ──────────────────────────────────────────────────
+    // C# sends flat JSON objects: {id, tag, layer, ...svgAttrs}
+    // Create/update via setAttribute — never innerHTML (Coherent crashes).
+    var shapeEls  = {};   // id → SVGElement
+    var previewEl = null;
 
-    // ── Coordinate transform ─────────────────────────────────────────────────
-    // Convert current-screen coords to baseline coords using the inverse camera matrix.
-    function svgPt(clientX, clientY) {
-        const [a, b, c, d, e, f] = invMat;
-        return {
-            x: a * clientX + c * clientY + e,
-            y: b * clientX + d * clientY + f,
-        };
-    }
-
-    // ── Hit testing ──────────────────────────────────────────────────────────
-    function rectContains(domRect, cx, cy) {
-        return cx >= domRect.left && cx <= domRect.right &&
-               cy >= domRect.top  && cy <= domRect.bottom;
-    }
-
-    function inToolbar(cx, cy) {
-        return rectContains(toolbar.getBoundingClientRect(), cx, cy);
-    }
-
-    function panelVisible() {
-        return root.style.display !== 'none';
-    }
-
-    function makePath(pts) {
-        return 'M ' + pts.map(([x, y]) => `${x},${y}`).join(' L ');
-    }
-
-    // ── Preview element (reused, never recreated per-frame) ──────────────────
-    let previewEl = null;
-
-    function ensurePreview(tag) {
-        if (previewEl && previewEl.tagName === tag) return previewEl;
-        if (previewEl && previewEl.parentNode) previewEl.parentNode.removeChild(previewEl);
-        previewEl = document.createElementNS(NS, tag);
-        previewEl.setAttribute('fill', 'none');
-        previewEl.setAttribute('stroke-linecap', 'round');
-        if (tag === 'path') previewEl.setAttribute('stroke-linejoin', 'round');
-        preview.appendChild(previewEl);
-        return previewEl;
-    }
-
-    function updatePreview(cx, cy) {
-        const c = COLORS[layer];
-        const sw = '4';
-        if (tool === 'line') {
-            const el = ensurePreview('line');
-            el.setAttribute('x1', x0);   el.setAttribute('y1', y0);
-            el.setAttribute('x2', cx);   el.setAttribute('y2', cy);
-            el.setAttribute('stroke', c); el.setAttribute('stroke-width', sw);
-        } else if (tool === 'rect') {
-            const el = ensurePreview('rect');
-            el.setAttribute('x',      Math.min(x0, cx));
-            el.setAttribute('y',      Math.min(y0, cy));
-            el.setAttribute('width',  Math.abs(cx - x0));
-            el.setAttribute('height', Math.abs(cy - y0));
-            el.setAttribute('stroke', c); el.setAttribute('stroke-width', sw);
-        } else if (tool === 'circle') {
-            const el = ensurePreview('ellipse');
-            el.setAttribute('cx', (x0 + cx) / 2);
-            el.setAttribute('cy', (y0 + cy) / 2);
-            el.setAttribute('rx', Math.abs(cx - x0) / 2);
-            el.setAttribute('ry', Math.abs(cy - y0) / 2);
-            el.setAttribute('stroke', c); el.setAttribute('stroke-width', sw);
-        } else if (tool === 'free') {
-            freePts.push([cx, cy]);
-            const el = ensurePreview('path');
-            el.setAttribute('d', makePath(freePts));
-            el.setAttribute('stroke', c); el.setAttribute('stroke-width', sw);
+    function applyShapes(jsonStr) {
+        if (!jsonStr) return;
+        var shapes = JSON.parse(jsonStr);
+        var seen   = {};
+        for (var i = 0; i < shapes.length; i++) {
+            var s  = shapes[i];
+            seen[s.id] = true;
+            var el = shapeEls[s.id];
+            if (!el) {
+                el = document.createElementNS(NS, s.tag);
+                el.setAttribute('pointer-events', 'all'); // override SVG parent's pointer-events:none
+                el.style.cursor = 'pointer';
+                (function(sid) {
+                    el.addEventListener('click', function(ev) {
+                        if (ev.shiftKey && typeof engine !== 'undefined')
+                            engine.trigger('skyplan.deleteShape', sid);
+                    }, true);
+                })(s.id);
+                document.getElementById('sp-g-' + s.layer).appendChild(el);
+                shapeEls[s.id] = el;
+            }
+            var keys = Object.keys(s);
+            for (var k = 0; k < keys.length; k++) {
+                var key = keys[k];
+                if (key !== 'id' && key !== 'tag' && key !== 'layer')
+                    el.setAttribute(key, s[key]);
+            }
+        }
+        // Remove shapes absent from the update
+        var ids = Object.keys(shapeEls);
+        for (var j = 0; j < ids.length; j++) {
+            if (!seen[ids[j]]) {
+                shapeEls[ids[j]].remove();
+                delete shapeEls[ids[j]];
+            }
         }
     }
 
-    function clearPreview() {
-        if (previewEl && previewEl.parentNode) previewEl.parentNode.removeChild(previewEl);
-        previewEl = null;
+    function applyPreview(jsonStr) {
+        if (!jsonStr) {
+            if (previewEl) { previewEl.remove(); previewEl = null; }
+            return;
+        }
+        var s = JSON.parse(jsonStr);
+        if (!previewEl || previewEl.tagName !== s.tag) {
+            if (previewEl) previewEl.remove();
+            previewEl = document.createElementNS(NS, s.tag);
+            preview.appendChild(previewEl);
+        }
+        var keys = Object.keys(s);
+        for (var k = 0; k < keys.length; k++) {
+            var key = keys[k];
+            if (key !== 'id' && key !== 'tag' && key !== 'layer')
+                previewEl.setAttribute(key, s[key]);
+        }
     }
 
-    // ── Unified input handler ────────────────────────────────────────────────
+    function applyHighlight(id) {
+        var ids = Object.keys(shapeEls);
+        for (var i = 0; i < ids.length; i++) {
+            shapeEls[ids[i]].setAttribute('opacity', id ? '0.3' : '1');
+        }
+        highlightedId = id || null;
+        if (highlightedId && shapeEls[highlightedId]) {
+            shapeEls[highlightedId].setAttribute('opacity', '1');
+        }
+    }
+
+    // ── Hit testing ───────────────────────────────────────────────────────────
+    function rectContains(r, cx, cy) {
+        return cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
+    }
+    function inToolbar(cx, cy) { return rectContains(toolbar.getBoundingClientRect(), cx, cy); }
+    function panelVisible()    { return root.style.display !== 'none'; }
+
+    // ── Input handlers ────────────────────────────────────────────────────────
     function handleDown(cx, cy, inputType) {
         if (!panelVisible()) return false;
         if (lastInputType === 'pointer' && inputType === 'mouse') return false;
-        debug(`down ${inputType} ${cx},${cy} toolbar=${inToolbar(cx, cy)}`);
-
         if (inToolbar(cx, cy)) {
-            toolbarDown  = true;
-            toolbarDownX = cx;
-            toolbarDownY = cy;
+            toolbarDown = true; toolbarDownX = cx; toolbarDownY = cy;
             return false;
         }
-
         lastInputType = inputType;
-        const p = svgPt(cx, cy);
-        x0 = p.x; y0 = p.y;
-        freePts = [[p.x, p.y]];
         drawing = true;
+        if (typeof engine !== 'undefined') engine.trigger('skyplan.drawStart', cx + ',' + cy);
         return true;
     }
 
     function handleMove(cx, cy, inputType) {
-        let consumed = false;
-
+        // Erase hover — send even when not drawing so C# can highlight nearest shape
+        if (!drawing && currentTool === 'erase' && panelVisible() && !inToolbar(cx, cy)) {
+            if (typeof engine !== 'undefined') engine.trigger('skyplan.eraseHover', cx + ',' + cy);
+        }
+        var consumed = false;
         if (toolbarDown && !panelDragging) {
-            const dx = cx - toolbarDownX, dy = cy - toolbarDownY;
+            var dx = cx - toolbarDownX, dy = cy - toolbarDownY;
             if (dx * dx + dy * dy > DRAG_THRESHOLD * DRAG_THRESHOLD) {
                 panelDragging = true;
                 dragOX = toolbarDownX - toolbar.offsetLeft;
@@ -265,142 +255,98 @@
                 toolbar.classList.add('dragging');
             }
         }
-
         if (panelDragging) {
             toolbar.style.left = (cx - dragOX) + 'px';
             toolbar.style.top  = (cy - dragOY) + 'px';
             consumed = true;
         }
-
         if (drawing) {
             if (lastInputType === 'pointer' && inputType === 'mouse') return false;
-            const p = svgPt(cx, cy);
-            updatePreview(p.x, p.y);
+            if (typeof engine !== 'undefined') engine.trigger('skyplan.drawMove', cx + ',' + cy);
             consumed = true;
         }
-
         return consumed;
     }
 
     function handleUp(cx, cy, inputType) {
         toolbarDown = false;
-        let consumed = false;
-
+        var consumed = false;
         if (panelDragging) {
             panelDragging = false;
             toolbar.classList.remove('dragging');
             consumed = true;
         }
-
         if (drawing) {
             if (lastInputType === 'pointer' && inputType === 'mouse') return false;
-            drawing = false;
+            drawing       = false;
             lastInputType = null;
-            const p = svgPt(cx, cy);
-
-            // Finalize the preview element into the layer group
-            updatePreview(p.x, p.y);
-            const el = previewEl;
-            previewEl = null; // disown so clearPreview won't remove it
-
-            debug(`up — shape committed: ${!!el} tool=${tool}`);
-
-            if (el) {
-                el.style.cursor = 'pointer';
-                el.addEventListener('click', ev => { if (ev.shiftKey) { el.remove(); notify(); } }, true);
-                document.getElementById(`sp-g-${layer}`).appendChild(el);
-                notify();
-            }
+            if (typeof engine !== 'undefined') engine.trigger('skyplan.drawEnd', cx + ',' + cy);
             consumed = true;
         }
-
         return consumed;
     }
 
     // Mouse events
-    document.addEventListener('mousedown', e => {
+    document.addEventListener('mousedown', function(e) {
         if (e.button !== 0) return;
-        if (handleDown(e.clientX, e.clientY, 'mouse')) {
-            e.stopImmediatePropagation(); e.preventDefault();
-        }
+        if (handleDown(e.clientX, e.clientY, 'mouse')) { e.stopImmediatePropagation(); e.preventDefault(); }
     }, true);
-    document.addEventListener('mousemove', e => {
-        if (handleMove(e.clientX, e.clientY, 'mouse')) {
-            e.stopImmediatePropagation(); e.preventDefault();
-        }
+    document.addEventListener('mousemove', function(e) {
+        if (handleMove(e.clientX, e.clientY, 'mouse')) { e.stopImmediatePropagation(); e.preventDefault(); }
     }, true);
-    document.addEventListener('mouseup', e => {
+    document.addEventListener('mouseup', function(e) {
         if (e.button !== 0) return;
-        if (handleUp(e.clientX, e.clientY, 'mouse')) {
-            e.stopImmediatePropagation(); e.preventDefault();
-        }
+        if (handleUp(e.clientX, e.clientY, 'mouse')) { e.stopImmediatePropagation(); e.preventDefault(); }
     }, true);
 
     // Pointer events (GameFace may route input as pointer instead of mouse)
-    document.addEventListener('pointerdown', e => {
+    document.addEventListener('pointerdown', function(e) {
         if (e.button !== 0) return;
-        if (handleDown(e.clientX, e.clientY, 'pointer')) {
-            e.stopImmediatePropagation(); e.preventDefault();
-        }
+        if (handleDown(e.clientX, e.clientY, 'pointer')) { e.stopImmediatePropagation(); e.preventDefault(); }
     }, true);
-    document.addEventListener('pointermove', e => {
-        if (handleMove(e.clientX, e.clientY, 'pointer')) {
-            e.stopImmediatePropagation(); e.preventDefault();
-        }
+    document.addEventListener('pointermove', function(e) {
+        if (handleMove(e.clientX, e.clientY, 'pointer')) { e.stopImmediatePropagation(); e.preventDefault(); }
     }, true);
-    document.addEventListener('pointerup', e => {
+    document.addEventListener('pointerup', function(e) {
         if (e.button !== 0) return;
-        if (handleUp(e.clientX, e.clientY, 'pointer')) {
+        if (handleUp(e.clientX, e.clientY, 'pointer')) { e.stopImmediatePropagation(); e.preventDefault(); }
+    }, true);
+
+    document.addEventListener('keydown', function(e) {
+        if (!panelVisible()) return;
+        if (e.key === 'Escape') { hide(); return; }
+        if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
+            if (typeof engine !== 'undefined') engine.trigger('skyplan.undo', '');
             e.stopImmediatePropagation(); e.preventDefault();
         }
     }, true);
 
-    // Escape closes
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && panelVisible()) hide();
-    }, true);
-
-    // ── Panel visibility ─────────────────────────────────────────────────────
+    // ── Panel visibility ──────────────────────────────────────────────────────
     function centerToolbar() {
-        // Position toolbar in pixels so drag works correctly
         toolbar.style.left = Math.round((window.innerWidth  - toolbar.offsetWidth)  / 2) + 'px';
         toolbar.style.top  = '12px';
     }
 
     function show() {
         root.style.display = 'block';
-        // Center on first show; after that, toolbar stays where user dragged it
         if (!toolbar.style.left) centerToolbar();
     }
 
     function hide() {
         root.style.display = 'none';
-        drawing = false;
+        drawing       = false;
         panelDragging = false;
-        preview.innerHTML = '';
+        if (previewEl) { previewEl.remove(); previewEl = null; }
+        applyHighlight('');
         if (typeof engine !== 'undefined') engine.trigger('skyplan.panelClosed');
     }
 
-    // ── Coherent bridge ──────────────────────────────────────────────────────
-    function notify() {
-        if (typeof engine === 'undefined') return;
-        const data = {};
-        ['roads', 'zoning', 'transit', 'notes'].forEach(l => {
-            data[l] = document.getElementById(`sp-g-${l}`).innerHTML;
-        });
-        engine.trigger('skyplan.drawingUpdated', JSON.stringify(data));
-    }
-
+    // ── Coherent bridge ───────────────────────────────────────────────────────
     if (typeof engine !== 'undefined') {
-        engine.on('skyplan.togglePanel', visible => { if (visible) show(); else hide(); });
-
-        engine.on('skyplan.cameraTransform', (fwd, inv) => {
-            // Apply forward matrix to drawings group so shapes track the camera
-            drawings.setAttribute('transform', fwd);
-            // Parse inverse matrix for coord conversion on next mouse event
-            const nums = inv.replace('matrix(', '').replace(')', '').split(',').map(Number);
-            if (nums.length === 6 && nums.every(isFinite)) invMat = nums;
-        });
+        engine.on('skyplan.togglePanel',   function(visible) { if (visible) show(); else hide(); });
+        engine.on('skyplan.shapesUpdate',    applyShapes);
+        engine.on('skyplan.previewUpdate',   applyPreview);
+        engine.on('skyplan.highlightShape',  applyHighlight);
     }
 
 })();
