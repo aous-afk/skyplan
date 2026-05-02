@@ -73,15 +73,9 @@
 		<None Include="$(ModTargetsFile)" Link="Properties\Mod.targets" />
 	</ItemGroup>
 
-	<!-- Copy UI folder alongside the DLL after WIP deployment -->
-	<Target Name="DeployUI" AfterTargets="DeployWIP">
-		<ItemGroup>
-			<UIFiles Include="$(MSBuildProjectDirectory)\UI\**\*.*" />
-		</ItemGroup>
-		<MakeDir Directories="$(DeployDir)\UI" />
-		<Copy SourceFiles="@(UIFiles)"
-		      DestinationFiles="@(UIFiles->'$(DeployDir)\UI\%(RecursiveDir)%(Filename)%(Extension)')"
-		      SkipUnchangedFiles="true" />
+	<Target Name="BuildSkyPlanUI" BeforeTargets="Build">
+		<Exec Command="npm run build"
+		      WorkingDirectory="$(MSBuildProjectDirectory)\..\SkyPlanUI" />
 	</Target>
 
 </Project>
