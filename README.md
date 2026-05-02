@@ -1,68 +1,89 @@
 # skyplan
 
-**Cities Skylines 2 mod** — in-game drawing overlay for city planning.
+**Cities: Skylines II mod** — in-game SVG drawing overlay for city planning.
 
-Tracing paper over your city map, but inside CS2. Draw road networks, zoning, districts, and transit lines on top of the actual game map before committing anything.
+Tracing paper over your city map, but inside CS2. Draw road networks, zoning, districts, and transit lines on top of the live game map before committing anything.
 
-## How it works
+## Features
 
-CS2 uses **Coherent GameFace** (a browser engine embedded in Unity) for all UI. Mod panels are HTML/CSS/JS — SVG drawing tools are a natural fit.
-
-- **C# side** reads game state, registers the UI panel, and passes map metadata (bounds, tile size, camera position) to JS via Coherent bridge
-- **JS side** renders an SVG canvas sized to match the game map, hosts the drawing tools, and sends geometry back to C# when needed (e.g. snapping to terrain)
+- Draw tools: line, rect, circle, freehand
+- Erase tool with hover highlight
+- 4 layers: Roads / Zoning / Transit / Notes (each with its own colour)
+- Draggable toolbar
+- World-space coordinates — shapes stay aligned as the camera pans and zooms
+- Undo stack (Ctrl+Z)
+- Clear layer
 
 ## Architecture
 
+Two projects, one `dotnet build`:
+
 ```
-skyplan/
-  Mod.cs                    # IMod entry point — OnLoad / OnDispose
-  Systems/
-    DrawingSystem.cs        # GameSystemBase — exposes map data to UI
-  UI/
-    index.html              # Coherent GameFace panel root
-    app.js                  # SVG drawing logic, bridge calls
-    styles.css
-  skyplan.csproj
+skyplan/                        # C# mod (UISystemBase ECS system)
+  Mod.cs                        # IMod entry, registers keybinding (Alt+P)
+  Setting.cs                    # Options UI + rebindable shortcut
+  Systems/DrawingSystem.cs      # Binding host, drawing logic, world↔screen math
+  skyplan.csproj                # Builds C# + triggers npm build for SkyPlanUI
+
+SkyPlanUI/                      # React/TSX UI mod (Coherent GameFace)
+  src/
+    index.tsx                   # Mod registrar — appends SkyplanOverlay to 'Game' hook
+    bindings.ts                 # bindValue subscriptions (C# → UI)
+    mods/SkyplanOverlay.tsx     # Main overlay component
+  mod.json                      # id: "skyplan" — must match C# mod folder
+  webpack.config.js             # Outputs skyplan.mjs to Mods/skyplan/
 ```
 
-## Map dimensions
+### C# ↔ UI binding system
 
-| Thing | Value |
-|---|---|
-| Full terrain | 57,344 × 57,344 m |
-| Heightmap | 4096 × 4096 px (~14 m/px) |
-| Playable area (base) | 5×5 tiles — 2,560 × 2,560 m |
-| Playable area (max) | 9×9 tiles with expansions |
-| Tile size | 512 × 512 m |
+Uses CS2's ECS binding infrastructure (`Colossal.UI.Binding`), not raw Coherent events.
 
-SVG `viewBox` matches the selected playable area. 1 SVG unit = 1 m.
+```
+C# ValueBinding<T>("skyplan", "panelVisible", ...)  →  bindValue<boolean>('skyplan', 'panelVisible', false)
+C# TriggerBinding<string>("skyplan", "drawStart", …) ←  trigger('skyplan', 'drawStart', `${x},${y}`)
+```
 
-## Planned features
+C# calls `.Update(value)` to push; React reads via `useValue(binding$)`.
 
-- [ ] SVG canvas overlay sized to current map's playable area
-- [ ] Draw tools: freehand line, straight segment, rectangle, circle
-- [ ] Layers: roads / zoning / transit / notes (toggle per layer)
-- [ ] Snap to 512 m tile grid
-- [ ] Named saved plans (stored as JSON in mod data folder)
-- [ ] Export SVG for external use / printing
+### Layer colours
 
-## Building & deploying (Linux / Proton)
+| Layer   | Stroke    |
+|---------|-----------|
+| Roads   | `#ff4444` |
+| Zoning  | `#44dd44` |
+| Transit | `#4488ff` |
+| Notes   | `#ffcc00` |
 
-```bash
-# Build
+## Build
+
+Requires Windows + PDX Modding Toolchain installed in-game (CS2 → Mods → Install Modding Toolchain).
+
+```
 dotnet build
-
-# Deploy to CS2 mods folder
-cp bin/Debug/net8.0/skyplan.dll \
-  ~/.local/share/Steam/steamapps/compatdata/949230/pfx/drive_c/Users/steamuser/AppData/LocalLow/Colossal\ Order/Cities\ Skylines\ II/Mods/skyplan/
-
-# Watch Unity log (no debugger available under Proton)
-tail -f ~/.local/share/Steam/steamapps/compatdata/949230/pfx/drive_c/Users/steamuser/AppData/LocalLow/Colossal\ Order/Cities\ Skylines\ II/Player.log
 ```
 
-## Prerequisites
+This single command:
+1. Runs `npm run build` in `SkyPlanUI/` (webpack → `Mods/skyplan/skyplan.mjs`)
+2. Compiles `skyplan.dll`
+3. Runs `ModPostProcessor.exe` → `skyplan_win_x86_64.dll`
+4. Deploys both DLLs to `%CSII_LOCALMODSPATH%\skyplan\`
 
-- CS2 installed at default Steam path
-- Game assemblies present in `Cities2_Data/Managed/`
-- ECS source generators configured as `<Analyzer>` items in `.csproj`
-- dotnet SDK 8+
+## Logs
+
+```
+%AppData%\..\LocalLow\Colossal Order\Cities Skylines II\Logs\skyplan.Mod.log
+%AppData%\..\LocalLow\Colossal Order\Cities Skylines II\Logs\UI.log
+```
+
+## Usage
+
+Load a city → press **Alt+P** (rebindable in Options → Key Bindings).
+
+![Simple use](skyplan/Properties/screenshots/simple-use.png)
+
+## What's next
+
+- Persist drawings to JSON on save/load
+- Camera drag restore while panel is open
+- Terrain snapping (snap to roads, zone grid)
+- Export SVG
