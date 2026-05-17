@@ -2,10 +2,17 @@ using UnityEngine;
 
 namespace skyplan.Systems {
 	public interface ICameraSystem {
+		#region Core
 		bool IsReady { get; }
-		void SetBaseline();
 		bool HasChanged();
 		Vector2 WorldToSVG(Vector3 world);
-		bool ScreenToWorldXZ(float sx, float sy, out Vector2 xz);
+		bool ScreenToWorld(float sx, float sy, out Vector3 world);
+		#endregion
+
+		#region CSS Transform / Baseline
+		void SetBaseline();
+		Vector2 WorldToSVGBaseline(Vector3 world);
+		string ComputeTransformMatrix();
+		#endregion
 	}
 }
