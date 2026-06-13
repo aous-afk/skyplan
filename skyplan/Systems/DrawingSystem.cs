@@ -6,14 +6,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using UnityEngine;
+using Skyplan.Models;
 
 namespace skyplan.Systems {
-	internal class Shape {
-		public string id;
-		public string type;
-		public string layer;
-		public List<Vector3> pts = new();
-	}
 
 	internal enum OpType { Draw, Delete, ClearLayer }
 
