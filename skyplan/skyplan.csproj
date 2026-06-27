@@ -5,6 +5,9 @@
 	
 		<!--The file where mod information which is required for publishing mod on PDX mods are stored-->
 		<PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
+		<Version>0.0.1-alpha.1</Version>
+		 <InformationalVersion>0.0.1.677b897.alpha</InformationalVersion>
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 	</PropertyGroup>
 	
 	<!--Imports must be after PropertyGroup block-->
@@ -42,6 +45,9 @@
 		<Reference Include="UnityEngine.CoreModule">
 			<Private>false</Private>
 		</Reference>
+		<Reference Include="UnityEngine.PhysicsModule">
+			<Private>false</Private>
+		</Reference>
 		<Reference Include="Unity.Burst">
 			<Private>false</Private>
 		</Reference>
@@ -54,6 +60,14 @@
 		<Reference Include="Unity.Mathematics">
 			<Private>false</Private>
 		</Reference>
+		<Reference Include="Colossal.PSI.Common">
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
+	
+	<ItemGroup>
+		<ProjectReference Include="../Skyplan.Models/skyplan.Models.csproj"/>
+		<ProjectReference Include="../SkyPlan.Export/SkyPlan.Export.csproj"/>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -72,6 +86,11 @@
 		<None Include="$(ModPropsFile)" Link="Properties\Mod.props" />
 		<None Include="$(ModTargetsFile)" Link="Properties\Mod.targets" />
 	</ItemGroup>
+
+	<Target Name="GenerateVersionInfo" BeforeTargets="Build">
+		<Exec Command="pwsh -NonInteractive -File &quot;$(MSBuildProjectDirectory)\..\version.ps1&quot;"
+		      WorkingDirectory="$(MSBuildProjectDirectory)\.." />
+	</Target>
 
 	<Target Name="BuildSkyPlanUI" BeforeTargets="Build">
 		<Exec Command="npm run build"
