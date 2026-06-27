@@ -60,14 +60,21 @@ namespace skyplan.Systems {
 			AddBinding(m_PreviewBinding);
 			AddBinding(m_HighlightBinding);
 
-			AddBinding(new TriggerBinding<string>("skyplan", "drawStart", csv => { var p = CSV2(csv); HandleDrawStart(p.x, p.y); }));
-			AddBinding(new TriggerBinding<string>("skyplan", "drawMove", csv => { var p = CSV2(csv); HandleDrawMove(p.x, p.y); }));
-			AddBinding(new TriggerBinding<string>("skyplan", "drawEnd", csv => { var p = CSV2(csv); HandleDrawEnd(p.x, p.y); }));
-			AddBinding(new TriggerBinding<string>("skyplan", "setTool", t => { m_CurrentTool = t; if (t != "erase") { m_EraseTarget = null; m_HighlightBinding.Update(""); } }));
+			AddBinding(new TriggerBinding<string>("skyplan", "drawStart", csv => {
+				  var p = CSV2(csv);
+				  HandleDrawStart(p.x, p.y);
+				  }));
+			AddBinding(new TriggerBinding<string>("skyplan", "drawMove", csv => {
+				  var p = CSV2(csv); HandleDrawMove(p.x, p.y); }));
+			AddBinding(new TriggerBinding<string>("skyplan", "drawEnd", csv => {
+				  var p = CSV2(csv); HandleDrawEnd(p.x, p.y); }));
+			AddBinding(new TriggerBinding<string>("skyplan", "setTool", t => {
+				  m_CurrentTool = t; if (t != "erase") { m_EraseTarget = null; m_HighlightBinding.Update(""); } }));
 			AddBinding(new TriggerBinding<string>("skyplan", "setLayer", l => m_CurrentLayer = l));
 			AddBinding(new TriggerBinding<string>("skyplan", "clearLayer", l => HandleClearLayer(l)));
 			AddBinding(new TriggerBinding<string>("skyplan", "undo", _ => HandleUndo()));
-			AddBinding(new TriggerBinding<string>("skyplan", "eraseHover", csv => { var p = CSV2(csv); HandleEraseHover(p.x, p.y); }));
+			AddBinding(new TriggerBinding<string>("skyplan", "eraseHover", csv => {
+				  var p = CSV2(csv); HandleEraseHover(p.x, p.y); }));
 			AddBinding(new TriggerBinding("skyplan", "panelClosed", () => {
 				m_PanelVisible = false;
 				m_ActiveShape = null;
@@ -80,7 +87,7 @@ namespace skyplan.Systems {
 			base.OnUpdate();
 			bool inGame = GameManager.instance != null &&
 				(GameManager.instance.gameMode & GameMode.Game) != 0;
-			if (inGame && Mod.m_ToggleAction != null && Mod.m_ToggleAction.WasPressedThisFrame())
+			if (inGame && Mod.m_ToggleAction?.WasPressedThisFrame() == true)
 				TogglePanel();
 			if (m_PanelVisible) {
 				if (!inGame) {
@@ -98,7 +105,10 @@ namespace skyplan.Systems {
 			m_PanelVisible = !m_PanelVisible;
 			if (m_PanelVisible) {
 				m_Camera.SetBaseline();
-				if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
+				if (m_Camera.IsReady) {
+				  UpdateShapesJson();
+				  UpdateShapesJsonBaseline();
+				}
 			} else {
 				m_ActiveShape = null;
 				m_PreviewBinding.Update("");
@@ -107,12 +117,49 @@ namespace skyplan.Systems {
 			Mod.log.Info($"Skyplan panel {(m_PanelVisible ? "shown" : "hidden")}");
 		}
 
+		// private void SyncCamera() {
+		// 	if (!m_Camera.HasChanged()) return;
+		// 	UpdateShapesJson();
+		// 	if (m_ActiveShape != null) UpdatePreviewJson();
+		// 	// string matrix = m_Camera.ComputeTransformMatrix();
+		// 	// if (matrix != null) m_TransformBinding.Update(matrix);
+		// }
+
+		/// <summary>
+		/// Converts a screen-space point to a world-space position on the XZ plane (y = 0) using the specified camera.
+		/// </summary>
+		/// <remarks>The method returns <see langword="false"/> if the ray from the screen point is parallel to the XZ
+		/// plane or points away from it. The resulting XZ coordinates are valid only when the method returns <see
+		/// langword="true"/>.</remarks>
+		/// <param name="cam">The camera used to perform the screen-to-world transformation.</param>
+		/// <param name="sx">The horizontal screen coordinate, in pixels.</param>
+		/// <param name="sy">The vertical screen coordinate, in pixels.</param>
+		/// <param name="xz">When this method returns, contains the world-space XZ coordinates corresponding to the screen point if the
+		/// conversion succeeds; otherwise, contains <see cref="Vector2.zero"/>.</param>
+		/// <returns><see langword="true"/> if the screen point projects onto the XZ plane; otherwise, <see langword="false"/>.</returns>
+		private static bool ScreenToWorldXZ(Camera cam, float sx, float sy, out Vector2 xz) {
+			Ray ray = cam.ScreenPointToRay(new Vector3(sx, cam.pixelHeight - sy, 0f));
+			if (Mathf.Abs(ray.direction.y) < 0.0001f) { xz = Vector2.zero; return false; }
+			float t = -ray.origin.y / ray.direction.y;
+			if (t < 0f) { xz = Vector2.zero; return false; }
+			Vector3 w = ray.origin + ray.direction * t;
+			xz = new Vector2(w.x, w.z);
+			return true;
+		}
+
+		/// <summary>
+		/// Synchronizes the camera state with the current view if a baseline is available and updates related shape data as
+		/// needed.
+		/// </summary>
+		/// <remarks>This method performs no action if there is no baseline, if the camera is unavailable, or if the
+		/// camera's view matrix has not changed since the last synchronization. It updates shape data only when necessary to
+		/// reflect the latest camera state.</remarks>
 		private void SyncCamera() {
 			if (!m_Camera.HasChanged()) return;
 			UpdateShapesJson();
 			if (m_ActiveShape != null) UpdatePreviewJson();
-			string matrix = m_Camera.ComputeTransformMatrix();
-			if (matrix != null) m_TransformBinding.Update(matrix);
+			// string matrix = m_Camera.ComputeTransformMatrix();
+			// if (matrix != null) m_TransformBinding.Update(matrix);
 		}
 
 		private void HandleDrawStart(float sx, float sy) {
@@ -131,12 +178,13 @@ namespace skyplan.Systems {
 			if (m_ActiveShape == null || !m_Camera.IsReady) return;
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
 			if (m_ActiveShape.type == "free") {
-				if (m_ActiveShape.pts.Count == 0 ||
-					Vector3.Distance(m_ActiveShape.pts[m_ActiveShape.pts.Count - 1], world) > 5f)
-					m_ActiveShape.pts.Add(world);
+			  if (m_ActiveShape.pts.Count == 0 ||
+				  Vector3.Distance(m_ActiveShape.pts[m_ActiveShape.pts.Count - 1], world) > 5f) {
+				m_ActiveShape.pts.Add(world);
+			  }
 			} else {
-				if (m_ActiveShape.pts.Count > 1) m_ActiveShape.pts[1] = world;
-				else m_ActiveShape.pts.Add(world);
+			  if (m_ActiveShape.pts.Count > 1) m_ActiveShape.pts[1] = world;
+			  else m_ActiveShape.pts.Add(world);
 			}
 			UpdatePreviewJson();
 		}

@@ -1,3 +1,6 @@
+import { config } from '@fortawesome/fontawesome-svg-core';
+config.autoAddCss = false;
+
 import { ModuleRegistry } from 'cs2/modding';
 import SkyplanOverlay from './mods/SkyplanOverlay';
 

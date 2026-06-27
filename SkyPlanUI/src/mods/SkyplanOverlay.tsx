@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useValue, trigger } from 'cs2/api';
-import { panelVisible$, shapes$, preview$, highlight$ } from '../bindings';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import {useValue, trigger} from 'cs2/api';
+import {panelVisible$, shapes$, preview$, highlight$} from '../bindings';
 import Toolbar from './Toolbar/Toolbar';
 import DrawingCanvas from './DrawingCanvas/DrawingCanvas';
-import { Tool, Layer, ShapeData } from './types';
+import {ToolId, Layer, ShapeData} from './types';
 
 const SkyplanOverlay: React.FC = () => {
 	const visible = useValue(panelVisible$);
@@ -15,7 +15,7 @@ const SkyplanOverlay: React.FC = () => {
 	const preview = useMemo<ShapeData | null>(() => { try { return previewJson ? JSON.parse(previewJson) : null; } catch { return null; } }, [previewJson]);
 	const highlightId = highlightRaw || null;
 
-	const [activeTool, setActiveTool] = useState<Tool>('line');
+	const [activeTool, setActiveTool] = useState<ToolId>('line');
 	const [activeLayer, setActiveLayer] = useState<Layer>('roads');
 	const [svgSize, setSvgSize] = useState({ w: 1920, h: 1080 });
 
@@ -26,7 +26,7 @@ const SkyplanOverlay: React.FC = () => {
 		return () => window.removeEventListener('resize', onResize);
 	}, []);
 
-	const handleTool = useCallback((t: Tool) => {
+	const handleTool = useCallback((t: ToolId) => {
 		setActiveTool(t);
 		trigger('skyplan', 'setTool', t);
 	}, []);
@@ -48,7 +48,9 @@ const SkyplanOverlay: React.FC = () => {
 	if (!visible) return null;
 
 	return (
-		<div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9000, pointerEvents: 'none' }}>
+	  <div>
+		<div data-skyplan-ui
+		style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9000, pointerEvents: 'none' }}>
 
 			<Toolbar
 				activeTool={activeTool}
@@ -58,6 +60,8 @@ const SkyplanOverlay: React.FC = () => {
 				onClear={handleClear}
 				onClose={handleClose}
 			/>
+			</div>
+			<div className="main-container">
 			<DrawingCanvas
 				activeTool={activeTool}
 				shapes={shapes}
@@ -66,6 +70,7 @@ const SkyplanOverlay: React.FC = () => {
 				svgSize={svgSize}
 			/>
 
+		</div>
 		</div>
 	);
 };

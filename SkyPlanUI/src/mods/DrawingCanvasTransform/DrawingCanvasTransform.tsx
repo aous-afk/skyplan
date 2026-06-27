@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { trigger } from 'cs2/api';
-import { Tool, ShapeData } from '../types';
+import { ToolId, ShapeData } from '../types';
 
 interface DrawingCanvasTransformProps {
-	activeTool: Tool;
+	activeTool: ToolId;
 	shapesBaseline: ShapeData[];
 	preview: ShapeData | null;
 	highlightId: string | null;
@@ -35,7 +35,7 @@ const DrawingCanvasTransform: React.FC<DrawingCanvasTransformProps> = ({
 }) => {
 	const drawingRef   = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
-	const toolRef      = useRef<Tool>('line');
+	const toolRef      = useRef<ToolId>('line');
 
 	useEffect(() => { toolRef.current = activeTool; }, [activeTool]);
 

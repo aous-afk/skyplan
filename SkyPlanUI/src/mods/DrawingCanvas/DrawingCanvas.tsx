@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { trigger } from 'cs2/api';
-import { Tool, ShapeData } from '../types';
+import { ToolId, ShapeData } from '../types';
 
 interface DrawingCanvasProps {
-	activeTool: Tool;
+	activeTool: ToolId;
 	shapes: ShapeData[];
 	preview: ShapeData | null;
 	highlightId: string | null;
@@ -32,15 +32,19 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, preview, highlightId, svgSize }) => {
 	const drawingRef = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
-	const toolRef = useRef<Tool>('line');
+	const toolRef = useRef<ToolId>('line');
 
-	useEffect(() => { toolRef.current = activeTool; }, [activeTool]);
+	useEffect(() => {
+		toolRef.current = activeTool;
+	}, [activeTool]);
 
 	useEffect(() => {
 		function onDown(cx: number, cy: number, type: string): boolean {
 			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
 			lastInputRef.current = type;
 			drawingRef.current = true;
+			console.log("onDown")
+			trigger('skyplan', 'drawEnd', `${cx},${cy}`);
 			trigger('skyplan', 'drawStart', `${cx},${cy}`);
 			return true;
 		}
@@ -65,12 +69,71 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			return true;
 		}
 
-		const md = (e: MouseEvent) => { if (e.button !== 0) return; if (onDown(e.clientX, e.clientY, 'mouse')) { e.stopImmediatePropagation(); e.preventDefault(); } };
-		const mm = (e: MouseEvent) => { if (onMove(e.clientX, e.clientY, 'mouse')) { e.stopImmediatePropagation(); e.preventDefault(); } };
-		const mu = (e: MouseEvent) => { if (e.button !== 0) return; if (onUp(e.clientX, e.clientY, 'mouse')) { e.stopImmediatePropagation(); e.preventDefault(); } };
-		const pd = (e: PointerEvent) => { if (e.button !== 0) return; if (onDown(e.clientX, e.clientY, 'pointer')) { e.stopImmediatePropagation(); e.preventDefault(); } };
-		const pm = (e: PointerEvent) => { if (onMove(e.clientX, e.clientY, 'pointer')) { e.stopImmediatePropagation(); e.preventDefault(); } };
-		const pu = (e: PointerEvent) => { if (e.button !== 0) return; if (onUp(e.clientX, e.clientY, 'pointer')) { e.stopImmediatePropagation(); e.preventDefault(); } };
+		const md = (e: MouseEvent) => {
+			switch (e.button) {
+				case 0:
+					if ((e.target as Element).closest('[data-skyplan-ui]')) return;
+					if (onDown(e.clientX, e.clientY, 'mouse')) {
+						e.stopImmediatePropagation();
+						e.preventDefault();
+					}
+					break;
+				case 1:
+					break;
+				case 2:
+					console.log("right click");
+					if (onUp(e.clientX, e.clientY, 'mouse')) {
+						e.stopImmediatePropagation();
+						e.preventDefault();
+					}
+					break;
+			}
+		};
+
+		// const md = (e: MouseEvent) => {
+		//   if (e.button !== 0) return;
+		//   if (onDown(e.clientX, e.clientY, 'mouse')) {
+		// 	e.stopImmediatePropagation();
+		// 	e.preventDefault(); 
+		//   } 
+		// };
+
+		const mm = (e: MouseEvent) => {
+			if (onMove(e.clientX, e.clientY, 'mouse')) {
+				e.stopImmediatePropagation();
+				e.preventDefault();
+			}
+		};
+		const mu = (e: MouseEvent) => {
+			if (e.button !== 2) return;
+			if (onUp(e.clientX, e.clientY, 'mouse')) {
+				e.stopImmediatePropagation();
+				e.preventDefault();
+			}
+		};
+		const pd = (e: PointerEvent) => {
+			if (e.button !== 0) return;
+			console.log("pointer down")
+			if (onDown(e.clientX, e.clientY, 'pointer')) {
+				e.stopImmediatePropagation();
+				e.preventDefault();
+			}
+		};
+		const pm = (e: PointerEvent) => {
+			console.log("pointer move")
+			if (onMove(e.clientX, e.clientY, 'pointer')) {
+				e.stopImmediatePropagation();
+				e.preventDefault();
+			}
+		};
+		const pu = (e: PointerEvent) => {
+			if (e.button !== 2) return;
+			console.log("pointer up")
+			if (onUp(e.clientX, e.clientY, 'pointer')) {
+				e.stopImmediatePropagation();
+				e.preventDefault();
+			}
+		};
 
 		const kd = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
@@ -86,7 +149,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 
 		document.addEventListener('mousedown', md, true);
 		document.addEventListener('mousemove', mm, true);
-		document.addEventListener('mouseup', mu, true);
+		// document.addEventListener('mouseup', mu, true);
 		document.addEventListener('pointerdown', pd, true);
 		document.addEventListener('pointermove', pm, true);
 		document.addEventListener('pointerup', pu, true);
@@ -94,7 +157,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		return () => {
 			document.removeEventListener('mousedown', md, true);
 			document.removeEventListener('mousemove', mm, true);
-			document.removeEventListener('mouseup', mu, true);
+			// document.removeEventListener('mouseup', mu, true);
 			document.removeEventListener('pointerdown', pd, true);
 			document.removeEventListener('pointermove', pm, true);
 			document.removeEventListener('pointerup', pu, true);

@@ -1,5 +1,18 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Tool, TOOLS, Layer, LAYERS } from '../types';
+import React, {useEffect, useRef, useState} from "react";
+import {Tool, ToolId, TOOLS, Layer, LAYERS} from '../types';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faLinesLeaning, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faSquare } from '@fortawesome/free-regular-svg-icons'
+import styles from './Toolbar.module.scss';
+
+type FAStyle = React.CSSProperties & { [K in `--fa-font-${string}`]?: string };
+const FA_STYLE: FAStyle = {
+	display: 'block',
+	width: 13,
+	height: 13,
+	overflow: 'visible',
+	flexShrink: 0,
+};
 
 const DRAG_THRESHOLD = 6;
 
@@ -11,9 +24,9 @@ const LAYER_ACTIVE_STYLE: Record<Layer, React.CSSProperties> = {
 };
 
 interface ToolbarProps {
-	activeTool: Tool;
+	activeTool: ToolId;
 	activeLayer: Layer;
-	onToolChange: (t: Tool) => void;
+	onToolChange: (t: ToolId) => void;
 	onLayerChange: (l: Layer) => void;
 	onClear: () => void;
 	onClose: () => void;
@@ -77,24 +90,35 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, onToolChange
 			position: 'absolute',
 			left: toolbarPos?.left ?? 0,
 			top: toolbarPos?.top ?? 12,
-			display: 'flex', alignItems: 'center', gap: 6,
-			padding: '8px 14px',
+			display: 'inline-flex',
+			alignItems: 'center',
+			gap: 2,
+			padding: '8px 10px',
 			background: 'rgba(18,18,18,0.88)',
 			borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)',
 			pointerEvents: 'auto', userSelect: 'none', cursor: 'grab',
 		}}>
 			{TOOLS.map(t => {
-				const active = activeTool === t;
+				const active = activeTool === t.id;
 				const base: React.CSSProperties = {
-					padding: '5px 12px', borderRadius: 5, border: 'none', cursor: 'pointer',
-					fontSize: 13, fontWeight: 600,
 					color: active ? '#fff' : '#bbb',
 					background: active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.07)',
 					outline: active ? '1px solid rgba(255,255,255,0.35)' : 'none',
 				};
-				const erase: React.CSSProperties = (t === 'erase' && active)
+				const erase: React.CSSProperties = (t.id === 'erase' && active)
 					? { background: '#3a1a00', color: '#ffaa55', outline: '1px solid #ff8800' } : {};
-				return <button key={t} onClick={() => onToolChange(t)} style={{ ...base, ...erase }}>{t[0].toUpperCase() + t.slice(1)}</button>;
+				return <button key={t.id}
+				onClick={() => onToolChange(t.id)}
+				className={`${styles.btn_base} ${active ? styles.btn_active : ''} ${t.id === 'erase' ? styles.btn_erase : ''}`}
+				// className={styles.btn_base}
+				// style={{...base, ...erase }}
+				>
+				<FontAwesomeIcon className={`${styles.svg} ${active ? styles.svg_active : ''}`} icon={t.icon} 
+				// style={FA_STYLE}
+				/>
+				<span className={styles.tooltip}>{t.label}</span>
+				{activeTool + t.id}
+				</button>;
 			})}
 
 			<div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.18)', margin: '0 4px' }} />
@@ -117,7 +141,17 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, onToolChange
 			<div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.18)', margin: '0 4px' }} />
 
 			<button onClick={onClear} style={{ padding: '5px 12px', borderRadius: 5, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#ff7070', background: 'rgba(255,255,255,0.07)' }}>Clear</button>
-			<button onClick={onClose} style={{ padding: '5px 12px', borderRadius: 5, border: 'none', cursor: 'pointer', fontSize: 13, color: '#888', background: 'rgba(255,255,255,0.07)' }}>Close</button>
+			<button onClick={onClose} 
+				style={{ 
+				  padding: '5px 12px',
+				  borderRadius: 5,
+				  border: 'none',
+				  cursor: 'pointer', 
+				  fontSize: 13,
+				  color: '#888',
+				  background: 'rgba(255,255,255,0.07)' }}>
+				  <FontAwesomeIcon icon={faXmark} style={FA_STYLE} />
+			</button>
 		</div>
 	);
 };

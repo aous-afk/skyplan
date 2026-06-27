@@ -47,7 +47,7 @@ namespace skyplan.Systems {
 			if (Mathf.Abs(ray.direction.y) < 0.0001f) { world = Vector3.zero; return false; }
 			float t0 = -ray.origin.y / ray.direction.y;
 			if (t0 < 0f) { world = Vector3.zero; return false; }
-			Vector3 approx = ray.origin + ray.direction * t0;
+			Vector3 approx = ray.origin + (ray.direction * t0);
 
 			// Step 2: sample actual terrain Y at that XZ
 			float terrainY = SampleTerrainHeight(approx.x, approx.z);

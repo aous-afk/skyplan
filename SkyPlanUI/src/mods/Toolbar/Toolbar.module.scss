@@ -1,0 +1,68 @@
+.svg {
+  	display: block;
+	width: 13px;
+	height: 13px;
+	overflow: visible;
+    color : #bbb;
+    &.svg_active{
+      color : #9c6d6d !IMPORTANT;
+    }
+	// flex_shrink: 0;
+}
+
+.btn_base{
+ color: #bbb;  // default color for both icon and any text
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  position: relative;
+
+  &:hover {
+	background: rgba(255,255,255,0.15);
+  }
+
+  .tooltip {
+	z-index: 1;
+    position: absolute ;
+    top: 100%;
+    margin-top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(18,18,18,0.95);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    color: #fff;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  &:hover .tooltip {
+    opacity: 1;
+  }
+
+  &.btn_erase:hover .tooltip {
+    color: #ffaa55;
+  }
+
+  &.btn_active {
+	color: #9c6d6d;
+	background: rgba(255,255,255,0.2);
+	outline: 1px solid rgba(255,255,255,0.35);
+  }
+
+  &.btn_erase.btn_active {
+	background: #3a1a00;
+	color: #ffaa55;
+	outline: 1px solid #ff8800;
+  }
+}
