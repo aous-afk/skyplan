@@ -1,3 +1,52 @@
+.toolbar {
+  color:#c28686;
+  display: inline-flex;
+  flex-direction: column;
+  background: rgba(18,18,18,0.88);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.tools_container {
+  background: rgba(18,18,18,0.88);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.layers_container {
+  background: rgba(18,18,18,0.88);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+}
+
+.layer_btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #bbb;
+  background: rgba(255,255,255,0.07);
+
+  &:hover {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+  }
+
+  &.layer_btn_active {
+    color: #fff;
+    background: rgba(255,255,255,0.15);
+  }
+}
+
 .svg {
   	display: block;
 	width: 13px;
@@ -11,7 +60,7 @@
 }
 
 .btn_base{
- color: #bbb;  // default color for both icon and any text
+  color: #bbb;  // default color for both icon and any text
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,7 +73,8 @@
   position: relative;
 
   &:hover {
-	background: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.15);
+    color: #fff;
   }
 
   .tooltip {
@@ -40,7 +90,7 @@
     padding: 4px 8px;
     font-size: 11px;
     white-space: nowrap;
-    color: #fff;
+    // color: #fff;
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.15s;

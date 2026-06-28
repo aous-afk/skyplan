@@ -43,7 +43,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
 			lastInputRef.current = type;
 			drawingRef.current = true;
-			console.log("onDown")
 			trigger('skyplan', 'drawEnd', `${cx},${cy}`);
 			trigger('skyplan', 'drawStart', `${cx},${cy}`);
 			return true;
@@ -81,7 +80,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 				case 1:
 					break;
 				case 2:
-					console.log("right click");
 					if (onUp(e.clientX, e.clientY, 'mouse')) {
 						e.stopImmediatePropagation();
 						e.preventDefault();

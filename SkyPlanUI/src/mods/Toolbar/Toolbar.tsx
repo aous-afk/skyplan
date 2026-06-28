@@ -1,38 +1,23 @@
-import React, {useEffect, useRef, useState} from "react";
-import {Tool, ToolId, TOOLS, Layer, LAYERS} from '../types';
+import React, { useEffect, useRef, useState } from "react";
+import { ToolId, TOOLS, Layer, LayerDef } from '../types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLinesLeaning, faXmark } from '@fortawesome/free-solid-svg-icons'
-import { faSquare } from '@fortawesome/free-regular-svg-icons'
+import { faXmark } from '@fortawesome/free-solid-svg-icons'
 import styles from './Toolbar.module.scss';
-
-type FAStyle = React.CSSProperties & { [K in `--fa-font-${string}`]?: string };
-const FA_STYLE: FAStyle = {
-	display: 'block',
-	width: 13,
-	height: 13,
-	overflow: 'visible',
-	flexShrink: 0,
-};
 
 const DRAG_THRESHOLD = 6;
 
-const LAYER_ACTIVE_STYLE: Record<Layer, React.CSSProperties> = {
-	roads: { background: '#7a0000', color: '#ff8888', outline: '1px solid #ff4444' },
-	zoning: { background: '#0a4a0a', color: '#88ee88', outline: '1px solid #44dd44' },
-	transit: { background: '#001a6e', color: '#88aaff', outline: '1px solid #4488ff' },
-	notes: { background: '#6a5000', color: '#ffdd66', outline: '1px solid #ffcc00' },
-};
 
 interface ToolbarProps {
 	activeTool: ToolId;
-	activeLayer: Layer;
+	activeLayer: LayerDef;
+	layers: LayerDef[];
 	onToolChange: (t: ToolId) => void;
-	onLayerChange: (l: Layer) => void;
+	onLayerChange: (l: LayerDef) => void;
 	onClear: () => void;
 	onClose: () => void;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, onToolChange, onLayerChange, onClear, onClose }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onToolChange, onLayerChange, onClear, onClose }) => {
 	const toolbarEl = useRef<HTMLDivElement>(null);
 	const tbDownRef = useRef(false);
 	const tbDownPosRef = useRef({ x: 0, y: 0 });
@@ -86,72 +71,58 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, onToolChange
 	}, []);
 
 	return (
-		<div ref={toolbarEl} style={{
+		<div ref={toolbarEl} className={styles.toolbar} style={{
 			position: 'absolute',
 			left: toolbarPos?.left ?? 0,
 			top: toolbarPos?.top ?? 12,
-			display: 'inline-flex',
-			alignItems: 'center',
-			gap: 2,
-			padding: '8px 10px',
-			background: 'rgba(18,18,18,0.88)',
-			borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)',
 			pointerEvents: 'auto', userSelect: 'none', cursor: 'grab',
 		}}>
-			{TOOLS.map(t => {
-				const active = activeTool === t.id;
-				const base: React.CSSProperties = {
-					color: active ? '#fff' : '#bbb',
-					background: active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.07)',
-					outline: active ? '1px solid rgba(255,255,255,0.35)' : 'none',
-				};
-				const erase: React.CSSProperties = (t.id === 'erase' && active)
-					? { background: '#3a1a00', color: '#ffaa55', outline: '1px solid #ff8800' } : {};
-				return <button key={t.id}
-				onClick={() => onToolChange(t.id)}
-				className={`${styles.btn_base} ${active ? styles.btn_active : ''} ${t.id === 'erase' ? styles.btn_erase : ''}`}
-				// className={styles.btn_base}
-				// style={{...base, ...erase }}
-				>
-				<FontAwesomeIcon className={`${styles.svg} ${active ? styles.svg_active : ''}`} icon={t.icon} 
-				// style={FA_STYLE}
-				/>
-				<span className={styles.tooltip}>{t.label}</span>
-				{activeTool + t.id}
-				</button>;
-			})}
 
-			<div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.18)', margin: '0 4px' }} />
+			<div className={styles.tools_container}>
+				<button onClick={onClose} className={styles.btn_base}>
+					<FontAwesomeIcon icon={faXmark} className={styles.svg} />
+				</button>
+				<button onClick={onClear} className={styles.btn_base} style={{ color: '#ff7070' }}>Clear</button>
+			</div>
 
-			{LAYERS.map(l => {
-				const active = activeLayer === l;
-				return (
-					<button key={l} onClick={() => onLayerChange(l)} style={{
-						padding: '5px 12px', borderRadius: 5, border: 'none', cursor: 'pointer',
-						fontSize: 13, fontWeight: 600,
-						color: active ? '#fff' : '#bbb',
-						background: active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.07)',
-						...(active ? LAYER_ACTIVE_STYLE[l] : {}),
-					}}>
-						{l[0].toUpperCase() + l.slice(1)}
-					</button>
-				);
-			})}
+			<div className={styles.tools_container}>
+				{TOOLS.map(t => {
+					const active = activeTool === t.id;
+					return <button key={t.id}
+						onClick={() => onToolChange(t.id)}
 
-			<div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.18)', margin: '0 4px' }} />
+						className={`${styles.btn_base} ${active ? styles.btn_active : ''} ${t.id === 'erase' ? styles.btn_erase : ''}`}
+						style={{
+						  outline: active ? `1px solid ` : 'none',
+						  borderBottom: active ? `2px solid ` : '2px solid transparent',
+						}}
 
-			<button onClick={onClear} style={{ padding: '5px 12px', borderRadius: 5, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#ff7070', background: 'rgba(255,255,255,0.07)' }}>Clear</button>
-			<button onClick={onClose} 
-				style={{ 
-				  padding: '5px 12px',
-				  borderRadius: 5,
-				  border: 'none',
-				  cursor: 'pointer', 
-				  fontSize: 13,
-				  color: '#888',
-				  background: 'rgba(255,255,255,0.07)' }}>
-				  <FontAwesomeIcon icon={faXmark} style={FA_STYLE} />
-			</button>
+					>
+						<FontAwesomeIcon className={`${styles.svg} ${active ? styles.svg_active : ''}`} icon={t.icon} />
+						<span className={styles.tooltip}>{t.label}</span>
+					</button>;
+				})}
+
+
+			</div>
+
+			<div className={styles.layers_container}>
+				{layers.map(l => {
+					const active = activeLayer.id === l.id;
+					return (
+						<button key={l.id}
+							onClick={() => onLayerChange(l)}
+							className={`${styles.layer_btn} ${active ? styles.layer_btn_active : ''}`}
+							style={{
+								outline: active ? `1px solid ${l.style.stroke}` : 'none',
+								borderBottom: active ? `2px solid ${l.style.stroke}` : '2px solid transparent',
+							}}
+						>
+							{l.label}
+						</button>
+					);
+				})}
+			</div>
 		</div>
 	);
 };

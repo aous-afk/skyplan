@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {useValue, trigger} from 'cs2/api';
 import {panelVisible$, shapes$, preview$, highlight$} from '../bindings';
 import Toolbar from './Toolbar/Toolbar';
 import DrawingCanvas from './DrawingCanvas/DrawingCanvas';
-import {ToolId, Layer, ShapeData} from './types';
+import {ToolId, Layer, ShapeData, LayerDef} from './types';
+import layerConfig from '../layers.json';
 
 const SkyplanOverlay: React.FC = () => {
 	const visible = useValue(panelVisible$);
@@ -16,8 +17,10 @@ const SkyplanOverlay: React.FC = () => {
 	const highlightId = highlightRaw || null;
 
 	const [activeTool, setActiveTool] = useState<ToolId>('line');
-	const [activeLayer, setActiveLayer] = useState<Layer>('roads');
+	const [activeLayer, setActiveLayer] = useState<LayerDef>(layerConfig.layers[0]);
 	const [svgSize, setSvgSize] = useState({ w: 1920, h: 1080 });
+
+	const visibleLayers = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
 
 	useEffect(() => {
 		const onResize = () => setSvgSize({ w: window.innerWidth || 1920, h: window.innerHeight || 1080 });
@@ -26,18 +29,42 @@ const SkyplanOverlay: React.FC = () => {
 		return () => window.removeEventListener('resize', onResize);
 	}, []);
 
+	useEffect(() => {
+		const visible = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
+		if (visible.length > 0 && !visible.find(l => l.id === activeLayer.id))
+			setActiveLayer(visible[0]);
+	}, [activeTool]);
+
+	useEffect(() => {
+		if (!visible) return;
+		const dto = {
+			...activeLayer,
+			style: Object.fromEntries(
+				Object.entries(activeLayer.style).map(([k, v]) => [k, String(v)])
+			),
+		};
+		trigger('skyplan', 'setLayer', JSON.stringify(dto));
+	}, [visible]);
+
 	const handleTool = useCallback((t: ToolId) => {
+	  console.log(t)
 		setActiveTool(t);
 		trigger('skyplan', 'setTool', t);
 	}, []);
 
-	const handleLayer = useCallback((l: Layer) => {
+	const handleLayer = useCallback((l: LayerDef) => {
 		setActiveLayer(l);
-		trigger('skyplan', 'setLayer', l);
+		const dto = {
+			...l,
+			style: Object.fromEntries(
+				Object.entries(l.style).map(([k, v]) => [k, String(v)])
+			),
+		};
+		trigger('skyplan', 'setLayer', JSON.stringify(dto));
 	}, []);
 
 	const handleClear = useCallback(() => {
-		trigger('skyplan', 'clearLayer', activeLayer);
+		trigger('skyplan', 'clearLayer', activeLayer.id);
 	}, [activeLayer]);
 
 	const handleClose = useCallback(() => {
@@ -55,6 +82,7 @@ const SkyplanOverlay: React.FC = () => {
 			<Toolbar
 				activeTool={activeTool}
 				activeLayer={activeLayer}
+				layers={visibleLayers}
 				onToolChange={handleTool}
 				onLayerChange={handleLayer}
 				onClear={handleClear}

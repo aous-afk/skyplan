@@ -63,6 +63,9 @@
 		<Reference Include="Colossal.PSI.Common">
 			<Private>false</Private>
 		</Reference>
+		<Reference Include="Newtonsoft.Json">
+			<Private>false</Private>
+		</Reference>
 	</ItemGroup>
 	
 	<ItemGroup>

@@ -1,0 +1,56 @@
+{
+  "layers": [
+    {
+      "id": "highway",
+      "label": "Highway",
+      "icon": "road",
+      "allowedTools": ["line"],
+      "style": {
+        "stroke": "#ff4444",
+        "strokeWidth": 6,
+        "strokeDasharray": "none",
+        "strokeLinecap": "round",
+        "strokeLinejoin": "round"
+      }
+    },
+    {
+      "id": "arterial",
+      "label": "Arterial",
+      "icon": "road",
+      "allowedTools": ["line"],
+      "style": {
+        "stroke": "#ff8800",
+        "strokeWidth": 4,
+        "strokeDasharray": "none",
+        "strokeLinecap": "round",
+        "strokeLinejoin": "round"
+      }
+    },
+    {
+      "id": "collector",
+      "label": "Collector",
+      "icon": "road",
+      "allowedTools": ["line"],
+      "style": {
+        "stroke": "#ffcc00",
+        "strokeWidth": 3,
+        "strokeDasharray": "none",
+        "strokeLinecap": "round",
+        "strokeLinejoin": "round"
+      }
+    },
+    {
+      "id": "local",
+      "label": "Local",
+      "icon": "road",
+      "allowedTools": ["line"],
+      "style": {
+        "stroke": "#ffffff",
+        "strokeWidth": 2,
+        "strokeDasharray": "none",
+        "strokeLinecap": "round",
+        "strokeLinejoin": "round"
+      }
+    }
+  ]
+}

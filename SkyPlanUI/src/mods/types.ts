@@ -1,5 +1,4 @@
-import { faDrawPolygon, faEraser, faLocationDot, faRoad } from '@fortawesome/free-solid-svg-icons';
-import styles from './Toolbar.module.scss';
+import {faDrawPolygon, faEraser, faLocationDot, faRoad} from '@fortawesome/free-solid-svg-icons';
 
 export const TOOLS = [
   { id: 'line',    label: 'Line',    icon: faRoad,        activeStyle: {} },
@@ -15,12 +14,17 @@ export const TOOLS = [
 export type Tool = typeof TOOLS[number];
 export type ToolId = typeof TOOLS[number]['id'];
 
-export const LAYERS = ['roads', 'zoning', 'transit', 'notes'] as const;
-export type Layer = typeof LAYERS[number];
+export type Layer = string;
 
 export interface ShapeData {
 	id: string;
 	tag: 'line' | 'polygon' | 'path' | 'ellipse' | 'rect';
 	layer: string;
 	[key: string]: string;
+}
+
+export interface LayerDef {
+	id: string;
+	label: string;
+	style: Record<string, string | number>;
 }
