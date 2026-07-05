@@ -26,5 +26,6 @@ export interface ShapeData {
 export interface LayerDef {
 	id: string;
 	label: string;
+	allowedTools: ToolId[];
 	style: Record<string, string | number>;
 }

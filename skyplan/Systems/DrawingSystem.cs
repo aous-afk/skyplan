@@ -11,6 +11,8 @@ using Skyplan.Models;
 using Skyplan.Models.dto;
 using System.Text.RegularExpressions;
 using System;
+using System.IO;
+using Colossal.PSI.Environment;
 
 namespace skyplan.Systems {
 
@@ -47,6 +49,7 @@ namespace skyplan.Systems {
 		private ValueBinding<string> m_TransformBinding;
 		private ValueBinding<string> m_PreviewBinding;
 		private ValueBinding<string> m_HighlightBinding;
+		private ValueBinding<string> m_LayersConfigBinding;
 
 		protected override void OnGamePreload(Colossal.Serialization.Entities.Purpose purpose, GameMode mode) {
 			try {
@@ -68,6 +71,7 @@ namespace skyplan.Systems {
 			m_TransformBinding = new ValueBinding<string>("skyplan", "transform", "");
 			m_PreviewBinding = new ValueBinding<string>("skyplan", "preview", "");
 			m_HighlightBinding = new ValueBinding<string>("skyplan", "highlight", "");
+			m_LayersConfigBinding = new ValueBinding<string>("skyplan", "layersConfig", "{\"layers\":[]}");
 
 			AddBinding(m_PanelVisibleBinding);
 			AddBinding(m_ShapesBinding);
@@ -75,6 +79,7 @@ namespace skyplan.Systems {
 			AddBinding(m_TransformBinding);
 			AddBinding(m_PreviewBinding);
 			AddBinding(m_HighlightBinding);
+			AddBinding(m_LayersConfigBinding);
 
 			AddBinding(new TriggerBinding<string>("skyplan", "drawStart", csv => {
 				Vector2 p = CSV2(csv);
@@ -143,9 +148,27 @@ namespace skyplan.Systems {
 			}
 		}
 
+		private void EnsureLayersJson() {
+			string dataDir = Path.Combine(EnvPath.kUserDataPath, "ModsData", nameof(skyplan));
+			string dest = Path.Combine(dataDir, "layers.json");
+			if (!File.Exists(dest)) {
+				string src = Path.Combine(Mod.modPath, "layers.json");
+				if (File.Exists(src)) {
+					Directory.CreateDirectory(dataDir);
+					File.Copy(src, dest);
+					Mod.log.Info($"[Skyplan] Seeded layers.json to {dest}");
+				} else {
+					Mod.log.Warn($"[Skyplan] Default layers.json not found at {src}");
+				}
+			}
+			if (File.Exists(dest))
+				m_LayersConfigBinding.Update(File.ReadAllText(dest));
+		}
+
 		public void TogglePanel() {
 			m_PanelVisible = !m_PanelVisible;
 			if (m_PanelVisible) {
+				EnsureLayersJson();
 				m_Camera.SetBaseline();
 				if (m_Camera.IsReady) {
 					UpdateShapesJson();

@@ -1,23 +1,47 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {useValue, trigger} from 'cs2/api';
-import {panelVisible$, shapes$, preview$, highlight$} from '../bindings';
+import {panelVisible$, shapes$, preview$, highlight$, layersConfig$} from '../bindings';
 import Toolbar from './Toolbar/Toolbar';
 import DrawingCanvas from './DrawingCanvas/DrawingCanvas';
-import {ToolId, Layer, ShapeData, LayerDef} from './types';
-import layerConfig from '../layers.json';
+import {ToolId, ShapeData, LayerDef} from './types';
 
 const SkyplanOverlay: React.FC = () => {
 	const visible = useValue(panelVisible$);
 	const shapesJson = useValue(shapes$);
 	const previewJson = useValue(preview$);
 	const highlightRaw = useValue(highlight$);
+	const layersConfigJson = useValue(layersConfig$);
 
-	const shapes = useMemo<ShapeData[]>(() => { try { return JSON.parse(shapesJson) ?? []; } catch { return []; } }, [shapesJson]);
-	const preview = useMemo<ShapeData | null>(() => { try { return previewJson ? JSON.parse(previewJson) : null; } catch { return null; } }, [previewJson]);
+	const shapes = useMemo<ShapeData[]>(() => {
+	  try {
+		return JSON.parse(shapesJson) ?? [];
+	  }
+	  catch {
+		return [];
+	  }
+	}, [shapesJson]);
+
+	const preview = useMemo<ShapeData | null>(() => {
+	  try {
+		return previewJson ? JSON.parse(previewJson) : null;
+	  }
+	  catch {
+		return null;
+	  }
+	}, [previewJson]);
+
 	const highlightId = highlightRaw || null;
 
+	const layerConfig = useMemo<{ layers: LayerDef[] }>(() => {
+	  try {
+		return JSON.parse(layersConfigJson);
+	  }
+	  catch {
+		return { layers: [] }; }
+	}, [layersConfigJson]);
+
 	const [activeTool, setActiveTool] = useState<ToolId>('line');
-	const [activeLayer, setActiveLayer] = useState<LayerDef>(layerConfig.layers[0]);
+	const [activeLayer, setActiveLayer] = useState<LayerDef | null>(null);
 	const [svgSize, setSvgSize] = useState({ w: 1920, h: 1080 });
 
 	const visibleLayers = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
@@ -31,12 +55,12 @@ const SkyplanOverlay: React.FC = () => {
 
 	useEffect(() => {
 		const visible = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
-		if (visible.length > 0 && !visible.find(l => l.id === activeLayer.id))
+		if (visible.length > 0 && !visible.find(l => l.id === activeLayer?.id))
 			setActiveLayer(visible[0]);
-	}, [activeTool]);
+	}, [activeTool, layerConfig]);
 
 	useEffect(() => {
-		if (!visible) return;
+		if (!visible || !activeLayer) return;
 		const dto = {
 			...activeLayer,
 			style: Object.fromEntries(
@@ -44,7 +68,7 @@ const SkyplanOverlay: React.FC = () => {
 			),
 		};
 		trigger('skyplan', 'setLayer', JSON.stringify(dto));
-	}, [visible]);
+	}, [visible, activeLayer]);
 
 	const handleTool = useCallback((t: ToolId) => {
 		setActiveTool(t);
@@ -63,6 +87,7 @@ const SkyplanOverlay: React.FC = () => {
 	}, []);
 
 	const handleClear = useCallback(() => {
+		if (!activeLayer) return;
 		trigger('skyplan', 'clearLayer', activeLayer.id);
 	}, [activeLayer]);
 
@@ -84,7 +109,7 @@ const SkyplanOverlay: React.FC = () => {
 
 			<Toolbar
 				activeTool={activeTool}
-				activeLayer={activeLayer}
+				activeLayer={activeLayer ?? visibleLayers[0]}
 				layers={visibleLayers}
 				onToolChange={handleTool}
 				onLayerChange={handleLayer}
@@ -93,7 +118,7 @@ const SkyplanOverlay: React.FC = () => {
 				onClose={handleClose}
 			/>
 			</div>
-			<div className="main-container">
+			<div className="drawing-canvas">
 			<DrawingCanvas
 				activeTool={activeTool}
 				shapes={shapes}

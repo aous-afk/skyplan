@@ -6,9 +6,9 @@ Tracing paper over your city map, but inside CS2. Draw road networks, zoning, di
 
 ## Features
 
-- Draw tools: line, rect, circle, freehand
+- Draw tools: line, polygon, point
 - Erase tool with hover highlight
-- 4 layers: Roads / Zoning / Transit / Notes (each with its own colour)
+- 17 built-in layers across Roads, Zones, and Public Services — fully customisable via `layers.json`
 - Draggable toolbar
 - World-space coordinates — shapes stay aligned as the camera pans and zooms
 - Undo stack (Ctrl+Z)
@@ -45,18 +45,77 @@ C# TriggerBinding<string>("skyplan", "drawStart", …) ←  trigger('skyplan', '
 
 C# calls `.Update(value)` to push; React reads via `useValue(binding$)`.
 
-### Layer colours
+### Customising layers (`layers.json`)
 
-| Layer   | Stroke    |
-|---------|-----------|
-| Roads   | `#ff4444` |
-| Zoning  | `#44dd44` |
-| Transit | `#4488ff` |
-| Notes   | `#ffcc00` |
+Layer definitions live in `SkyPlanUI/src/layers.json` and are deployed to the mod folder on every build. On first panel open, the file is seeded to:
+
+```
+%AppData%\..\LocalLow\Colossal Order\Cities Skylines II\ModsData\skyplan\layers.json
+```
+
+Edit that file to customise colours, add layers, or remove ones you don't need. Changes take effect the next time you open the panel (hot-swap — no rebuild required).
+
+#### Schema
+
+```jsonc
+{
+  "version": "...",       // auto-patched by version.ps1 on every build
+  "layers": [
+    {
+      "id": "my-layer",          // unique identifier, used internally
+      "label": "My Layer",       // displayed in the toolbar
+      "allowedTools": ["line"],  // which tools show this layer: "line" | "polygon" | "point"
+      "style": {
+        // any valid SVG presentation attribute is accepted, e.g.:
+        "stroke": "#ff4444",
+        "strokeWidth": 3,
+        "strokeDasharray": "8 4",
+        "strokeLinecap": "round",
+        "fill": "#ff4444",
+        "fill-opacity": "0.5",
+        "opacity": "0.8"
+      }
+    }
+  ]
+}
+```
+
+Any SVG presentation attribute is valid inside `style` — `stroke-dasharray`, `opacity`, `fill-rule`, etc. String and number values are both accepted.
+
+#### Built-in layers
+
+| Category | Layer | Tool | Colour |
+|---|---|---|---|
+| Roads | Highway | line | `#ff4444` |
+| Roads | Arterial | line | `#ff8800` |
+| Roads | Collector | line | `#ffcc00` |
+| Roads | Local | line | `#ffffff` |
+| Zones | Residential | polygon | `#44cc88` |
+| Zones | Commercial | polygon | `#4488ff` |
+| Zones | Industrial | polygon | `#ffaa22` |
+| Zones | Office | polygon | `#cc88ff` |
+| Services | Healthcare | polygon | `#ff4488` |
+| Services | Education | polygon | `#44ddff` |
+| Services | Police & Admin | polygon | `#3366ff` |
+| Services | Fire & Rescue | polygon | `#ff6622` |
+| Services | Parks & Rec | polygon | `#33bb55` |
+| Services | Utilities | polygon | `#ffdd00` |
+| Services | Garbage | polygon | `#996633` |
+| Services | Transport | polygon | `#cc44ff` |
+| Services | Telecom & Post | polygon | `#66cccc` |
 
 ## Build
 
 Requires Windows + PDX Modding Toolchain installed in-game (CS2 → Mods → Install Modding Toolchain).
+
+First-time setup:
+
+```
+dotnet tool restore
+npm install --prefix SkyPlanUI
+```
+
+Then on every build:
 
 ```
 dotnet build
@@ -67,6 +126,7 @@ This single command:
 2. Compiles `skyplan.dll`
 3. Runs `ModPostProcessor.exe` → `skyplan_win_x86_64.dll`
 4. Deploys both DLLs to `%CSII_LOCALMODSPATH%\skyplan\`
+5. Deploys `layers.json` to `%CSII_LOCALMODSPATH%\skyplan\`
 
 ## Logs
 

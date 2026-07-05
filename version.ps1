@@ -9,4 +9,10 @@ namespace skyplan {
 }
 "@
 Set-Content -Path "$PSScriptRoot\skyplan\VersionInfo.cs" -Value $cs -Encoding UTF8
+
+$layersPath = "$PSScriptRoot\SkyPlanUI\src\layers.json"
+$layers = Get-Content $layersPath -Raw | ConvertFrom-Json
+$layers.version = $version
+$layers | ConvertTo-Json -Depth 10 | Set-Content $layersPath -Encoding UTF8
+
 Write-Output $version

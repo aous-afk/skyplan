@@ -100,4 +100,14 @@
 		      WorkingDirectory="$(MSBuildProjectDirectory)\..\SkyPlanUI" />
 	</Target>
 
+	<Target Name="DeployLayersJson" AfterTargets="Build">
+		<PropertyGroup>
+			<ModDeployDir>$([System.Environment]::GetEnvironmentVariable('CSII_LOCALMODSPATH', 'EnvironmentVariableTarget.User'))\skyplan</ModDeployDir>
+		</PropertyGroup>
+		<Copy
+			SourceFiles="$(MSBuildProjectDirectory)\..\SkyPlanUI\src\layers.json"
+			DestinationFolder="$(ModDeployDir)"
+			SkipUnchangedFiles="true" />
+	</Target>
+
 </Project>

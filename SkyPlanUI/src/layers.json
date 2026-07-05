@@ -1,55 +1,233 @@
 {
+  "version": "0.0.1.2c8c9af.beta",
   "layers": [
     {
       "id": "highway",
       "label": "Highway",
-      "icon": "road",
-      "allowedTools": ["line"],
+      "allowedTools": [
+        "line"
+      ],
       "style": {
         "stroke": "#ff4444",
         "strokeWidth": 6,
         "strokeDasharray": "none",
         "strokeLinecap": "round",
-        "strokeLinejoin": "round"
+        "strokeLinejoin": "round",
+        "fill-opacity": "0.5"
       }
     },
     {
       "id": "arterial",
       "label": "Arterial",
-      "icon": "road",
-      "allowedTools": ["line"],
+      "allowedTools": [
+        "line"
+      ],
       "style": {
         "stroke": "#ff8800",
         "strokeWidth": 4,
         "strokeDasharray": "none",
         "strokeLinecap": "round",
-        "strokeLinejoin": "round"
+        "strokeLinejoin": "round",
+        "fill-opacity": "0.5"
       }
     },
     {
       "id": "collector",
       "label": "Collector",
-      "icon": "road",
-      "allowedTools": ["line"],
+      "allowedTools": [
+        "line"
+      ],
       "style": {
         "stroke": "#ffcc00",
         "strokeWidth": 3,
         "strokeDasharray": "none",
         "strokeLinecap": "round",
-        "strokeLinejoin": "round"
+        "strokeLinejoin": "round",
+        "fill-opacity": "0.5"
       }
     },
     {
       "id": "local",
       "label": "Local",
-      "icon": "road",
-      "allowedTools": ["line"],
+      "allowedTools": [
+        "line"
+      ],
       "style": {
         "stroke": "#ffffff",
         "strokeWidth": 2,
         "strokeDasharray": "none",
         "strokeLinecap": "round",
-        "strokeLinejoin": "round"
+        "strokeLinejoin": "round",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "residential",
+      "label": "Residential",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#44cc88",
+        "strokeWidth": 2,
+        "fill": "#44cc88",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "commercial",
+      "label": "Commercial",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#4488ff",
+        "strokeWidth": 2,
+        "fill": "#4488ff",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "industrial",
+      "label": "Industrial",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#ffaa22",
+        "strokeWidth": 2,
+        "fill": "#ffaa22",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "office",
+      "label": "Office",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#cc88ff",
+        "strokeWidth": 2,
+        "fill": "#cc88ff",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "healthcare",
+      "label": "Healthcare",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#ff4488",
+        "strokeWidth": 2,
+        "fill": "#ff4488",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "education",
+      "label": "Education",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#44ddff",
+        "strokeWidth": 2,
+        "fill": "#44ddff",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "police-admin",
+      "label": "Police & Admin",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#3366ff",
+        "strokeWidth": 2,
+        "fill": "#3366ff",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "fire-rescue",
+      "label": "Fire & Rescue",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#ff6622",
+        "strokeWidth": 2,
+        "fill": "#ff6622",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "parks",
+      "label": "Parks & Rec",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#33bb55",
+        "strokeWidth": 2,
+        "fill": "#33bb55",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "utilities",
+      "label": "Utilities",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#ffdd00",
+        "strokeWidth": 2,
+        "fill": "#ffdd00",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "garbage",
+      "label": "Garbage",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#996633",
+        "strokeWidth": 2,
+        "fill": "#996633",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "transport",
+      "label": "Transport",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#cc44ff",
+        "strokeWidth": 2,
+        "fill": "#cc44ff",
+        "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "telecom-post",
+      "label": "Telecom & Post",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#66cccc",
+        "strokeWidth": 2,
+        "fill": "#66cccc",
+        "fill-opacity": "0.5"
       }
     }
   ]
