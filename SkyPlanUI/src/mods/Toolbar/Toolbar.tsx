@@ -79,7 +79,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onTo
 			pointerEvents: 'auto', userSelect: 'none', cursor: 'grab',
 		}}>
 
-			<div className={styles.tools_container}>
+			<div className={styles.actions_container}>
 				<button onClick={onClose} className={styles.btn_base}>
 					<FontAwesomeIcon icon={faXmark} className={styles.svg} />
 				</button>
@@ -89,43 +89,47 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onTo
 				<button onClick={onClear} className={styles.btn_base} style={{ color: '#ff7070' }}>Clear</button>
 			</div>
 
-			<div className={styles.tools_container}>
-				{TOOLS.map(t => {
-					const active = activeTool === t.id;
-					return <button key={t.id}
-						onClick={() => onToolChange(t.id)}
-
-						className={`${styles.btn_base} ${active ? styles.btn_active : ''} ${t.id === 'erase' ? styles.btn_erase : ''}`}
-						style={{
-						  outline: active ? `1px solid ` : 'none',
-						  borderBottom: active ? `2px solid ` : '2px solid transparent',
-						}}
-
-					>
-						<FontAwesomeIcon className={`${styles.svg} ${active ? styles.svg_active : ''}`} icon={t.icon} />
-						<span className={styles.tooltip}>{t.label}</span>
-					</button>;
-				})}
-
-
-			</div>
-
-			<div className={styles.layers_container}>
-				{layers.map(l => {
-					const active = activeLayer.id === l.id;
-					return (
-						<button key={l.id}
-							onClick={() => onLayerChange(l)}
-							className={`${styles.layer_btn} ${active ? styles.layer_btn_active : ''}`}
+			<div className={styles.body}>
+				<div className={styles.tools_column}>
+					{TOOLS.map(t => {
+						const active = activeTool === t.id;
+						return <button key={t.id}
+							onClick={() => onToolChange(t.id)}
+							className={`${styles.btn_base} ${active ? styles.btn_active : ''} ${t.id === 'erase' ? styles.btn_erase : ''}`}
 							style={{
-								outline: active ? `1px solid ${l.style.stroke}` : 'none',
-								borderBottom: active ? `2px solid ${l.style.stroke}` : '2px solid transparent',
+								outline: active ? `1px solid ${activeLayer.style.stroke}` : 'none',
+								borderBottom: active ? `2px solid ${activeLayer.style.stroke}` : '2px solid transparent',
 							}}
 						>
-							{l.label}
-						</button>
-					);
-				})}
+							<FontAwesomeIcon className={`${styles.svg} ${active ? styles.svg_active : ''}`} icon={t.icon} />
+							<span className={styles.tooltip}>{t.label}</span>
+						</button>;
+					})}
+				</div>
+
+				<div className={styles.layers_panel}>
+					<div className={styles.search_bar}>
+						<span className={styles.search_icon}>⌕</span>
+						<span className={styles.search_placeholder}>Search layers...</span>
+					</div>
+					<div className={styles.layers_grid}>
+						{layers.map(l => {
+							const active = activeLayer.id === l.id;
+							return (
+								<button key={l.id}
+									onClick={() => onLayerChange(l)}
+									className={`${styles.layer_btn} ${active ? styles.layer_btn_active : ''}`}
+									style={{
+										outline: active ? `1px solid ${l.style.stroke}` : 'none',
+										borderBottom: active ? `2px solid ${l.style.stroke}` : '2px solid transparent',
+									}}
+								>
+									{l.label}
+								</button>
+							);
+						})}
+					</div>
+				</div>
 			</div>
 		</div>
 	);

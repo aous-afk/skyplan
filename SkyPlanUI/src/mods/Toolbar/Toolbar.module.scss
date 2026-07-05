@@ -1,40 +1,91 @@
 .toolbar {
-  color:#c28686;
   display: inline-flex;
   flex-direction: column;
-  background: rgba(18,18,18,0.88);
+  background: rgba(18,18,18,0.92);
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.12);
+  overflow: hidden;
 }
 
-.tools_container {
-  background: rgba(18,18,18,0.88);
+// ── row 1: close / undo / clear ─────────────────────────────────────────────
+.actions_container {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 2px;
-  padding: 10px;
-  border-radius: 10px;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-.layers_container {
-  background: rgba(18,18,18,0.88);
+// ── row 2: tools column + layers panel ──────────────────────────────────────
+.body {
   display: flex;
+  flex-direction: row;
+}
+
+.tools_column {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 10px;
-  border-top: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px;
+  padding: 8px 6px;
+  border-right: 1px solid rgba(255,255,255,0.08);
 }
 
+// ── layers panel (search + grid) ────────────────────────────────────────────
+.layers_panel {
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+}
+
+.search_bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  cursor: text;
+}
+
+.search_icon {
+  font-size: 15px;
+  color: rgba(255,255,255,0.3);
+  line-height: 1;
+}
+
+.search_placeholder {
+  font-size: 12px;
+  color: rgba(255,255,255,0.25);
+  user-select: none;
+}
+
+.layers_grid {
+  display: grid !important;
+  grid-template-columns: #{"repeat(3, 1fr)"};
+  gap: 3px;
+  padding: 6px 8px;
+  height: 160px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar        { width: 4px; }
+  &::-webkit-scrollbar-track  { background: transparent; }
+  &::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.15); border-radius: 2px; }
+}
+
+// ── layer button ─────────────────────────────────────────────────────────────
 .layer_btn {
-  padding: 4px 10px;
+  padding: 4px 6px;
   border-radius: 5px;
   border: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #bbb;
   background: rgba(255,255,255,0.07);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &:hover {
     background: rgba(255,255,255,0.15);
@@ -47,20 +98,21 @@
   }
 }
 
+// ── shared button base ───────────────────────────────────────────────────────
 .svg {
-  	display: block;
-	width: 13px;
-	height: 13px;
-	overflow: visible;
-    color : #bbb;
-    &.svg_active{
-      color : #9c6d6d !IMPORTANT;
-    }
-	// flex_shrink: 0;
+  display: block;
+  width: 13px;
+  height: 13px;
+  overflow: visible;
+  color: #bbb;
+
+  &.svg_active {
+    color: #9c6d6d !important;
+  }
 }
 
-.btn_base{
-  color: #bbb;  // default color for both icon and any text
+.btn_base {
+  color: #bbb;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -71,6 +123,7 @@
   font-size: 13px;
   font-weight: 600;
   position: relative;
+  background: transparent;
 
   &:hover {
     background: rgba(255,255,255,0.15);
@@ -78,8 +131,8 @@
   }
 
   .tooltip {
-	z-index: 1;
-    position: absolute ;
+    z-index: 1;
+    position: absolute;
     top: 100%;
     margin-top: 6px;
     left: 50%;
@@ -90,7 +143,6 @@
     padding: 4px 8px;
     font-size: 11px;
     white-space: nowrap;
-    // color: #fff;
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.15s;
@@ -105,14 +157,14 @@
   }
 
   &.btn_active {
-	color: #9c6d6d;
-	background: rgba(255,255,255,0.2);
-	outline: 1px solid rgba(255,255,255,0.35);
+    color: #9c6d6d;
+    background: rgba(255,255,255,0.2);
+    outline: 1px solid rgba(255,255,255,0.35);
   }
 
   &.btn_erase.btn_active {
-	background: #3a1a00;
-	color: #ffaa55;
-	outline: 1px solid #ff8800;
+    background: #3a1a00;
+    color: #ffaa55;
+    outline: 1px solid #ff8800;
   }
 }
