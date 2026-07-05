@@ -141,6 +141,10 @@ Load a city → press **Alt+P** (rebindable in Options → Key Bindings).
 
 ![Simple use](skyplan/Properties/screenshots/simple-use.png)
 
+Plan your land usage.
+polygon tool
+![polygon_tool](skyplan/Properties/screenshots/polygon_demo.png)
+
 ## What's next
 
 - Persist drawings to JSON on save/load
