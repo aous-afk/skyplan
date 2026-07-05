@@ -59,6 +59,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			}
 
 			endDraw(cx, cy);
+			drawingRef.current = true;
 			trigger('skyplan', 'drawStart', `${cx},${cy}`);
 			return true;
 		}
@@ -79,6 +80,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		}
 
 		function endDraw(cx: number, cy: number) {
+			if (toolRef.current === 'polygon') {
+				if (drawingRef.current) {
+					trigger('skyplan', 'addPoint', `${cx},${cy}`);
+				}
+			}
 			drawingRef.current = false;
 			lastInputRef.current = null;
 			trigger('skyplan', 'drawEnd', `${cx},${cy}`);
