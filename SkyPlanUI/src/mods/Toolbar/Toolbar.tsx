@@ -97,8 +97,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onTo
 							onClick={() => onToolChange(t.id)}
 							className={`${styles.btn_base} ${active ? styles.btn_active : ''} ${t.id === 'erase' ? styles.btn_erase : ''}`}
 							style={{
-								outline: active ? `1px solid ${activeLayer.style.stroke}` : 'none',
-								borderBottom: active ? `2px solid ${activeLayer.style.stroke}` : '2px solid transparent',
+								border: active ? `2px solid ${activeLayer.style.stroke}` : '2px solid transparent',
 							}}
 						>
 							<FontAwesomeIcon className={`${styles.svg} ${active ? styles.svg_active : ''}`} icon={t.icon} />
@@ -120,8 +119,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onTo
 									onClick={() => onLayerChange(l)}
 									className={`${styles.layer_btn} ${active ? styles.layer_btn_active : ''}`}
 									style={{
-										outline: active ? `1px solid ${l.style.stroke}` : 'none',
-										borderBottom: active ? `2px solid ${l.style.stroke}` : '2px solid transparent',
+										border: active ? `2px solid ${l.style.stroke}` : '2px solid transparent',
 									}}
 								>
 									{l.label}

@@ -12,7 +12,6 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 2px;
   padding: 6px 8px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
@@ -27,7 +26,6 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
   padding: 8px 6px;
   border-right: 1px solid rgba(255,255,255,0.08);
 }
@@ -42,7 +40,6 @@
 .search_bar {
   display: flex;
   align-items: center;
-  gap: 6px;
   padding: 5px 10px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
   cursor: text;
@@ -52,6 +49,7 @@
   font-size: 15px;
   color: rgba(255,255,255,0.3);
   line-height: 1;
+  margin-right: 6px;
 }
 
 .search_placeholder {
@@ -61,23 +59,22 @@
 }
 
 .layers_grid {
-  display: grid !important;
-  grid-template-columns: #{"repeat(3, 1fr)"};
-  gap: 3px;
-  padding: 6px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  padding: 4px 6px;
   height: 160px;
   overflow-y: auto;
-
-  &::-webkit-scrollbar        { width: 4px; }
-  &::-webkit-scrollbar-track  { background: transparent; }
-  &::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.15); border-radius: 2px; }
 }
 
 // ── layer button ─────────────────────────────────────────────────────────────
 .layer_btn {
-  padding: 4px 6px;
+  width: 33.33%;
+  box-sizing: border-box;
+  padding: 4px 4px;
+  margin: 1px 0;
   border-radius: 5px;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
@@ -118,7 +115,7 @@
   justify-content: center;
   padding: 5px 10px;
   border-radius: 5px;
-  border: none;
+  border: 2px solid transparent;
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
@@ -159,12 +156,12 @@
   &.btn_active {
     color: #9c6d6d;
     background: rgba(255,255,255,0.2);
-    outline: 1px solid rgba(255,255,255,0.35);
+    border: 2px solid rgba(255,255,255,0.35);
   }
 
   &.btn_erase.btn_active {
     background: #3a1a00;
     color: #ffaa55;
-    outline: 1px solid #ff8800;
+    border: 2px solid #ff8800;
   }
 }
