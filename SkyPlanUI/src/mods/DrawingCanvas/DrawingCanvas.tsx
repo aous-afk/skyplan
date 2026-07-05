@@ -42,16 +42,35 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		function onDown(cx: number, cy: number, type: string): boolean {
 			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
 			lastInputRef.current = type;
+			if (toolRef.current === 'polygon') {
+				if (!drawingRef.current) {
+					drawingRef.current = true;
+					trigger('skyplan', 'drawStart', `${cx},${cy}`);
+				} else {
+					trigger('skyplan', 'addPoint', `${cx},${cy}`);
+				}
+				return true;
+			}
+
 			drawingRef.current = true;
-			trigger('skyplan', 'drawEnd', `${cx},${cy}`);
+			if (!drawingRef.current && toolRef.current === 'erase') {
+				trigger('skyplan', 'eraseHover', `${cx},${cy}`);
+				return true;
+			}
+
+			endDraw(cx, cy);
 			trigger('skyplan', 'drawStart', `${cx},${cy}`);
 			return true;
 		}
 
 		function onMove(cx: number, cy: number, type: string): boolean {
 			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
-			if (!drawingRef.current && toolRef.current === 'erase')
+
+			if (!drawingRef.current && toolRef.current === 'erase') {
 				trigger('skyplan', 'eraseHover', `${cx},${cy}`);
+				return true;
+			}
+
 			if (drawingRef.current) {
 				trigger('skyplan', 'drawMove', `${cx},${cy}`);
 				return true;
@@ -59,12 +78,16 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			return false;
 		}
 
-		function onUp(cx: number, cy: number, type: string): boolean {
-			if (!drawingRef.current) return false;
-			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
+		function endDraw(cx: number, cy: number) {
 			drawingRef.current = false;
 			lastInputRef.current = null;
 			trigger('skyplan', 'drawEnd', `${cx},${cy}`);
+		}
+
+		function onUp(cx: number, cy: number, type: string): boolean {
+			if (!drawingRef.current) return false;
+			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
+			endDraw(cx, cy);
 			return true;
 		}
 
@@ -111,14 +134,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		};
 		const pd = (e: PointerEvent) => {
 			if (e.button !== 0) return;
-			console.log("pointer down")
 			if (onDown(e.clientX, e.clientY, 'pointer')) {
 				e.stopImmediatePropagation();
 				e.preventDefault();
 			}
 		};
 		const pm = (e: PointerEvent) => {
-			console.log("pointer move")
 			if (onMove(e.clientX, e.clientY, 'pointer')) {
 				e.stopImmediatePropagation();
 				e.preventDefault();
@@ -126,7 +147,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		};
 		const pu = (e: PointerEvent) => {
 			if (e.button !== 2) return;
-			console.log("pointer up")
 			if (onUp(e.clientX, e.clientY, 'pointer')) {
 				e.stopImmediatePropagation();
 				e.preventDefault();
@@ -136,7 +156,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		const kd = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
 				drawingRef.current = false;
-				trigger('skyplan', 'panelClosed');
+				trigger('skyplan', 'panelClosed', '');
 				return;
 			}
 			if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {

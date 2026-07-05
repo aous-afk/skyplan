@@ -47,7 +47,6 @@ const SkyplanOverlay: React.FC = () => {
 	}, [visible]);
 
 	const handleTool = useCallback((t: ToolId) => {
-	  console.log(t)
 		setActiveTool(t);
 		trigger('skyplan', 'setTool', t);
 	}, []);
@@ -68,8 +67,12 @@ const SkyplanOverlay: React.FC = () => {
 	}, [activeLayer]);
 
 	const handleClose = useCallback(() => {
-		trigger('skyplan', 'panelClosed');
+		trigger('skyplan', 'panelClosed', '');
 	}, []);
+
+	const HandleUndo = useCallback(() => {
+		trigger('skyplan', 'undo', '');
+	}, [])
 
 
 	if (!visible) return null;
@@ -85,6 +88,7 @@ const SkyplanOverlay: React.FC = () => {
 				layers={visibleLayers}
 				onToolChange={handleTool}
 				onLayerChange={handleLayer}
+				onUndo={HandleUndo}
 				onClear={handleClear}
 				onClose={handleClose}
 			/>

@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
-import { ToolId, TOOLS, Layer, LayerDef } from '../types';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faXmark } from '@fortawesome/free-solid-svg-icons'
+import React, {useEffect, useRef, useState} from "react";
+import {ToolId, TOOLS, Layer, LayerDef} from '../types';
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
+import {faArrowLeft, faXmark} from '@fortawesome/free-solid-svg-icons'
 import styles from './Toolbar.module.scss';
 
 const DRAG_THRESHOLD = 6;
@@ -13,11 +13,12 @@ interface ToolbarProps {
 	layers: LayerDef[];
 	onToolChange: (t: ToolId) => void;
 	onLayerChange: (l: LayerDef) => void;
+	onUndo: () => void;
 	onClear: () => void;
 	onClose: () => void;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onToolChange, onLayerChange, onClear, onClose }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onToolChange, onLayerChange, onUndo, onClear, onClose }) => {
 	const toolbarEl = useRef<HTMLDivElement>(null);
 	const tbDownRef = useRef(false);
 	const tbDownPosRef = useRef({ x: 0, y: 0 });
@@ -81,6 +82,9 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onTo
 			<div className={styles.tools_container}>
 				<button onClick={onClose} className={styles.btn_base}>
 					<FontAwesomeIcon icon={faXmark} className={styles.svg} />
+				</button>
+				<button onClick={onUndo} className={styles.btn_base}>
+					<FontAwesomeIcon icon={faArrowLeft} className={styles.svg} />
 				</button>
 				<button onClick={onClear} className={styles.btn_base} style={{ color: '#ff7070' }}>Clear</button>
 			</div>

@@ -9,8 +9,8 @@ using System.Text;
 using UnityEngine;
 using Skyplan.Models;
 using Skyplan.Models.dto;
-using System.Linq;
 using System.Text.RegularExpressions;
+using System;
 
 namespace skyplan.Systems {
 
@@ -29,11 +29,12 @@ namespace skyplan.Systems {
 		private ICameraSystem m_Camera;
 		private bool m_PanelVisible;
 
-		internal readonly List<Shape> m_Shapes = new();
-		private readonly List<Op> m_UndoStack = new();
+		internal readonly List<Shape> m_Shapes = [];
+		private readonly List<Op> m_UndoStack = [];
 		private Shape m_ActiveShape;
+		private List<Vector3> _points = [];
 		private string m_CurrentTool = "line";
-		private LayerDefDto m_CurrentLayer = new LayerDefDto {
+		private LayerDefDto m_CurrentLayer = new() {
 			Id = "default", Label = "Default",
 			Style = new Dictionary<string, string> { { "stroke", "#ffffff" }, { "strokeWidth", "2" } }
 		};
@@ -47,10 +48,10 @@ namespace skyplan.Systems {
 		private ValueBinding<string> m_PreviewBinding;
 		private ValueBinding<string> m_HighlightBinding;
 
-		protected override void OnGamePreload(Colossal.Serialization.Entities.Purpose purpose, Game.GameMode mode) {
+		protected override void OnGamePreload(Colossal.Serialization.Entities.Purpose purpose, GameMode mode) {
 			try {
 				base.OnGamePreload(purpose, mode);
-			} catch (System.InvalidOperationException ex) {
+			} catch (InvalidOperationException ex) {
 				Mod.log.Warn($"[DrawingSystem] OnGamePreload caught InvalidOperationException (system state destroyed during world rebuild): {ex.Message}");
 			}
 		}
@@ -79,14 +80,24 @@ namespace skyplan.Systems {
 				Vector2 p = CSV2(csv);
 				HandleDrawStart(p.x, p.y);
 			}));
+
 			AddBinding(new TriggerBinding<string>("skyplan", "drawMove", csv => {
 				Vector2 p = CSV2(csv);
 				HandleDrawMove(p.x, p.y);
 			}));
+
 			AddBinding(new TriggerBinding<string>("skyplan", "drawEnd", csv => {
-				var p = CSV2(csv); HandleDrawEnd(p.x, p.y);
+				Vector2 p = CSV2(csv);
+				HandleDrawEnd(p.x, p.y);
 			}));
+
+			AddBinding(new TriggerBinding<string>("skyplan", "addPoint", csv => {
+				Vector2 p = CSV2(csv);
+				AddPoint(p.x, p.y);
+			}));
+
 			AddBinding(new TriggerBinding<string>("skyplan", "setTool", t => {
+				Tools tool = (Tools)Enum.Parse(typeof(Tools), t, true);
 				m_CurrentTool = t;
 				if (t != "erase") {
 					m_EraseTarget = null;
@@ -95,11 +106,17 @@ namespace skyplan.Systems {
 			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setLayer", json => m_CurrentLayer = JsonConvert.DeserializeObject<LayerDefDto>(json)));
-			AddBinding(new TriggerBinding<string>("skyplan", "clearLayer", l => HandleClearLayer(l)));
+
+			AddBinding(new TriggerBinding<string>("skyplan", "clearLayer", HandleClearLayer));
+
 			AddBinding(new TriggerBinding<string>("skyplan", "undo", _ => HandleUndo()));
+
 			AddBinding(new TriggerBinding<string>("skyplan", "eraseHover", csv => {
-				var p = CSV2(csv); HandleEraseHover(p.x, p.y);
+				Vector2 p = CSV2(csv);
+				HandleEraseHover(p.x, p.y);
+
 			}));
+
 			AddBinding(new TriggerBinding("skyplan", "panelClosed", () => {
 				m_PanelVisible = false;
 				m_ActiveShape = null;
@@ -189,7 +206,11 @@ namespace skyplan.Systems {
 
 		private void HandleDrawStart(float sx, float sy) {
 			if (!m_Camera.IsReady) return;
-			if (m_CurrentTool == "erase") { EraseNearest(); return; }
+			if (m_CurrentTool == "erase") {
+				EraseNearest();
+				return;
+			}
+
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
 			m_ActiveShape = new Shape {
 				id = $"s{m_NextId++}",
@@ -197,25 +218,53 @@ namespace skyplan.Systems {
 				layer = m_CurrentLayer,
 			};
 			m_ActiveShape.pts.Add(world);
+			if (m_CurrentTool == "polygon") _points.Add(world);
 		}
 
 		private void HandleDrawMove(float sx, float sy) {
 			if (m_ActiveShape == null || !m_Camera.IsReady) return;
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
-			if (m_ActiveShape.type == "free") {
-				if (m_ActiveShape.pts.Count == 0 ||
-					Vector3.Distance(m_ActiveShape.pts[m_ActiveShape.pts.Count - 1], world) > 5f) {
-					m_ActiveShape.pts.Add(world);
-				}
-			} else {
-				if (m_ActiveShape.pts.Count > 1) m_ActiveShape.pts[1] = world;
-				else m_ActiveShape.pts.Add(world);
+
+			if (m_ActiveShape.type == "polygon") {
+				var previewPts = new List<Vector3>(_points) { world };
+				Shape temp = new() { id = "__preview__", type = "polygon", layer = m_ActiveShape.layer, pts = previewPts };
+				m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
+				return;
 			}
+
+			if (m_ActiveShape.pts.Count > 1)
+				m_ActiveShape.pts[1] = world;
+			else
+				m_ActiveShape.pts.Add(world);
 			UpdatePreviewJson();
+		}
+
+		private void AddPoint(float sx, float sy){
+			if (m_ActiveShape == null || !m_Camera.IsReady) return;
+			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
+			_points.Add(world);
 		}
 
 		private void HandleDrawEnd(float sx, float sy) {
 			if (m_ActiveShape == null) return;
+
+			if (m_ActiveShape.type == "polygon") {
+				m_ActiveShape.pts.Clear();
+				m_ActiveShape.pts.AddRange(_points);
+				if (m_ActiveShape.pts.Count >= 3) {
+					m_Shapes.Add(m_ActiveShape);
+					m_UndoStack.Add(new Op { type = OpType.Draw, shape = m_ActiveShape });
+					if (m_Camera.IsReady) {
+					  UpdateShapesJson();
+					  UpdateShapesJsonBaseline();
+					}
+				}
+				m_ActiveShape = null;
+				_points.Clear();
+				m_PreviewBinding.Update("");
+				return;
+			}
+
 			HandleDrawMove(sx, sy);
 			if (m_ActiveShape.pts.Count >= 2) {
 				m_Shapes.Add(m_ActiveShape);
@@ -223,6 +272,7 @@ namespace skyplan.Systems {
 				if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
 			}
 			m_ActiveShape = null;
+			_points = [];
 			m_PreviewBinding.Update("");
 		}
 
@@ -295,83 +345,78 @@ namespace skyplan.Systems {
 			var sb = new StringBuilder();
 			sb.Append($"{{\"id\":\"{s.id}\",\"layer\":\"{s.layer}\"");
 
-			Vector2 Proj(Vector3 w) =>
-				baseline ? m_Camera.WorldToSVGBaseline(w) : m_Camera.WorldToSVG(w);
 			if (s.layer?.Style != null) {
-				foreach (var x in s.layer.Style) {
-					var key = Regex.Replace(x.Key, "([A-Z])", "-$1").ToLower();
+				foreach (KeyValuePair<string, string> x in s.layer.Style) {
+					string key = Regex.Replace(x.Key, "([A-Z])", "-$1").ToLower();
 					sb.Append($",\"{key}\":\"{x.Value}\"");
 				}
 			} else {
 				sb.Append(",\"stroke\":\"#ffffff\",\"stroke-width\":\"2\"");
-				Mod.log.Warn($"[ShapeToJSON] s.layer or s.layer.Style is null for shape {s.id}, using fallback style");
 			}
-			Mod.log.Info($"[ShapeToJSON] json so far: {sb}");
 			switch (s.type) {
 				case "line":
 					if (s.pts.Count < 2) return null;
-					Vector2 p0 = Proj(s.pts[0]);
-					Vector2 p1 = Proj(s.pts[1]);
-					sb.Append(",\"tag\":\"line\"");
-					sb.Append($",\"x1\":\"{F(p0.x)}\",\"y1\":\"{F(p0.y)}\"");
-					sb.Append($",\"x2\":\"{F(p1.x)}\",\"y2\":\"{F(p1.y)}\"");
+					sb.Append(CreateLineString(s.pts[0], s.pts[1]));
 					break;
 
-				case "rect":
+				case "polygon":
 					if (s.pts.Count < 2) return null;
-					Vector2 a = Proj(s.pts[0]);
-					Vector2 b = Proj(new Vector3(s.pts[1].x, s.pts[0].y, s.pts[0].z));
-					Vector2 c2 = Proj(s.pts[1]);
-					Vector2 d = Proj(new Vector3(s.pts[0].x, s.pts[1].y, s.pts[1].z));
-					sb.Append(",\"tag\":\"polygon\"");
-					sb.Append($",\"points\":\"{F(a.x)},{F(a.y)} {F(b.x)},{F(b.y)} {F(c2.x)},{F(c2.y)} {F(d.x)},{F(d.y)}\"");
-					// sb.Append($",\"stroke\":\"{c}\",\"stroke-width\":\"4\",\"fill\":\"none\"");
+					sb.Append(CreatePolygon(s.pts));
+					// if (s.pts.Count == 2) {
+					//   sb.Append(CreateLineString(s.pts[0], s.pts[1]));
+					//   break;
+					// }
+					// // todo it needs to preview with for or while update the shape needs to be snapped to the last line
+					// Vector2 a = Proj(s.pts[0]);
+					// Vector2 b = Proj(new Vector3(s.pts[1].x, s.pts[0].y, s.pts[0].z));
+					// Vector2 c2 = Proj(s.pts[1]);
+					// sb.Append(",\"tag\":\"polygon\"");
+					// sb.Append($",\"points\":\"{F(a.x)},{F(a.y)} {F(b.x)},{F(b.y)} {F(c2.x)},{F(c2.y)} {F(a.x)},{F(a.y)}\"");
 					break;
-
-				case "circle": {
-						if (s.pts.Count < 2) return null;
-						float wcx = (s.pts[0].x + s.pts[1].x) * 0.5f;
-						float wcy = (s.pts[0].y + s.pts[1].y) * 0.5f;
-						float wcz = (s.pts[0].z + s.pts[1].z) * 0.5f;
-						float wrx = Mathf.Abs(s.pts[1].x - s.pts[0].x) * 0.5f;
-						float wrz = Mathf.Abs(s.pts[1].z - s.pts[0].z) * 0.5f;
-						const int N = 32;
-						var cPts = new StringBuilder();
-						for (int i = 0; i < N; i++) {
-							float ang = 2f * Mathf.PI * i / N;
-							Vector2 sp = Proj(new Vector3(wcx + wrx * Mathf.Cos(ang), wcy, wcz + wrz * Mathf.Sin(ang)));
-							if (i > 0) cPts.Append(' ');
-							cPts.Append($"{F(sp.x)},{F(sp.y)}");
-						}
-						sb.Append(",\"tag\":\"polygon\"");
-						sb.Append($",\"points\":\"{cPts}\"");
-						// sb.Append($",\"stroke\":\"{c}\",\"stroke-width\":\"4\",\"fill\":\"none\"");
-						break;
-					}
-				case "free": {
-						if (s.pts.Count < 2) return null;
-						var path = new StringBuilder("M ");
-						for (int i = 0; i < s.pts.Count; i++) {
-							Vector2 p = Proj(s.pts[i]);
-							if (i > 0) path.Append(" L ");
-							path.Append($"{F(p.x)},{F(p.y)}");
-						}
-						sb.Append(",\"tag\":\"path\"");
-						sb.Append($",\"d\":\"{path}\"");
-						// sb.Append($",\"stroke\":\"{c}\",\"stroke-width\":\"4\"");
-						sb.Append(",\"stroke-linecap\":\"round\",\"stroke-linejoin\":\"round\",\"fill\":\"none\"");
-						break;
-					}
 				default: return null;
 			}
 			sb.Append('}');
 			return sb.ToString();
 		}
 
+		Vector2 Proj(Vector3 w) =>
+		   m_Camera.WorldToSVG(w);
+		private string CreateLineString(Vector3 pointa, Vector3 pointb){
+			StringBuilder sb = new();
+			Vector2 p0 = Proj(pointa);
+			Vector2 p1 = Proj(pointb);
+			sb.Append(",\"tag\":\"line\"");
+			sb.Append($",\"x1\":\"{F(p0.x)}\",\"y1\":\"{F(p0.y)}\"");
+			sb.Append($",\"x2\":\"{F(p1.x)}\",\"y2\":\"{F(p1.y)}\"");
+			return sb.ToString();
+		}
+
+		private string CreatePolygon(List<Vector3> points){
+		  if (points.Count < 2) {
+			return string.Empty;
+		  }
+		  // invalid polygon
+		  if (points.Count == 2) {
+			return CreateLineString(points[0], points[1]);
+		  }
+		  StringBuilder sb = new();
+		  Vector2 startingPoint = Proj(points[0]);
+		  sb.Append(",\"tag\":\"polygon\"");
+		  sb.Append($",\"points\":\"{F(startingPoint.x)},{F(startingPoint.y)} ");
+		  for (int i = 1; i < points.Count ; i ++){
+			Vector2 p = Proj(points[i]);
+			sb.Append($" {F(p.x)},{F(p.y)} ");
+		  }
+		  sb.Append($"{F(startingPoint.x)},{F(startingPoint.y)}");
+		  sb.Append('\"');
+
+		  return sb.ToString();
+		}
+
 		private void UpdateShapesJson() {
 			var sb = new StringBuilder("[");
 			bool first = true;
-			foreach (var s in m_Shapes) {
+			foreach (Shape s in m_Shapes) {
 				string json = ShapeToJSON(s, baseline: false);
 				if (json == null) continue;
 				if (!first) sb.Append(',');
@@ -401,12 +446,12 @@ namespace skyplan.Systems {
 				m_PreviewBinding.Update("");
 				return;
 			}
-			var temp = new Shape {
+			Shape temp = new() {
 				id = "__preview__",
 				type = m_ActiveShape.type,
 				layer = m_ActiveShape.layer,
 				pts = m_ActiveShape.pts,
-			};
+			  };
 			m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
 		}
 

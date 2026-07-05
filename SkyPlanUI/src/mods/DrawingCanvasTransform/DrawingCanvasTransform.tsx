@@ -78,7 +78,7 @@ const DrawingCanvasTransform: React.FC<DrawingCanvasTransformProps> = ({
 		const kd = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
 				drawingRef.current = false;
-				trigger('skyplan', 'panelClosed');
+				trigger('skyplan', 'panelClosed', '');
 				return;
 			}
 			if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
