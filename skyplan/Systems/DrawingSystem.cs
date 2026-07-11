@@ -40,7 +40,7 @@ namespace skyplan.Systems {
 			Id = "default", Label = "Default",
 			Style = new Dictionary<string, string> { { "stroke", "#ffffff" }, { "strokeWidth", "2" } }
 		};
-		private int m_NextId;
+		internal int m_NextId;
 		private string m_EraseTarget;
 
 		private ValueBinding<bool> m_PanelVisibleBinding;
@@ -122,12 +122,7 @@ namespace skyplan.Systems {
 
 			}));
 
-			AddBinding(new TriggerBinding("skyplan", "panelClosed", () => {
-				m_PanelVisible = false;
-				m_ActiveShape = null;
-				m_PanelVisibleBinding.Update(false);
-				m_PreviewBinding.Update("");
-			}));
+			AddBinding(new TriggerBinding("skyplan", "panelClosed", HidePanel));
 		}
 
 		protected override void OnUpdate() {
@@ -138,14 +133,21 @@ namespace skyplan.Systems {
 				TogglePanel();
 			if (m_PanelVisible) {
 				if (!inGame) {
-					m_PanelVisible = false;
-					m_ActiveShape = null;
-					m_PanelVisibleBinding.Update(false);
-					m_PreviewBinding.Update("");
+					HidePanel();
+				} else if (UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true) {
+					HidePanel();
 				} else {
 					SyncCamera();
 				}
 			}
+		}
+
+		private void HidePanel() {
+			m_PanelVisible = false;
+			m_ActiveShape = null;
+			_points.Clear();
+			m_PanelVisibleBinding.Update(false);
+			m_PreviewBinding.Update("");
 		}
 
 		private void EnsureLayersJson() {
@@ -462,6 +464,15 @@ namespace skyplan.Systems {
 			}
 			sb.Append(']');
 			m_ShapesBaselineBinding.Update(sb.ToString());
+		}
+
+		public void LoadShapes(List<Shape> imported) {
+			m_Shapes.Clear();
+			m_UndoStack.Clear();
+			m_ActiveShape = null;
+			m_Shapes.AddRange(imported);
+			if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
+			m_PreviewBinding.Update("");
 		}
 
 		private void UpdatePreviewJson() {

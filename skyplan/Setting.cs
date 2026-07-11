@@ -1,20 +1,25 @@
 using Colossal;
 using Colossal.IO.AssetDatabase;
+using Colossal.PSI.Environment;
 using Game.Input;
 using Game.Modding;
 using Game.Settings;
+using Game.UI.Localization;
+using Game.UI.Widgets;
 using skyplan.Systems;
 using Skyplan.Models;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 
 namespace skyplan {
 	[FileLocation(nameof(skyplan))]
 	[SettingsUIGroupOrder(kPanelGroup, kKeybindingGroup, kAboutGroup, kExportGroup)]
 	[SettingsUIShowGroupName(kPanelGroup, kKeybindingGroup, kAboutGroup, kExportGroup)]
 	[SettingsUIKeyboardAction(Mod.kToggleActionName, ActionType.Button,
-		usages: new[] { Usages.kMenuUsage, Usages.kDefaultUsage },
-		interactions: new[] { "Press" })]
+		usages: [Usages.kMenuUsage, Usages.kDefaultUsage],
+		interactions: ["Press"])]
 	public class Setting : ModSetting {
 		public const string kSection = "Main";
 		public const string kExportSection = "Export";
@@ -55,6 +60,60 @@ namespace skyplan {
 			}
 		}
 
+		[SettingsUITextInput]
+		[SettingsUISection(kExportSection, kExportGroup)]
+		public string ExportPlanName { get; set; } = "Plan";
+
+		[SettingsUITextInput]
+		[SettingsUISection(kExportSection, kExportGroup)]
+		public string ExportIteration { get; set; } = "";
+
+		[SettingsUIButton]
+		[SettingsUISection(kExportSection, kExportGroup)]
+		public bool ExportSVG {
+			set {
+				string name = string.IsNullOrWhiteSpace(ExportIteration)
+					? $"{ExportPlanName}.svg"
+					: $"{ExportPlanName}_{ExportIteration}.svg";
+				ExportSystem.Instance()?.ExportToSVG(name);
+			}
+		}
+
+		[SettingsUIButton]
+		[SettingsUISection(kExportSection, kExportGroup)]
+		public bool RefreshImportList {
+			set { m_FileListVersion++; }
+		}
+
+		private int m_FileListVersion = 0;
+		public int GetFileListVersion() => m_FileListVersion;
+
+		[SettingsUIDropdown(typeof(Setting), nameof(GetSVGFiles))]
+		[SettingsUIValueVersion(typeof(Setting), nameof(GetFileListVersion))]
+		[SettingsUISection(kExportSection, kExportGroup)]
+		public string ImportFileName { get; set; } = "";
+
+		public DropdownItem<string>[] GetSVGFiles() {
+			string dir = Path.Combine(EnvPath.kUserDataPath, "ModsData", nameof(skyplan));
+			if (!Directory.Exists(dir))
+				return [new DropdownItem<string> { value = "", displayName = LocalizedString.Value("No files found") }];
+			var files = Directory.GetFiles(dir, "*.svg")
+				.Select(Path.GetFileName)
+				.Select(name => new DropdownItem<string> { value = name, displayName = LocalizedString.Value(name) })
+				.ToArray();
+			return files.Length > 0 ? files
+				: [new DropdownItem<string> { value = "", displayName = LocalizedString.Value("No files found") }];
+		}
+
+		[SettingsUIButton]
+		[SettingsUISection(kExportSection, kExportGroup)]
+		public bool ImportSVG {
+			set {
+				if (!string.IsNullOrEmpty(ImportFileName))
+					ExportSystem.Instance()?.ImportFromSVG(ImportFileName);
+			}
+		}
+
 		[SettingsUIKeyboardBinding(BindingKeyboard.P, Mod.kToggleActionName)]
 		[SettingsUISection(kSection, kKeybindingGroup)]
 		public ProxyBinding ToggleBinding { get; set; }
@@ -77,13 +136,16 @@ namespace skyplan {
 			// System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
 			// System.Diagnostics.FileVersionInfo fvi = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location);
 			// string version = fvi.FileVersion;
-			return $"assembly Version = , VersionInfo = {VersionInfo.Version}";
+			return $"VersionInfo = {VersionInfo.Version}";
 		}
 
 		public override void SetDefaults() {
 			Srid = SridOption.Epsg4326;
 			OriginX = "0";
 			OriginY = "0";
+			ExportPlanName = "Plan";
+			ExportIteration = "";
+			ImportFileName = "";
 		}
 	}
 
@@ -127,6 +189,24 @@ namespace skyplan {
 
 				{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.ExportGeoJson)), "Export To GeoJson" },
 				{ m_Setting.GetOptionDescLocaleID(nameof(Setting.ExportGeoJson)), "Export the plan to GeoJSON using the configured CRS." },
+
+				{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.ExportPlanName)), "Plan Name" },
+				{ m_Setting.GetOptionDescLocaleID(nameof(Setting.ExportPlanName)), "Name of the plan (used in the filename)." },
+
+				{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.ExportIteration)), "Iteration" },
+				{ m_Setting.GetOptionDescLocaleID(nameof(Setting.ExportIteration)), "Iteration number or label (e.g. 1, 2, v2)." },
+
+				{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.ExportSVG)), "Export To SVG" },
+				{ m_Setting.GetOptionDescLocaleID(nameof(Setting.ExportSVG)), "Export the plan to SVG as {PlanName}_{Iteration}.svg." },
+
+				{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.RefreshImportList)), "Refresh" },
+				{ m_Setting.GetOptionDescLocaleID(nameof(Setting.RefreshImportList)), "Rescan ModsData/skyplan/ for SVG files." },
+
+				{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.ImportFileName)), "SVG File" },
+				{ m_Setting.GetOptionDescLocaleID(nameof(Setting.ImportFileName)), "Select an exported SVG plan from the ModsData/skyplan/ folder." },
+
+				{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.ImportSVG)), "Import SVG" },
+				{ m_Setting.GetOptionDescLocaleID(nameof(Setting.ImportSVG)), "Load the selected SVG plan, replacing current drawings." },
 
 				{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.ResetBindings)), "Reset bindings" },
 				{ m_Setting.GetOptionDescLocaleID(nameof(Setting.ResetBindings)), "Restore default key bindings for this mod." },
