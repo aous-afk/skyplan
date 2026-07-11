@@ -22,9 +22,6 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 	switch (s.tag) {
 		case 'line': return <line key={s.id} {...attrs} />;
 		case 'polygon': return <polygon key={s.id} {...attrs} />;
-		case 'path': return <path key={s.id} {...attrs} />;
-		case 'ellipse': return <ellipse key={s.id} {...attrs} />;
-		case 'rect': return <rect key={s.id} {...attrs} />;
 		default: return null;
 	}
 }

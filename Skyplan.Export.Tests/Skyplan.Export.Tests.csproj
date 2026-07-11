@@ -17,7 +17,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\SkyPlan.Export\SkyPlan.Export.csproj" />
+		<ProjectReference Include="..\Skyplan.Persistence\Skyplan.Persistence.csproj" />
 		<ProjectReference Include="..\Skyplan.Models\Skyplan.Models.csproj" />
 	</ItemGroup>
 

@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Text;
 using Skyplan.Models;
 
-namespace SkyPlan.Export {
+namespace Skyplan.Persistence {
 	public static class GeoJsonExporter {
 		public static string Export(List<Shape> shapes, int srid, double originX, double originY) {
 			var sb = new StringBuilder();
