@@ -49,15 +49,10 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 				return true;
 			}
 
-			drawingRef.current = true;
-			if (!drawingRef.current && toolRef.current === 'erase') {
-				trigger('skyplan', 'eraseHover', `${cx},${cy}`);
-				return true;
-			}
-
 			endDraw(cx, cy);
 			drawingRef.current = true;
 			trigger('skyplan', 'drawStart', `${cx},${cy}`);
+			if (toolRef.current === 'erase') drawingRef.current = false;
 			return true;
 		}
 
