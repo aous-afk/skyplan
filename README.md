@@ -4,6 +4,22 @@
 
 Tracing paper over your city map, but inside CS2. Draw road networks, zoning, districts, and transit lines on top of the live game map before committing anything.
 
+## Usage
+
+Load a city → press **Alt+P** (rebindable in Options → Key Bindings).
+
+Plan your roads with line tool
+
+![Simple use](skyplan/Properties/screenshots/line_tool.png)
+
+Plan your land usage with polygon tool
+
+![polygon_tool](skyplan/Properties/screenshots/polygon_tool.png)
+
+Import and Export the SVGs
+
+![settings](./skyplan/Properties/screenshots/settings_1.png)
+
 ## Features
 
 - Draw tools: line, polygon, point
@@ -13,37 +29,6 @@ Tracing paper over your city map, but inside CS2. Draw road networks, zoning, di
 - World-space coordinates — shapes stay aligned as the camera pans and zooms
 - Undo stack (Ctrl+Z)
 - Clear layer
-
-## Architecture
-
-Two projects, one `dotnet build`:
-
-```
-skyplan/                        # C# mod (UISystemBase ECS system)
-  Mod.cs                        # IMod entry, registers keybinding (Alt+P)
-  Setting.cs                    # Options UI + rebindable shortcut
-  Systems/DrawingSystem.cs      # Binding host, drawing logic, world↔screen math
-  skyplan.csproj                # Builds C# + triggers npm build for SkyPlanUI
-
-SkyPlanUI/                      # React/TSX UI mod (Coherent GameFace)
-  src/
-    index.tsx                   # Mod registrar — appends SkyplanOverlay to 'Game' hook
-    bindings.ts                 # bindValue subscriptions (C# → UI)
-    mods/SkyplanOverlay.tsx     # Main overlay component
-  mod.json                      # id: "skyplan" — must match C# mod folder
-  webpack.config.js             # Outputs skyplan.mjs to Mods/skyplan/
-```
-
-### C# ↔ UI binding system
-
-Uses CS2's ECS binding infrastructure (`Colossal.UI.Binding`), not raw Coherent events.
-
-```
-C# ValueBinding<T>("skyplan", "panelVisible", ...)  →  bindValue<boolean>('skyplan', 'panelVisible', false)
-C# TriggerBinding<string>("skyplan", "drawStart", …) ←  trigger('skyplan', 'drawStart', `${x},${y}`)
-```
-
-C# calls `.Update(value)` to push; React reads via `useValue(binding$)`.
 
 ### Customising layers (`layers.json`)
 
@@ -112,13 +97,14 @@ First-time setup:
 
 ```
 dotnet tool restore
-npm install --prefix SkyPlanUI
+cd .\SkyPlanUI\
+npm install
 ```
 
 Then on every build:
 
 ```
-dotnet build
+dotnet build  .\skyplan\skyplan.csproj
 ```
 
 This single command:
@@ -135,19 +121,6 @@ This single command:
 %AppData%\..\LocalLow\Colossal Order\Cities Skylines II\Logs\UI.log
 ```
 
-## Usage
-
-Load a city → press **Alt+P** (rebindable in Options → Key Bindings).
-
-![Simple use](skyplan/Properties/screenshots/simple-use.png)
-
-Plan your land usage.
-polygon tool
-![polygon_tool](skyplan/Properties/screenshots/polygon_demo.png)
-
 ## What's next
 
-- Persist drawings to JSON on save/load
-- Camera drag restore while panel is open
 - Terrain snapping (snap to roads, zone grid)
-- Export SVG
