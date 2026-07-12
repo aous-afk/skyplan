@@ -13,12 +13,16 @@ namespace Skyplan.Persistence {
 			XDocument doc = XDocument.Parse(svgContent);
 			XElement root = doc.Root;
 
-			foreach (XElement el in Descendants(root, "line")) {
-				Shape? s = ParseLine(el, ref nextId);
+			foreach (XElement el in Descendants(root, "path")) {
+				Shape? s = ParsePath(el, ref nextId);
 				if (s != null) shapes.Add(s);
 			}
 			foreach (XElement el in Descendants(root, "polygon")) {
 				Shape? s = ParsePolygon(el, ref nextId);
+				if (s != null) shapes.Add(s);
+			}
+			foreach (XElement el in Descendants(root, "circle")) {
+				Shape? s = ParseCircle(el, ref nextId);
 				if (s != null) shapes.Add(s);
 			}
 			return shapes;
@@ -28,23 +32,27 @@ namespace Skyplan.Persistence {
 		private static IEnumerable<XElement> Descendants(XElement root, string localName) =>
 			root.Descendants(SvgNs + localName).Concat(root.Descendants(localName));
 
-		private static Shape? ParseLine(XElement el, ref int nextId) {
-			float? x1 = Attr(el, "x1"), z1 = Attr(el, "y1");
-			float? x2 = Attr(el, "x2"), z2 = Attr(el, "y2");
-			if (x1 == null || z1 == null || x2 == null || z2 == null) {
-				return null;
-			}
+		private static Shape? ParsePath(XElement el, ref int nextId) {
+			string? d = el.Attribute("d")?.Value?.Trim();
+			if (string.IsNullOrEmpty(d)) return null;
+
+			// Parse "M x1 z1 L x2 z2" — extract 4 numeric tokens, skip M/L commands
+			float[] nums = d.Split(new char[]{' ', ',', '\t', '\r', '\n'}, StringSplitOptions.RemoveEmptyEntries)
+				.Where(t => float.TryParse(t, System.Globalization.NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+				.Select(t => float.Parse(t, System.Globalization.NumberStyles.Float, CultureInfo.InvariantCulture))
+				.ToArray();
+			if (nums.Length < 4) return null;
 
 			float y0 = Attr(el, "data-y0") ?? 0f;
 			float y1 = Attr(el, "data-y1") ?? 0f;
 
 			return new Shape {
 				id = $"s{nextId++}",
-				type = "line",
+				type = "path",
 				layer = ParseLayer(el),
 				pts = [
-					new Vector3(x1.Value, y0, z1.Value),
-					new Vector3(x2.Value, y1, z2.Value),
+					new Vector3(nums[0], y0, nums[1]),
+					new Vector3(nums[2], y1, nums[3]),
 				]
 			};
 		}
@@ -87,6 +95,18 @@ namespace Skyplan.Persistence {
 				type = "polygon",
 				layer = ParseLayer(el),
 				pts = pts,
+			};
+		}
+
+		private static Shape? ParseCircle(XElement el, ref int nextId) {
+			float? cx = Attr(el, "cx"), cz = Attr(el, "cy");
+			if (cx == null || cz == null) return null;
+			float y = Attr(el, "data-y") ?? 0f;
+			return new Shape {
+				id = $"s{nextId++}",
+				type = "point",
+				layer = ParseLayer(el),
+				pts = [new Vector3(cx.Value, y, cz.Value)],
 			};
 		}
 

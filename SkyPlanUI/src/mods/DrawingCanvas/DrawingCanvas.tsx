@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { trigger } from 'cs2/api';
-import { ToolId, ShapeData } from '../types';
+import React, {useEffect, useRef} from 'react';
+import {trigger} from 'cs2/api';
+import {ToolId, ShapeData} from '../types';
 
 interface DrawingCanvasProps {
 	activeTool: ToolId;
@@ -10,18 +10,37 @@ interface DrawingCanvasProps {
 	svgSize: { w: number; h: number };
 }
 
-const SKIP = new Set(['id', 'tag', 'layer']);
+const SKIP = new Set(['id', 'tag', 'layer', 'layerDef']);
+
+function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null): string {
+	const seen = new Set<string>();
+	const rules: string[] = [];
+	const all = preview ? [...shapes, preview] : shapes;
+	for (const s of all) {
+		if (!s.layerDef?.style || seen.has(s.layer)) continue;
+		seen.add(s.layer);
+		const decls = Object.entries(s.layerDef.style)
+			.map(([k, v]) => `${k}:${v}`)
+			.join(';');
+		rules.push(`.sp-${s.layer}{${decls}}`);
+	}
+	return rules.join('');
+}
 
 function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null {
 	const attrs: Record<string, string> = {};
 	for (const k of Object.keys(s)) {
-		if (!SKIP.has(k)) attrs[k] = s[k];
+		if (!SKIP.has(k)) attrs[k] = s[k] as string;
 	}
-	if (opacity !== undefined) attrs.opacity = opacity;
+	const style: Record<string, string> = {};
+	if (opacity !== undefined) style.opacity = opacity;
+	const cn = `sp-${s.layer}`;
 
 	switch (s.tag) {
-		case 'line': return <line key={s.id} {...attrs} />;
-		case 'polygon': return <polygon key={s.id} {...attrs} />;
+		case 'path':
+			return <path key={s.id} className={cn} {...attrs} style={style} />;
+		case 'polygon': return <polygon key={s.id} className={cn} {...attrs} style={style} />;
+		case 'circle':  return <circle  key={s.id} className={cn} {...attrs} style={style} />;
 		default: return null;
 	}
 }
@@ -29,7 +48,7 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, preview, highlightId, svgSize }) => {
 	const drawingRef = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
-	const toolRef = useRef<ToolId>('line');
+	const toolRef = useRef<ToolId>('path');
 
 	useEffect(() => {
 		toolRef.current = activeTool;
@@ -52,7 +71,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			endDraw(cx, cy);
 			drawingRef.current = true;
 			trigger('skyplan', 'drawStart', `${cx},${cy}`);
-			if (toolRef.current === 'erase') drawingRef.current = false;
+			if (toolRef.current === 'erase' || toolRef.current === 'point') drawingRef.current = false;
 			return true;
 		}
 
@@ -109,14 +128,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			}
 		};
 
-		// const md = (e: MouseEvent) => {
-		//   if (e.button !== 0) return;
-		//   if (onDown(e.clientX, e.clientY, 'mouse')) {
-		// 	e.stopImmediatePropagation();
-		// 	e.preventDefault(); 
-		//   } 
-		// };
-
 		const mm = (e: MouseEvent) => {
 			if (onMove(e.clientX, e.clientY, 'mouse')) {
 				e.stopImmediatePropagation();
@@ -165,7 +176,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 
 		document.addEventListener('mousedown', md, true);
 		document.addEventListener('mousemove', mm, true);
-		// document.addEventListener('mouseup', mu, true);
 		document.addEventListener('pointerdown', pd, true);
 		document.addEventListener('pointermove', pm, true);
 		document.addEventListener('pointerup', pu, true);
@@ -173,7 +183,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		return () => {
 			document.removeEventListener('mousedown', md, true);
 			document.removeEventListener('mousemove', mm, true);
-			// document.removeEventListener('mouseup', mu, true);
 			document.removeEventListener('pointerdown', pd, true);
 			document.removeEventListener('pointermove', pm, true);
 			document.removeEventListener('pointerup', pu, true);
@@ -182,6 +191,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 	}, []);
 
 	const hasHighlight = highlightId !== null;
+	const layerCSS = buildLayerCSS(shapes, preview);
 
 	return (
 		<svg
@@ -189,6 +199,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			width={svgSize.w} height={svgSize.h}
 			viewBox={`0 0 ${svgSize.w} ${svgSize.h}`}
 		>
+			<defs>
+				<style>{layerCSS}</style>
+			</defs>
 			{shapes.map(s => renderShape(s, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
 			{preview && renderShape(preview)}
 		</svg>

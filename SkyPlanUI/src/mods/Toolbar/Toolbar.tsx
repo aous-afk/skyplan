@@ -97,7 +97,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onTo
 							onClick={() => onToolChange(t.id)}
 							className={`${styles.btn_base} ${active ? styles.btn_active : ''} ${t.id === 'erase' ? styles.btn_erase : ''}`}
 							style={{
-								border: active ? `2px solid ${activeLayer.style.stroke}` : '2px solid transparent',
+								border: active && activeLayer ? `2px solid ${activeLayer.style.stroke}` : '2px solid transparent',
 							}}
 						>
 							<FontAwesomeIcon className={`${styles.svg} ${active ? styles.svg_active : ''}`} icon={t.icon} />
@@ -113,7 +113,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onTo
 					</div>
 					<div className={styles.layers_grid}>
 						{layers.map(l => {
-							const active = activeLayer.id === l.id;
+							const active = activeLayer?.id === l.id;
 							return (
 								<button key={l.id}
 									onClick={() => onLayerChange(l)}

@@ -17,6 +17,10 @@
 			<HintPath>$(ManagedPath)\Unity.Mathematics.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
+		<Reference Include="Newtonsoft.Json">
+			<HintPath>$(ManagedPath)\Newtonsoft.Json.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
 	</ItemGroup>
 
 </Project>

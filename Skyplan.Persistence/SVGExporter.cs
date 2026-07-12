@@ -17,8 +17,9 @@ namespace Skyplan.Persistence {
 
 			foreach (Shape shape in shapes) {
 				string? elem = shape.type switch {
-					"line"    when shape.pts.Count >= 2 => ExportLine(shape),
+					"path"    when shape.pts.Count >= 2 => ExportPath(shape),
 					"polygon" when shape.pts.Count >= 3 => ExportPolygon(shape),
+					"point"   when shape.pts.Count >= 1 => ExportCircle(shape),
 					_ => null
 				};
 				if (elem != null) sb.AppendLine($"  {elem}");
@@ -28,12 +29,12 @@ namespace Skyplan.Persistence {
 			return sb.ToString();
 		}
 
-		private static string ExportLine(Shape s) {
+		private static string ExportPath(Shape s) {
 			var p0 = s.pts[0];
 			var p1 = s.pts[1];
-			return $"<line x1=\"{F(p0.x)}\" y1=\"{F(p0.z)}\" x2=\"{F(p1.x)}\" y2=\"{F(p1.z)}\"" +
+			return $"<path d=\"M {F(p0.x)} {F(p0.z)} L {F(p1.x)} {F(p1.z)}\"" +
 			       $" data-layer=\"{s.layer?.Id}\" data-y0=\"{F(p0.y)}\" data-y1=\"{F(p1.y)}\"" +
-			       $" style=\"{BuildStyle(s)}\"/>";
+			       $" fill=\"none\" style=\"{BuildStyle(s)}\"/>";
 		}
 
 		private static string ExportPolygon(Shape s) {
@@ -41,6 +42,13 @@ namespace Skyplan.Persistence {
 			string dataY = string.Join(",", s.pts.Select(p => F(p.y)));
 			return $"<polygon points=\"{pts}\"" +
 			       $" data-layer=\"{s.layer?.Id}\" data-y=\"{dataY}\"" +
+			       $" style=\"{BuildStyle(s)}\"/>";
+		}
+
+		private static string ExportCircle(Shape s) {
+			var p = s.pts[0];
+			return $"<circle cx=\"{F(p.x)}\" cy=\"{F(p.z)}\" r=\"100\"" +
+			       $" data-layer=\"{s.layer?.Id}\" data-y=\"{F(p.y)}\"" +
 			       $" style=\"{BuildStyle(s)}\"/>";
 		}
 

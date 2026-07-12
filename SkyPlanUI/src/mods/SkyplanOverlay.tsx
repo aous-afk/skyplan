@@ -40,7 +40,7 @@ const SkyplanOverlay: React.FC = () => {
 		return { layers: [] }; }
 	}, [layersConfigJson]);
 
-	const [activeTool, setActiveTool] = useState<ToolId>('line');
+	const [activeTool, setActiveTool] = useState<ToolId>('path');
 	const [activeLayer, setActiveLayer] = useState<LayerDef | null>(null);
 	const [svgSize, setSvgSize] = useState({ w: 1920, h: 1080 });
 

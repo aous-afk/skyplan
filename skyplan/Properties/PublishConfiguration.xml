@@ -13,7 +13,9 @@ This is a long description
 	<!--Thumbnail-->
 	<Thumbnail Value="Properties/Thumbnail.png" />
 	<!--Screenshot, can be set multiple times-->
-	<Screenshot Value="Properties/screenshots/simple-use.png" />
+	<Screenshot Value="Properties/screenshots/line_tool.png" />
+	<Screenshot Value="Properties/screenshots/polygon_tool.png" />
+	<Screenshot Value="Properties/screenshots/settings_1.png" />
 	<!--Tag, can be set multiple times-->
 	<Tag Value="" />
 	<!--Link to the forum post where the mod can be discussed-->
@@ -31,7 +33,7 @@ This is a long description
 	<!--<ChangeLog>
 	</ChangeLog>-->
 	<!--External link, can be set multiple times. supported types are "discord", "github", "youtube", "twitch", "x", "paypal", "patreon", "buymeacoffee", "kofi", "crowdin", "gitlab", "gofundme"-->
-	<ExternalLink Type="" Url="" />
+	<ExternalLink Type="github" Url="https://github.com/aous-afk/skyplan" />
 	<!--Supported values Public, Private, Unlisted-->
 	<AccessLevel Value="Public" />
 </Publish>

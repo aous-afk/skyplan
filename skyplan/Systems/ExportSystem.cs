@@ -32,7 +32,7 @@ namespace skyplan.Systems {
 		public void ExportToSVG(string fileName = "Plan_1.svg") {
 			DrawingSystem drawingSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<DrawingSystem>();
 			var shapes = drawingSystem.m_Shapes
-				.Where(s => s.pts.Count >= 2)
+				.Where(s => s.pts.Count >= 1)
 				.ToList();
 
 			Mod.log.Info($"Exporting {shapes.Count} shapes to svg as {fileName}");

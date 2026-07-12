@@ -11,19 +11,19 @@ interface DrawingCanvasTransformProps {
 	transform: string;
 }
 
-const SKIP = new Set(['id', 'tag', 'layer']);
+const SKIP = new Set(['id', 'tag', 'layer', 'layerDef']);
 
 function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null {
 	const attrs: Record<string, string> = {};
 	for (const k of Object.keys(s)) {
-		if (!SKIP.has(k)) attrs[k] = s[k];
+		if (!SKIP.has(k)) attrs[k] = s[k] as string;
 	}
 	if (opacity !== undefined) attrs.opacity = opacity;
 
 	switch (s.tag) {
-		case 'line':    return <line    key={s.id} {...attrs} />;
-		case 'polygon': return <polygon key={s.id} {...attrs} />;
 		case 'path':    return <path    key={s.id} {...attrs} />;
+		case 'polygon': return <polygon key={s.id} {...attrs} />;
+		// case 'path':    return <path    key={s.id} {...attrs} />;
 		case 'ellipse': return <ellipse key={s.id} {...attrs} />;
 		case 'rect':    return <rect    key={s.id} {...attrs} />;
 		default:        return null;
@@ -35,7 +35,7 @@ const DrawingCanvasTransform: React.FC<DrawingCanvasTransformProps> = ({
 }) => {
 	const drawingRef   = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
-	const toolRef      = useRef<ToolId>('line');
+	const toolRef      = useRef<ToolId>('path');
 
 	useEffect(() => { toolRef.current = activeTool; }, [activeTool]);
 

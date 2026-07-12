@@ -9,7 +9,6 @@ using System.Text;
 using UnityEngine;
 using Skyplan.Models;
 using Skyplan.Models.dto;
-using System.Text.RegularExpressions;
 using System;
 using System.IO;
 using Colossal.PSI.Environment;
@@ -35,7 +34,7 @@ namespace skyplan.Systems {
 		private readonly List<Op> m_UndoStack = [];
 		private Shape m_ActiveShape;
 		private List<Vector3> _points = [];
-		private string m_CurrentTool = "line";
+		private string m_CurrentTool = "path";
 		private LayerDefDto m_CurrentLayer = new() {
 			Id = "default", Label = "Default",
 			Style = new Dictionary<string, string> { { "stroke", "#ffffff" }, { "strokeWidth", "2" } }
@@ -237,6 +236,20 @@ namespace skyplan.Systems {
 			}
 
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
+
+			if (m_CurrentTool == "point") {
+				Shape s = new() {
+					id = $"s{m_NextId++}",
+					type = "point",
+					layer = m_CurrentLayer,
+					pts = [world],
+				};
+				m_Shapes.Add(s);
+				m_UndoStack.Add(new Op { type = OpType.Draw, shape = s });
+				if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
+				return;
+			}
+
 			m_ActiveShape = new Shape {
 				id = $"s{m_NextId++}",
 				type = m_CurrentTool,
@@ -302,11 +315,11 @@ namespace skyplan.Systems {
 		}
 
 		private void HandleClearLayer(string layer) {
-			var removed = m_Shapes.FindAll(s => s.layer.Id == layer);
+			var removed = m_Shapes.FindAll(s => s.layer?.Id == layer);
 			if (removed.Count > 0)
 				m_UndoStack.Add(new Op { type = OpType.ClearLayer, layer = layer, cleared = removed });
-			m_Shapes.RemoveAll(s => s.layer.Id == layer);
-			if (m_ActiveShape != null && m_ActiveShape.layer.Id == layer)
+			m_Shapes.RemoveAll(s => s.layer?.Id == layer);
+			if (m_ActiveShape != null && m_ActiveShape.layer?.Id == layer)
 				m_ActiveShape = null;
 			if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
 			m_PreviewBinding.Update("");
@@ -368,27 +381,25 @@ namespace skyplan.Systems {
 
 		private string ShapeToJSON(Shape s, bool baseline = false) {
 			var sb = new StringBuilder();
-			sb.Append($"{{\"id\":\"{s.id}\",\"layer\":\"{s.layer}\"");
-
-			if (s.layer?.Style != null) {
-				foreach (KeyValuePair<string, string> x in s.layer.Style) {
-					string key = Regex.Replace(x.Key, "([A-Z])", "-$1").ToLower();
-					sb.Append($",\"{key}\":\"{x.Value}\"");
-				}
-			} else {
-				sb.Append(",\"stroke\":\"#ffffff\",\"stroke-width\":\"2\"");
-			}
+			sb.Append($"{{\"id\":\"{s.id}\",\"layer\":\"{s.layer?.Id ?? ""}\"");
+			if (s.layer != null)
+				sb.Append($",\"layerDef\":{JsonConvert.SerializeObject(s.layer)}");
 			switch (s.type) {
-				case "line":
+				case "path":
 					if (s.pts.Count < 2) return null;
-					sb.Append(CreateLineString(s.pts[0], s.pts[1]));
+					sb.Append(CreatePath(s.pts[0], s.pts[1]));
+					break;
+
+				case "point":
+					if (s.pts.Count < 1) return null;
+					sb.Append(CreatePoint(s));
 					break;
 
 				case "polygon":
 					if (s.pts.Count < 2) return null;
 					sb.Append(CreatePolygon(s.pts));
 					// if (s.pts.Count == 2) {
-					//   sb.Append(CreateLineString(s.pts[0], s.pts[1]));
+					//   sb.Append(CreatePath(s.pts[0], s.pts[1]));
 					//   break;
 					// }
 					// // todo it needs to preview with for or while update the shape needs to be snapped to the last line
@@ -406,14 +417,15 @@ namespace skyplan.Systems {
 
 		Vector2 Proj(Vector3 w) =>
 		   m_Camera.WorldToSVG(w);
-		private string CreateLineString(Vector3 pointa, Vector3 pointb){
-			StringBuilder sb = new();
+		private string CreatePoint(Shape s) {
+			Vector2 p = Proj(s.pts[0]);
+			return $",\"tag\":\"circle\",\"cx\":\"{F(p.x)}\",\"cy\":\"{F(p.y)}\",\"r\":\"6\"";
+		}
+
+		private string CreatePath(Vector3 pointa, Vector3 pointb){
 			Vector2 p0 = Proj(pointa);
 			Vector2 p1 = Proj(pointb);
-			sb.Append(",\"tag\":\"line\"");
-			sb.Append($",\"x1\":\"{F(p0.x)}\",\"y1\":\"{F(p0.y)}\"");
-			sb.Append($",\"x2\":\"{F(p1.x)}\",\"y2\":\"{F(p1.y)}\"");
-			return sb.ToString();
+			return $",\"tag\":\"path\",\"d\":\"M {F(p0.x)} {F(p0.y)} L {F(p1.x)} {F(p1.y)}\"";
 		}
 
 		private string CreatePolygon(List<Vector3> points){
@@ -422,7 +434,7 @@ namespace skyplan.Systems {
 		  }
 		  // invalid polygon
 		  if (points.Count == 2) {
-			return CreateLineString(points[0], points[1]);
+			return CreatePath(points[0], points[1]);
 		  }
 		  StringBuilder sb = new();
 		  Vector2 startingPoint = Proj(points[0]);

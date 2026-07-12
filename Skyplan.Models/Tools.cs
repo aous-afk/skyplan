@@ -1,6 +1,6 @@
 namespace Skyplan.Models {
   public enum Tools {
-	line,
+	path,
 	polygon,
 	point,
 	erase,

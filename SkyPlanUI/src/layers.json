@@ -2,17 +2,74 @@
   "version": "0.0.1.5928701.beta",
   "layers": [
     {
+      "id": "train",
+      "label": "Train",
+      "allowedTools": [
+        "path"
+      ],
+      "style": {
+        "stroke": "#333333",
+        "stroke-width": 5,
+        "stroke-dasharray": "14 5",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+        "fill-opacity": "0"
+      }
+    },
+    {
+      "id": "subway",
+      "label": "Subway",
+      "allowedTools": [
+        "path"
+      ],
+      "style": {
+        "stroke": "#5533ff",
+        "stroke-width": 4,
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+        "fill-opacity": "0"
+      }
+    },
+    {
+      "id": "tram",
+      "label": "Tram",
+      "allowedTools": [
+        "path"
+      ],
+      "style": {
+        "stroke": "#00cc77",
+        "stroke-width": 3,
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+        "fill-opacity": "0"
+      }
+    },
+    {
+      "id": "bus",
+      "label": "Bus",
+      "allowedTools": [
+        "path"
+      ],
+      "style": {
+        "stroke": "#ff6633",
+        "stroke-width": 2,
+        "stroke-dasharray": "8 4",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+        "fill-opacity": "0"
+      }
+    },
+    {
       "id": "highway",
       "label": "Highway",
       "allowedTools": [
-        "line"
+        "path"
       ],
       "style": {
         "stroke": "#ff4444",
-        "strokeWidth": 6,
-        "strokeDasharray": "none",
-        "strokeLinecap": "round",
-        "strokeLinejoin": "round",
+        "stroke-width": 6,
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
         "fill-opacity": "0.5"
       }
     },
@@ -20,14 +77,13 @@
       "id": "arterial",
       "label": "Arterial",
       "allowedTools": [
-        "line"
+        "path"
       ],
       "style": {
         "stroke": "#ff8800",
-        "strokeWidth": 4,
-        "strokeDasharray": "none",
-        "strokeLinecap": "round",
-        "strokeLinejoin": "round",
+        "stroke-width": 4,
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
         "fill-opacity": "0.5"
       }
     },
@@ -35,14 +91,13 @@
       "id": "collector",
       "label": "Collector",
       "allowedTools": [
-        "line"
+        "path"
       ],
       "style": {
         "stroke": "#ffcc00",
-        "strokeWidth": 3,
-        "strokeDasharray": "none",
-        "strokeLinecap": "round",
-        "strokeLinejoin": "round",
+        "stroke-width": 3,
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
         "fill-opacity": "0.5"
       }
     },
@@ -50,14 +105,13 @@
       "id": "local",
       "label": "Local",
       "allowedTools": [
-        "line"
+        "path"
       ],
       "style": {
         "stroke": "#ffffff",
-        "strokeWidth": 2,
-        "strokeDasharray": "none",
-        "strokeLinecap": "round",
-        "strokeLinejoin": "round",
+        "stroke-width": 2,
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
         "fill-opacity": "0.5"
       }
     },
@@ -69,7 +123,7 @@
       ],
       "style": {
         "stroke": "#44cc88",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#44cc88",
         "fill-opacity": "0.5"
       }
@@ -82,7 +136,7 @@
       ],
       "style": {
         "stroke": "#4488ff",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#4488ff",
         "fill-opacity": "0.5"
       }
@@ -95,7 +149,7 @@
       ],
       "style": {
         "stroke": "#ffaa22",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#ffaa22",
         "fill-opacity": "0.5"
       }
@@ -108,7 +162,7 @@
       ],
       "style": {
         "stroke": "#cc88ff",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#cc88ff",
         "fill-opacity": "0.5"
       }
@@ -121,7 +175,7 @@
       ],
       "style": {
         "stroke": "#ff4488",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#ff4488",
         "fill-opacity": "0.5"
       }
@@ -134,7 +188,7 @@
       ],
       "style": {
         "stroke": "#44ddff",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#44ddff",
         "fill-opacity": "0.5"
       }
@@ -147,7 +201,7 @@
       ],
       "style": {
         "stroke": "#3366ff",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#3366ff",
         "fill-opacity": "0.5"
       }
@@ -160,7 +214,7 @@
       ],
       "style": {
         "stroke": "#ff6622",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#ff6622",
         "fill-opacity": "0.5"
       }
@@ -173,7 +227,7 @@
       ],
       "style": {
         "stroke": "#33bb55",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#33bb55",
         "fill-opacity": "0.5"
       }
@@ -186,7 +240,7 @@
       ],
       "style": {
         "stroke": "#ffdd00",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#ffdd00",
         "fill-opacity": "0.5"
       }
@@ -199,7 +253,7 @@
       ],
       "style": {
         "stroke": "#996633",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#996633",
         "fill-opacity": "0.5"
       }
@@ -212,7 +266,7 @@
       ],
       "style": {
         "stroke": "#cc44ff",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#cc44ff",
         "fill-opacity": "0.5"
       }
@@ -225,9 +279,45 @@
       ],
       "style": {
         "stroke": "#66cccc",
-        "strokeWidth": 2,
+        "stroke-width": 2,
         "fill": "#66cccc",
         "fill-opacity": "0.5"
+      }
+    },
+    {
+      "id": "poi",
+      "label": "Point of Interest",
+      "allowedTools": [
+        "point"
+      ],
+      "style": {
+        "fill": "#ffcc00",
+        "stroke": "#ffcc00",
+        "stroke-width": 1
+      }
+    },
+    {
+      "id": "landmark",
+      "label": "Landmark",
+      "allowedTools": [
+        "point"
+      ],
+      "style": {
+        "fill": "#ff4488",
+        "stroke": "#ff4488",
+        "stroke-width": 1
+      }
+    },
+    {
+      "id": "tree",
+      "label": "Tree",
+      "allowedTools": [
+        "point"
+      ],
+      "style": {
+        "fill": "#33bb55",
+        "stroke": "#33bb55",
+        "stroke-width": 1
       }
     }
   ]
