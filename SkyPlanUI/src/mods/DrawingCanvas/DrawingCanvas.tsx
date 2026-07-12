@@ -195,9 +195,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 
 	return (
 		<svg
-			style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'visible' }}
-			width={svgSize.w} height={svgSize.h}
-			viewBox={`0 0 ${svgSize.w} ${svgSize.h}`}
+			style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'hidden' }}
+			width={svgSize.w} height={svgSize.h - 54}
+			viewBox={`0 0 ${svgSize.w} ${svgSize.h - 54}`}
 		>
 			<defs>
 				<style>{layerCSS}</style>
