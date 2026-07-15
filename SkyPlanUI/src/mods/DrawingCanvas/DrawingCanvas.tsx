@@ -39,8 +39,10 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 	switch (s.tag) {
 		case 'path':
 			return <path key={s.id} className={cn} {...attrs} style={style} />;
-		case 'polygon': return <polygon key={s.id} className={cn} {...attrs} style={style} />;
-		case 'circle':  return <circle  key={s.id} className={cn} {...attrs} style={style} />;
+		case 'polygon':
+			return <polygon key={s.id} className={cn} {...attrs} style={style} />;
+		case 'circle':
+			return <circle key={s.id} className={cn} {...attrs} style={style} />;
 		default: return null;
 	}
 }
@@ -193,11 +195,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 	const hasHighlight = highlightId !== null;
 	const layerCSS = buildLayerCSS(shapes, preview);
 
+	if (shapes.length === 0 && !preview) return null;
+
 	return (
 		<svg
+			key={shapes.length}
 			style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'hidden' }}
-			width={svgSize.w} height={svgSize.h - 54}
-			viewBox={`0 0 ${svgSize.w} ${svgSize.h - 54}`}
+			width={svgSize.w} height={svgSize.h * 0.93}
+			viewBox={`0 0 ${svgSize.w} ${svgSize.h * 0.93}`}
 		>
 			<defs>
 				<style>{layerCSS}</style>
