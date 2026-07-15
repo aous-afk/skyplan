@@ -15,7 +15,7 @@ using Colossal.PSI.Environment;
 
 namespace skyplan.Systems {
 
-	internal enum OpType { Draw, Delete, ClearLayer }
+	internal enum OpType { Draw, Delete, ClearLayer, ClearAll }
 
 	internal class Op {
 		public OpType type;
@@ -112,6 +112,7 @@ namespace skyplan.Systems {
 			AddBinding(new TriggerBinding<string>("skyplan", "setLayer", json => m_CurrentLayer = JsonConvert.DeserializeObject<LayerDefDto>(json)));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "clearLayer", HandleClearLayer));
+			AddBinding(new TriggerBinding<string>("skyplan", "clearAll", _ => HandleClearAll()));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "undo", _ => HandleUndo()));
 
@@ -314,6 +315,15 @@ namespace skyplan.Systems {
 			m_PreviewBinding.Update("");
 		}
 
+		private void HandleClearAll() {
+			if (m_Shapes.Count == 0) return;
+			m_UndoStack.Add(new Op { type = OpType.ClearAll, cleared = [.. m_Shapes] });
+			m_Shapes.Clear();
+			m_ActiveShape = null;
+			if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
+			m_PreviewBinding.Update("");
+		}
+
 		private void HandleClearLayer(string layer) {
 			var removed = m_Shapes.FindAll(s => s.layer?.Id == layer);
 			if (removed.Count > 0)
@@ -327,12 +337,13 @@ namespace skyplan.Systems {
 
 		private void HandleUndo() {
 			if (m_UndoStack.Count == 0) return;
-			Op op = m_UndoStack[m_UndoStack.Count - 1];
+			Op op = m_UndoStack[^1];
 			m_UndoStack.RemoveAt(m_UndoStack.Count - 1);
 			switch (op.type) {
 				case OpType.Draw: m_Shapes.Remove(op.shape); break;
 				case OpType.Delete: m_Shapes.Add(op.shape); break;
-				case OpType.ClearLayer: m_Shapes.AddRange(op.cleared); break;
+				case OpType.ClearLayer:
+				case OpType.ClearAll: m_Shapes.AddRange(op.cleared); break;
 			}
 			if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
 		}

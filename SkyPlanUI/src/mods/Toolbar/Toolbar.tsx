@@ -15,10 +15,11 @@ interface ToolbarProps {
 	onLayerChange: (l: LayerDef) => void;
 	onUndo: () => void;
 	onClear: () => void;
+	onClearAll: () => void;
 	onClose: () => void;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onToolChange, onLayerChange, onUndo, onClear, onClose }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onToolChange, onLayerChange, onUndo, onClear, onClearAll, onClose }) => {
 	const toolbarEl = useRef<HTMLDivElement>(null);
 	const tbDownRef = useRef(false);
 	const tbDownPosRef = useRef({ x: 0, y: 0 });
@@ -87,6 +88,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onTo
 					<FontAwesomeIcon icon={faArrowLeft} className={styles.svg} />
 				</button>
 				<button onClick={onClear} className={styles.btn_base} style={{ color: '#ff7070' }}>Clear</button>
+				<button onClick={onClearAll} className={styles.btn_base} style={{ color: '#ff4444' }}>Clear All</button>
 			</div>
 
 			<div className={styles.body}>

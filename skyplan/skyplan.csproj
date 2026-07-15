@@ -110,4 +110,7 @@
 			SkipUnchangedFiles="true" />
 	</Target>
 
+	<PropertyGroup>
+	  <LangVersion>12.0</LangVersion>
+	</PropertyGroup>
 </Project>

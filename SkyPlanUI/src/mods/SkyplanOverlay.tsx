@@ -91,6 +91,10 @@ const SkyplanOverlay: React.FC = () => {
 		trigger('skyplan', 'clearLayer', activeLayer.id);
 	}, [activeLayer]);
 
+	const handleClearAll = useCallback(() => {
+		trigger('skyplan', 'clearAll', '');
+	}, []);
+
 	const handleClose = useCallback(() => {
 		trigger('skyplan', 'panelClosed', '');
 	}, []);
@@ -115,6 +119,7 @@ const SkyplanOverlay: React.FC = () => {
 				onLayerChange={handleLayer}
 				onUndo={HandleUndo}
 				onClear={handleClear}
+				onClearAll={handleClearAll}
 				onClose={handleClose}
 			/>
 			</div>

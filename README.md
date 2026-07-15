@@ -24,7 +24,7 @@ Import and Export the SVGs
 
 - Draw tools: line, polygon, point
 - Erase tool with hover highlight
-- 17 built-in layers across Roads, Zones, and Public Services — fully customisable via `layers.json`
+- **24 built-in layers** across Transit, Roads, Zones, Public Services, and Points of Interest — fully customisable via `layers.json`
 - Draggable toolbar
 - World-space coordinates — shapes stay aligned as the camera pans and zooms
 - Undo stack (Ctrl+Z)
