@@ -5,8 +5,8 @@
 	
 		<!--The file where mod information which is required for publishing mod on PDX mods are stored-->
 		<PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
-		<Version>0.0.1-alpha.1</Version>
-		 <InformationalVersion>0.0.1.677b897.alpha</InformationalVersion>
+		<Version>0.0.2-beta</Version>
+		 <InformationalVersion>0.0.2-beta</InformationalVersion>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 	</PropertyGroup>
 	
