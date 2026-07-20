@@ -2,7 +2,7 @@
 	<!--Id must be set in order to update existed mod. it is not required for publishing mod for the first time-->
 	<ModId Value="" />
 	<!--Name of the mod to display to players-->
-	<DisplayName Value="skyplan" />
+	<DisplayName Value="Skyplan [BETA]" />
 	<!--Short description of the mod-->
 	<ShortDescription Value="In-game SVG drawing overlay for road, zone, and transit planning before you build." />
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
@@ -12,15 +12,19 @@
 Tracing paper over your city — inside CS2.
 
 Open the overlay with **Alt+P** (rebindable), sketch out your road network, zoning, and transit lines on top of the live map, then build with confidence.
-Left-Click to start drawing Right-Click to end the drawing. for lines means left-click will end the drawing and start a new line from the end of the previous line. For Polygon means Left-click will add point and right click will end the drawing and close the Polygon.
+
+Left-Click to start drawing, Right-Click to end the drawing. For lines, left-click starts a new segment from the end of the previous one. For polygons, left-click adds a point and right-click closes the shape.
 
 ### Disclaimer
 
 This is a rough beta version, a lot of the feedback that i got on reddit is not yet implemented. even the Thumbnail is under development.
+
 There is no auto-save nor auto load. please export the plans before closing the game.
 
 The second beta version (milestone) will include:
-v0.1.0 — Drawing Polish
+
+v0.1.0: Drawing Polish
+
 Make the drawing experience smoother and the overlay easier to use while building.
 - Per-layer opacity control
 - Global overlay opacity slider
@@ -55,25 +59,29 @@ Make the drawing experience smoother and the overlay easier to use while buildin
 Load a city, press **Alt+P**, draw.
 	</LongDescription>
 	<Thumbnail Value="Properties/Thumbnail.png" />
+	<Screenshot Value="Properties/screenshots/cover.png" />
 	<Screenshot Value="Properties/screenshots/line_tool.png" />
 	<Screenshot Value="Properties/screenshots/polygon_tool.png" />
 	<Screenshot Value="Properties/screenshots/settings_1.png" />
 	<!--Tag, can be set multiple times-->
-	<Tag Value="codemode" />
+	<Tag Value="Code Mod" />
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="" />
 	<!--Version of the mod-->
 	<ModVersion Value="0.0.2-beta" />
 	<!--Recommended version of the base game to use the mod-->
-	<GameVersion Value="1.0.*" />
+	<GameVersion Value="1.6.*" />
 	<!--Dependency for the mod, can be set multiple times-->
 	<Dependency Id="" />
 	<!--Required DLC, can be set multiple times. Supported values are "Landmark Buildings", "San Fransisco Set", "Beach Properties", "Urban Promenades", "Modern Architecture"-->
 	<RequiredDLC Value="" />
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-	<ChangeLog Value="" />
-	<!--<ChangeLog>
-	</ChangeLog>-->
+	<ChangeLog>
+## 0.0.2-beta
+- Fixed: last shape stays visible after clearing all drawings
+- Fixed: keybinding conflict — default key changed from P to Alt+P
+- Added: Clear All button (clears all layers at once, undoable with Ctrl+Z)
+	</ChangeLog>
 	<!--External link, can be set multiple times. supported types are "discord", "github", "youtube", "twitch", "x", "paypal", "patreon", "buymeacoffee", "kofi", "crowdin", "gitlab", "gofundme"-->
 	<ExternalLink Type="github" Url="https://github.com/aous-afk/skyplan" />
 	<!--Supported values Public, Private, Unlisted-->
