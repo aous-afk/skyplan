@@ -131,6 +131,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		};
 
 		const mm = (e: MouseEvent) => {
+			if (e.buttons & 2) return; // right-drag = camera pan, let it through
 			if (onMove(e.clientX, e.clientY, 'mouse')) {
 				e.stopImmediatePropagation();
 				e.preventDefault();
@@ -151,6 +152,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			}
 		};
 		const pm = (e: PointerEvent) => {
+			if (e.buttons & 2) return; // right-drag = camera pan, let it through
 			if (onMove(e.clientX, e.clientY, 'pointer')) {
 				e.stopImmediatePropagation();
 				e.preventDefault();
