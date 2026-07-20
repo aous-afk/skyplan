@@ -4,24 +4,66 @@
 	<!--Name of the mod to display to players-->
 	<DisplayName Value="skyplan" />
 	<!--Short description of the mod-->
-	<ShortDescription Value="This is a short description" />
+	<ShortDescription Value="In-game SVG drawing overlay for road, zone, and transit planning before you build." />
 	<!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
-	<!--LongDescription Value="This is a long description" /-->
 	<LongDescription>
-This is a long description
+## Skyplan
+
+Tracing paper over your city — inside CS2.
+
+Open the overlay with **Alt+P** (rebindable), sketch out your road network, zoning, and transit lines on top of the live map, then build with confidence.
+Left-Click to start drawing Right-Click to end the drawing. for lines means left-click will end the drawing and start a new line from the end of the previous line. For Polygon means Left-click will add point and right click will end the drawing and close the Polygon.
+
+### Disclaimer
+
+This is a rough beta version, a lot of the feedback that i got on reddit is not yet implemented. even the Thumbnail is under development.
+There is no auto-save nor auto load. please export the plans before closing the game.
+
+The second beta version (milestone) will include:
+v0.1.0 — Drawing Polish
+Make the drawing experience smoother and the overlay easier to use while building.
+- Per-layer opacity control
+- Global overlay opacity slider
+- Layer visibility toggle
+- Redo support
+- Fuzzy search for layers in the toolbar
+
+
+### Features
+- Line, polygon, and point drawing tools: plan roads, mark zones, drop points of interest
+- 24 built-in layers: Transit (Train, Subway, Tram, Bus), Roads (Highway to Local), Zones (Residential, Commercial, Industrial, Office), Public Services, and Points of Interest — each with its own colour and style
+- Fully customisable layers: edit `layers.json` to add, remove, or restyle any layer. Changes hot-swap without a game restart
+- World-space coordinates: shapes stay pinned to the map as you pan and zoom
+- SVG export and import: save your plans as standard SVG files, open them in Inkscape, share them, or import them back later
+- Erase tool: with hover highlight
+- Undo: (Ctrl+Z)
+- Draggable toolbar
+
+## Known Issues
+- changing the styles in `layer.json` while already having shapes in the current session wont hot reload. it needs clear-all for the new style to take effect.
+
+## Limitations
+- No redo, only undo (Ctrl+Z) is supported.
+- No snapping, lines do not snap to roads, the grid, or other shapes.
+- Each line is a separate two-point segment, continuous polylines are planned but not yet implemented.
+- No layer visibility toggle, individual layers cannot be hidden without clearing them.
+- No labeling: there is no way to label the shapes and write custom text. Planned
+
+
+### Usage
+
+Load a city, press **Alt+P**, draw.
 	</LongDescription>
-	<!--Thumbnail-->
 	<Thumbnail Value="Properties/Thumbnail.png" />
-	<!--Screenshot, can be set multiple times-->
 	<Screenshot Value="Properties/screenshots/line_tool.png" />
 	<Screenshot Value="Properties/screenshots/polygon_tool.png" />
 	<Screenshot Value="Properties/screenshots/settings_1.png" />
 	<!--Tag, can be set multiple times-->
-	<Tag Value="" />
+	<Tag Value="codemode" />
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.0.1.5d6d7cf-alpha.1" />
+	<ModVersion Value="0.0.2-beta" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.0.*" />
 	<!--Dependency for the mod, can be set multiple times-->
@@ -35,5 +77,5 @@ This is a long description
 	<!--External link, can be set multiple times. supported types are "discord", "github", "youtube", "twitch", "x", "paypal", "patreon", "buymeacoffee", "kofi", "crowdin", "gitlab", "gofundme"-->
 	<ExternalLink Type="github" Url="https://github.com/aous-afk/skyplan" />
 	<!--Supported values Public, Private, Unlisted-->
-	<AccessLevel Value="Public" />
+	<AccessLevel Value="Private" />
 </Publish>

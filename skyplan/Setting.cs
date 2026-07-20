@@ -130,7 +130,7 @@ namespace skyplan {
 			// System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
 			// System.Diagnostics.FileVersionInfo fvi = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location);
 			// string version = fvi.FileVersion;
-			return $"VersionInfo = {VersionInfo.Version}";
+			return VersionInfo.Version;
 		}
 
 		public override void SetDefaults() {
