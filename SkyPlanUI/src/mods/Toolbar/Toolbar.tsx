@@ -109,10 +109,14 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onTo
 				</div>
 
 				<div className={styles.layers_panel}>
-					<div className={styles.search_bar}>
+
+					{ /*
+					  <div className={styles.search_bar}>
 						<span className={styles.search_icon}>⌕</span>
 						<span className={styles.search_placeholder}>Search layers...</span>
 					</div>
+				*/	}
+
 					<div className={styles.layers_grid}>
 						{layers.map(l => {
 							const active = activeLayer?.id === l.id;

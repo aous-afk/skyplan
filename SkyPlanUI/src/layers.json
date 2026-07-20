@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1.5b327bb.beta",
+  "version": "0.0.2-beta",
   "layers": [
     {
       "id": "train",
@@ -13,7 +13,7 @@
         "stroke-dasharray": "14 5",
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
-        "fill-opacity": "0"
+        "stroke-opacity": "0.8"
       }
     },
     {
@@ -27,7 +27,7 @@
         "stroke-width": 4,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
-        "fill-opacity": "0"
+        "stroke-opacity": "0.8"
       }
     },
     {
@@ -41,7 +41,7 @@
         "stroke-width": 3,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
-        "fill-opacity": "0"
+        "stroke-opacity": "0.8"
       }
     },
     {
@@ -56,7 +56,7 @@
         "stroke-dasharray": "8 4",
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
-        "fill-opacity": "0"
+        "stroke-opacity": "0.8"
       }
     },
     {
@@ -70,7 +70,7 @@
         "stroke-width": 6,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
-        "fill-opacity": "0.5"
+        "stroke-opacity": "0.8"
       }
     },
     {
@@ -84,7 +84,7 @@
         "stroke-width": 4,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
-        "fill-opacity": "0.5"
+        "stroke-opacity": "0.8"
       }
     },
     {
@@ -98,7 +98,7 @@
         "stroke-width": 3,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
-        "fill-opacity": "0.5"
+        "stroke-opacity": "0.8"
       }
     },
     {
@@ -112,7 +112,7 @@
         "stroke-width": 2,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
-        "fill-opacity": "0.5"
+        "stroke-opacity": "0.8"
       }
     },
     {

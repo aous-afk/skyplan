@@ -108,7 +108,7 @@ namespace skyplan {
 			}
 		}
 
-		[SettingsUIKeyboardBinding(BindingKeyboard.P, Mod.kToggleActionName)]
+		[SettingsUIKeyboardBinding(BindingKeyboard.P, Mod.kToggleActionName, alt: true)]
 		[SettingsUISection(kSection, kKeybindingGroup)]
 		public ProxyBinding ToggleBinding { get; set; }
 
