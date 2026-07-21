@@ -9,8 +9,10 @@ namespace skyplan.Systems {
 	public partial class CameraSystem : GameSystemBase, ICameraSystem {
 
 		#region Core
-		private Matrix4x4 m_LastMatrix;
 		private bool m_HasBaseline;
+		private Vector3 m_LastPos;
+		private Quaternion m_LastRot;
+		private float m_LastFov;
 		private TerrainSystem m_TerrainSystem;
 
 		public bool IsReady => m_HasBaseline && GetCamera() != null;
@@ -26,16 +28,21 @@ namespace skyplan.Systems {
 			if (!m_HasBaseline) return false;
 			Camera cam = GetCamera();
 			if (cam == null) return false;
-			bool same = cam.worldToCameraMatrix == m_LastMatrix;
-			if (!same) m_LastMatrix = cam.worldToCameraMatrix;
+			Vector3 pos = cam.transform.position;
+			Quaternion rot = cam.transform.rotation;
+			float fov = cam.fieldOfView;
+			bool same = pos == m_LastPos && rot == m_LastRot && fov == m_LastFov;
+			if (!same) { m_LastPos = pos; m_LastRot = rot; m_LastFov = fov; }
 			return !same;
 		}
 
 		public Vector2 WorldToSVG(Vector3 world) {
 			Camera cam = GetCamera();
 			if (cam == null) return Vector2.zero;
-			Vector3 s = cam.WorldToScreenPoint(world);
-			return new Vector2(s.x, cam.pixelHeight - s.y);
+			// worldToCameraMatrix is stale in CS2 (set once, never updated);
+			// derive the view matrix from the live transform instead.
+			Matrix4x4 w2c = Matrix4x4.Scale(new Vector3(1, 1, -1)) * cam.transform.worldToLocalMatrix;
+			return ProjectWithMatrices(world, w2c, cam.projectionMatrix, cam.pixelWidth, cam.pixelHeight);
 		}
 
 		public bool ScreenToWorld(float sx, float sy, out Vector3 world) {
@@ -86,15 +93,17 @@ namespace skyplan.Systems {
 		public void SetBaseline() {
 			Camera cam = GetCamera();
 			if (cam == null) return;
-			m_LastMatrix = cam.worldToCameraMatrix;
-			m_BaselineWorldToCamera = cam.worldToCameraMatrix;
+			m_LastPos = cam.transform.position;
+			m_LastRot = cam.transform.rotation;
+			m_LastFov = cam.fieldOfView;
+			m_BaselineWorldToCamera = Matrix4x4.Scale(new Vector3(1, 1, -1)) * cam.transform.worldToLocalMatrix;
 			m_BaselineProjection = cam.projectionMatrix;
 			m_BaselinePixelW = cam.pixelWidth;
 			m_BaselinePixelH = cam.pixelHeight;
 			for (int i = 0; i < k_Anchors.Length; i++)
 				m_BaselineAnchors[i] = ProjectWithMatrices(k_Anchors[i], m_BaselineWorldToCamera, m_BaselineProjection, m_BaselinePixelW, m_BaselinePixelH);
 			m_HasBaseline = true;
-			Mod.log.Info($"CameraSystem.SetBaseline: cam={cam.name} px={cam.pixelWidth}x{cam.pixelHeight}");
+			Mod.log.Info($"CameraSystem.SetBaseline: cam={cam.name} pos={cam.transform.position} px={cam.pixelWidth}x{cam.pixelHeight}");
 		}
 
 		public Vector2 WorldToSVGBaseline(Vector3 world) {
