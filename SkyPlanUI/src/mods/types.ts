@@ -24,10 +24,12 @@ export interface ShapeLayerDef {
 
 export interface ShapeData {
 	id: string;
-	tag: 'path' | 'polygon' | 'circle' | 'ellipse' | 'rect';
-	layer: string;
+	tag: Tag;
+	layerId: string;
 	layerDef?: ShapeLayerDef;
-	[key: string]: string | ShapeLayerDef | undefined;
+	pts: { x: number; y: number }[];
+	inFrame: boolean;
+	label?: string;
 }
 
 export interface LayerDef {
@@ -35,4 +37,11 @@ export interface LayerDef {
 	label: string;
 	allowedTools: ToolId[];
 	style: Record<string, string | number>;
+}
+
+export enum Tag {
+  none = 'none',
+  path = 'path',
+  polygon = 'polygon',
+  circle = 'circle',
 }

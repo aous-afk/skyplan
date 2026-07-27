@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { trigger } from 'cs2/api';
-import { ToolId, ShapeData } from '../types';
+import { ToolId, ShapeData, Tag } from '../types';
 
 interface DrawingCanvasTransformProps {
 	activeTool: ToolId;
@@ -15,17 +15,17 @@ const SKIP = new Set(['id', 'tag', 'layer', 'layerDef']);
 
 function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null {
 	const attrs: Record<string, string> = {};
-	for (const k of Object.keys(s)) {
-		if (!SKIP.has(k)) attrs[k] = s[k] as string;
-	}
+	// for (const k of Object.keys(s)) {
+	// 	if (!SKIP.has(k)) attrs[k] = s[k] as string;
+	// }
 	if (opacity !== undefined) attrs.opacity = opacity;
 
 	switch (s.tag) {
-		case 'path':    return <path    key={s.id} {...attrs} />;
-		case 'polygon': return <polygon key={s.id} {...attrs} />;
-		// case 'path':    return <path    key={s.id} {...attrs} />;
-		case 'ellipse': return <ellipse key={s.id} {...attrs} />;
-		case 'rect':    return <rect    key={s.id} {...attrs} />;
+		case Tag.path:    return <path    key={s.id} {...attrs} />;
+		// case 'polygon': return <polygon key={s.id} {...attrs} />;
+		// // case 'path':    return <path    key={s.id} {...attrs} />;
+		// case 'ellipse': return <ellipse key={s.id} {...attrs} />;
+		// case 'rect':    return <rect    key={s.id} {...attrs} />;
 		default:        return null;
 	}
 }

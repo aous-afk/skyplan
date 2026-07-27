@@ -1,6 +1,7 @@
 import React, {useEffect, useRef} from 'react';
 import {trigger} from 'cs2/api';
-import {ToolId, ShapeData} from '../types';
+import {ToolId, ShapeData, Tag} from '../types';
+import {buildPath, buildPolygon} from 'mods/utils/buildSvg';
 
 interface DrawingCanvasProps {
 	activeTool: ToolId;
@@ -11,39 +12,44 @@ interface DrawingCanvasProps {
 	svgSize: { w: number; h: number };
 }
 
-const SKIP = new Set(['id', 'tag', 'layer', 'layerDef']);
-
 function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null): string {
 	const seen = new Set<string>();
 	const rules: string[] = [];
 	const all = preview ? [...shapes, preview] : shapes;
 	for (const s of all) {
-		if (!s.layerDef?.style || seen.has(s.layer)) continue;
-		seen.add(s.layer);
+		if (!s.layerDef?.style || seen.has(s.layerDef.id)) continue;
+		seen.add(s.layerDef.id);
 		const decls = Object.entries(s.layerDef.style)
 			.map(([k, v]) => `${k}:${v}`)
 			.join(';');
-		rules.push(`.sp-${s.layer}{${decls}}`);
+		rules.push(`.sp-${s.layerDef.id}{${decls}}`);
 	}
 	return rules.join('');
 }
 
 function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null {
-	const attrs: Record<string, string> = {};
-	for (const k of Object.keys(s)) {
-		if (!SKIP.has(k)) attrs[k] = s[k] as string;
-	}
-	const style: Record<string, string> = {};
-	if (opacity !== undefined) style.opacity = opacity;
-	const cn = `sp-${s.layer}`;
+	const cn = `sp-${s.layerDef?.id ?? ''}`;
+	const style = opacity !== undefined ? { opacity } : undefined;
 
 	switch (s.tag) {
-		case 'path':
-			return <path key={s.id} className={cn} {...attrs} style={style} />;
-		case 'polygon':
-			return <polygon key={s.id} className={cn} {...attrs} style={style} />;
-		case 'circle':
-			return <circle key={s.id} className={cn} {...attrs} style={style} />;
+		case Tag.path: {
+			const d = buildPath(s.pts);
+			if (!d) return null;
+			return <path key={s.id} className={cn} d={d} style={style} />;
+		}
+		case Tag.polygon: {
+			if (s.pts.length < 3) {
+				const d = buildPath(s.pts);
+				if (!d) return null;
+				return <path key={s.id} className={cn} d={d} style={style} />;
+			}
+			const points = buildPolygon(s.pts);
+			return <polygon key={s.id} className={cn} points={points} style={style} />;
+		}
+		case Tag.circle: {
+			const p = s.pts[0];
+			return <circle key={s.id} className={cn} cx={p.x} cy={p.y} r={6} style={style} />;
+		}
 		default: return null;
 	}
 }
