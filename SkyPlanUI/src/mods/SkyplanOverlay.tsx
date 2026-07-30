@@ -13,31 +13,32 @@ const SkyplanOverlay: React.FC = () => {
 	const layersConfigJson = useValue(layersConfig$);
 
 	const shapes = useMemo<ShapeData[]>(() => {
-	  try {
-		return JSON.parse(shapesJson) ?? [];
-	  }
-	  catch {
-		return [];
-	  }
+		try {
+			return JSON.parse(shapesJson) ?? [];
+		}
+		catch {
+			return [];
+		}
 	}, [shapesJson]);
 
 	const preview = useMemo<ShapeData | null>(() => {
-	  try {
-		return previewJson ? JSON.parse(previewJson) : null;
-	  }
-	  catch {
-		return null;
-	  }
+		try {
+			return previewJson ? JSON.parse(previewJson) : null;
+		}
+		catch {
+			return null;
+		}
 	}, [previewJson]);
 
 	const highlightId = highlightRaw || null;
 
 	const layerConfig = useMemo<{ layers: LayerDef[] }>(() => {
-	  try {
-		return JSON.parse(layersConfigJson);
-	  }
-	  catch {
-		return { layers: [] }; }
+		try {
+			return JSON.parse(layersConfigJson);
+		}
+		catch {
+			return { layers: [] };
+		}
 	}, [layersConfigJson]);
 
 	const [activeTool, setActiveTool] = useState<ToolId>('path');
@@ -45,6 +46,8 @@ const SkyplanOverlay: React.FC = () => {
 	const [svgSize, setSvgSize] = useState({ w: 1920, h: 1080 });
 
 	const visibleLayers = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
+
+	const [viewMode, setViewMode] = useState(false);
 
 	useEffect(() => {
 		const onResize = () => setSvgSize({ w: window.innerWidth || 1920, h: window.innerHeight || 1080 });
@@ -101,38 +104,43 @@ const SkyplanOverlay: React.FC = () => {
 
 	const HandleUndo = useCallback(() => {
 		trigger('skyplan', 'undo', '');
-	}, [])
+	}, []);
 
+	const handleViewModeToggle = useCallback(() => {
+		setViewMode(v => !v);
+	}, []);
 
 	if (!visible) return null;
 
 	return (
-	  <div>
-		<div data-skyplan-ui
-		style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9000, pointerEvents: 'none' }}>
+		<div>
+			<div data-skyplan-ui
+				style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9000, pointerEvents: 'none' }}>
+				<Toolbar
+					activeTool={activeTool}
+					activeLayer={activeLayer ?? visibleLayers[0]}
+					layers={visibleLayers}
+					viewMode={viewMode}
+					onViewModeToggle={handleViewModeToggle}
+					onToolChange={handleTool}
+					onLayerChange={handleLayer}
+					onUndo={HandleUndo}
+					onClear={handleClear}
+					onClearAll={handleClearAll}
+					onClose={handleClose}
+				/>
+				<div className="drawing-canvas">
+					<DrawingCanvas
+						activeTool={activeTool}
+						viewMode={viewMode}
+						shapes={shapes}
+						preview={preview}
+						highlightId={highlightId}
+						svgSize={svgSize}
+					/>
 
-			<Toolbar
-				activeTool={activeTool}
-				activeLayer={activeLayer ?? visibleLayers[0]}
-				layers={visibleLayers}
-				onToolChange={handleTool}
-				onLayerChange={handleLayer}
-				onUndo={HandleUndo}
-				onClear={handleClear}
-				onClearAll={handleClearAll}
-				onClose={handleClose}
-			/>
+				</div>
 			</div>
-			<div className="drawing-canvas">
-			<DrawingCanvas
-				activeTool={activeTool}
-				shapes={shapes}
-				preview={preview}
-				highlightId={highlightId}
-				svgSize={svgSize}
-			/>
-
-		</div>
 		</div>
 	);
 };

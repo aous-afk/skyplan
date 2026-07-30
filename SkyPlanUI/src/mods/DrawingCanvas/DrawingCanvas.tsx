@@ -4,6 +4,7 @@ import {ToolId, ShapeData} from '../types';
 
 interface DrawingCanvasProps {
 	activeTool: ToolId;
+	viewMode: boolean ;
 	shapes: ShapeData[];
 	preview: ShapeData | null;
 	highlightId: string | null;
@@ -47,18 +48,24 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 	}
 }
 
-const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, preview, highlightId, svgSize }) => {
+const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, viewMode, shapes, preview, highlightId, svgSize }) => {
 	const drawingRef = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
 	const toolRef = useRef<ToolId>('path');
+	const viewModeRef = useRef(true);
 
 	useEffect(() => {
 		toolRef.current = activeTool;
 	}, [activeTool]);
 
 	useEffect(() => {
+		viewModeRef.current = viewMode;
+	}, [viewMode]);
+
+	useEffect(() => {
 		function onDown(cx: number, cy: number, type: string): boolean {
 			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
+			if (viewModeRef.current) return false;
 			lastInputRef.current = type;
 			if (toolRef.current === 'polygon') {
 				if (!drawingRef.current) {
@@ -80,6 +87,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		function onMove(cx: number, cy: number, type: string): boolean {
 			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
 
+			if (viewModeRef.current) return false;
 			if (!drawingRef.current && toolRef.current === 'erase') {
 				trigger('skyplan', 'eraseHover', `${cx},${cy}`);
 				return true;
@@ -93,6 +101,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		}
 
 		function endDraw(cx: number, cy: number) {
+			if (viewModeRef.current) return;
 			if (toolRef.current === 'polygon') {
 				if (drawingRef.current) {
 					trigger('skyplan', 'addPoint', `${cx},${cy}`);
@@ -104,6 +113,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		}
 
 		function onUp(cx: number, cy: number, type: string): boolean {
+			if (viewModeRef.current) return false;
 			if (!drawingRef.current) return false;
 			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
 			endDraw(cx, cy);
@@ -111,6 +121,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		}
 
 		const md = (e: MouseEvent) => {
+			if (viewModeRef.current) return;
 			switch (e.button) {
 				case 0:
 					if ((e.target as Element).closest('[data-skyplan-ui]')) return;
@@ -131,6 +142,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		};
 
 		const mm = (e: MouseEvent) => {
+			if (viewModeRef.current) return;
 			if (e.buttons & 2) return; // right-drag = camera pan, let it through
 			if (onMove(e.clientX, e.clientY, 'mouse')) {
 				e.stopImmediatePropagation();
@@ -138,6 +150,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			}
 		};
 		const mu = (e: MouseEvent) => {
+			if (viewModeRef.current) return;
 			if (e.button !== 2) return;
 			if (onUp(e.clientX, e.clientY, 'mouse')) {
 				e.stopImmediatePropagation();
@@ -145,6 +158,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			}
 		};
 		const pd = (e: PointerEvent) => {
+			if (viewModeRef.current) return;
 			if (e.button !== 0) return;
 			if (onDown(e.clientX, e.clientY, 'pointer')) {
 				e.stopImmediatePropagation();
@@ -152,6 +166,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			}
 		};
 		const pm = (e: PointerEvent) => {
+			if (viewModeRef.current) return;
 			if (e.buttons & 2) return; // right-drag = camera pan, let it through
 			if (onMove(e.clientX, e.clientY, 'pointer')) {
 				e.stopImmediatePropagation();
@@ -159,6 +174,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 			}
 		};
 		const pu = (e: PointerEvent) => {
+			if (viewModeRef.current) return;
 			if (e.button !== 2) return;
 			if (onUp(e.clientX, e.clientY, 'pointer')) {
 				e.stopImmediatePropagation();
@@ -167,6 +183,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, shapes, previ
 		};
 
 		const kd = (e: KeyboardEvent) => {
+			if (viewModeRef.current) return;
 			if (e.key === 'Escape') {
 				drawingRef.current = false;
 				trigger('skyplan', 'panelClosed', '');
