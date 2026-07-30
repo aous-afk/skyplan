@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from "react";
-import {ToolId, TOOLS, Layer, LayerDef} from '../types';
+import {ToolId, TOOLS, LayerDef} from '../types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faArrowLeft, faXmark} from '@fortawesome/free-solid-svg-icons'
 import styles from './Toolbar.module.scss';
@@ -11,6 +11,8 @@ interface ToolbarProps {
 	activeTool: ToolId;
 	activeLayer: LayerDef;
 	layers: LayerDef[];
+	viewMode: boolean;
+	onViewModeToggle: () => void;
 	onToolChange: (t: ToolId) => void;
 	onLayerChange: (l: LayerDef) => void;
 	onUndo: () => void;
@@ -19,7 +21,7 @@ interface ToolbarProps {
 	onClose: () => void;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onToolChange, onLayerChange, onUndo, onClear, onClearAll, onClose }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, viewMode, onViewModeToggle, onToolChange, onLayerChange, onUndo, onClear, onClearAll, onClose }) => {
 	const toolbarEl = useRef<HTMLDivElement>(null);
 	const tbDownRef = useRef(false);
 	const tbDownPosRef = useRef({ x: 0, y: 0 });
@@ -87,11 +89,17 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onTo
 				<button onClick={onUndo} className={styles.btn_base}>
 					<FontAwesomeIcon icon={faArrowLeft} className={styles.svg} />
 				</button>
+				<label className={styles.mode_toggle} onClick={onViewModeToggle}>
+					<span className={styles.toggle_track} style={{ background: viewMode ? 'rgba(255,255,255,0.15)' : '#4a90d9' }}>
+						<span className={styles.toggle_knob} style={{ transform: viewMode ? 'translateX(0)' : 'translateX(18px)' }} />
+					</span>
+					<span className={styles.toggle_label} style={{ color: viewMode ? 'rgba(255,255,255,0.5)' : '#4a90d9' }}>{viewMode ? 'View' : 'Draw'}</span>
+				</label>
 				<button onClick={onClear} className={styles.btn_base} style={{ color: '#ff7070' }}>Clear</button>
 				<button onClick={onClearAll} className={styles.btn_base} style={{ color: '#ff4444' }}>Clear All</button>
 			</div>
 
-			<div className={styles.body}>
+			{!viewMode && <div className={styles.body}>
 				<div className={styles.tools_column}>
 					{TOOLS.map(t => {
 						const active = activeTool === t.id;
@@ -134,7 +142,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, onTo
 						})}
 					</div>
 				</div>
-			</div>
+			</div>}
 		</div>
 	);
 };

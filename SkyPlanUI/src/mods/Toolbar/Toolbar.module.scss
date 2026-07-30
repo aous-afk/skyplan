@@ -7,7 +7,7 @@
   overflow: hidden;
 }
 
-// ── row 1: close / undo / clear ─────────────────────────────────────────────
+// row 1: close / toggle / undo / clear
 .actions_container {
   display: flex;
   flex-direction: row;
@@ -16,7 +16,7 @@
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-// ── row 2: tools column + layers panel ──────────────────────────────────────
+// row 2: tools column + layers panel
 .body {
   display: flex;
   flex-direction: row;
@@ -30,7 +30,7 @@
   border-right: 1px solid rgba(255,255,255,0.08);
 }
 
-// ── layers panel (search + grid) ────────────────────────────────────────────
+// layers panel (search + grid)
 .layers_panel {
   display: flex;
   flex-direction: column;
@@ -68,7 +68,7 @@
   overflow-y: auto;
 }
 
-// ── layer button ─────────────────────────────────────────────────────────────
+// layer button
 .layer_btn {
   width: 33.33%;
   box-sizing: border-box;
@@ -96,7 +96,44 @@
   }
 }
 
-// ── shared button base ───────────────────────────────────────────────────────
+// view mode toggle
+.mode_toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+.toggle_track {
+  display: block;
+  width: 36px;
+  height: 18px;
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle_knob {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.toggle_label {
+  font-size: 12px;
+  font-weight: 600;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+// shared button base
 .svg {
   display: block;
   width: 13px;
