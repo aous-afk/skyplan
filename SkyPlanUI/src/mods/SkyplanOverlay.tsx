@@ -48,6 +48,7 @@ const SkyplanOverlay: React.FC = () => {
 	const visibleLayers = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
 
 	const [viewMode, setViewMode] = useState(false);
+	const [toolbarPos, setToolbarPos] = useState<{ left: number; top: number } | null>(null);
 
 	useEffect(() => {
 		const onResize = () => setSvgSize({ w: window.innerWidth || 1920, h: window.innerHeight || 1080 });
@@ -121,6 +122,8 @@ const SkyplanOverlay: React.FC = () => {
 					activeLayer={activeLayer ?? visibleLayers[0]}
 					layers={visibleLayers}
 					viewMode={viewMode}
+					toolbarPos={toolbarPos}
+					onToolbarPosChange={setToolbarPos}
 					onViewModeToggle={handleViewModeToggle}
 					onToolChange={handleTool}
 					onLayerChange={handleLayer}

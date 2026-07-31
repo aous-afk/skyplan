@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from "react";
+import React, {useEffect, useRef} from "react";
 import {ToolId, TOOLS, LayerDef} from '../types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faArrowLeft, faXmark} from '@fortawesome/free-solid-svg-icons'
@@ -12,6 +12,8 @@ interface ToolbarProps {
 	activeLayer: LayerDef;
 	layers: LayerDef[];
 	viewMode: boolean;
+	toolbarPos: { left: number; top: number } | null;
+	onToolbarPosChange: (pos: { left: number; top: number }) => void;
 	onViewModeToggle: () => void;
 	onToolChange: (t: ToolId) => void;
 	onLayerChange: (l: LayerDef) => void;
@@ -21,21 +23,17 @@ interface ToolbarProps {
 	onClose: () => void;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, viewMode, onViewModeToggle, onToolChange, onLayerChange, onUndo, onClear, onClearAll, onClose }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, viewMode, toolbarPos, onToolbarPosChange, onViewModeToggle, onToolChange, onLayerChange, onUndo, onClear, onClearAll, onClose }) => {
 	const toolbarEl = useRef<HTMLDivElement>(null);
 	const tbDownRef = useRef(false);
 	const tbDownPosRef = useRef({ x: 0, y: 0 });
 	const draggingRef = useRef(false);
 	const dragOffRef = useRef({ x: 0, y: 0 });
-	const tbCentered = useRef(false);
 
-	const [toolbarPos, setToolbarPos] = useState<{ left: number; top: number } | null>(null);
-
-	// center on first mount
+	// position on first open
 	useEffect(() => {
-		if (!tbCentered.current && toolbarEl.current) {
-			setToolbarPos({ left: Math.round((window.innerWidth - toolbarEl.current.offsetWidth) / 2), top: 12 });
-			tbCentered.current = true;
+		if (!toolbarPos && toolbarEl.current) {
+			onToolbarPosChange({ left: 12, top: 12 });
 		}
 	}, []);
 
@@ -60,7 +58,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, view
 				if (el) dragOffRef.current = { x: tbDownPosRef.current.x - el.offsetLeft, y: tbDownPosRef.current.y - el.offsetTop };
 			}
 			if (draggingRef.current)
-				setToolbarPos({ left: e.clientX - dragOffRef.current.x, top: e.clientY - dragOffRef.current.y });
+				onToolbarPosChange({ left: e.clientX - dragOffRef.current.x, top: e.clientY - dragOffRef.current.y });
 		};
 		const mu = () => { tbDownRef.current = false; draggingRef.current = false; };
 
