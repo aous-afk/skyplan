@@ -12,8 +12,14 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
   padding: 6px 8px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
+  min-width: 290px;
+
+  > * + * {
+    margin-left: 4px;
+  }
 }
 
 // row 2: tools column + layers panel
@@ -96,11 +102,20 @@
   }
 }
 
+// clear actions row at the bottom of the layers panel
+.layer_actions {
+  display: flex;
+  flex-direction: row;
+  padding: 4px 6px;
+  border-top-width: 1px;
+  border-top-style: solid;
+  border-top-color: #2a2a2a;
+}
+
 // view mode toggle
 .mode_toggle {
   display: flex;
   align-items: center;
-  gap: 6px;
   padding: 0 4px;
   cursor: pointer;
 }
@@ -131,6 +146,7 @@
   font-weight: 600;
   user-select: none;
   transition: color 0.2s;
+  margin-left: 6px;
 }
 
 // shared button base
@@ -163,6 +179,10 @@
   &:hover {
     background: rgba(255,255,255,0.15);
     color: #fff;
+
+    .svg {
+      color: #fff;
+    }
   }
 
   .tooltip {
@@ -201,5 +221,21 @@
     background: #3a1a00;
     color: #ffaa55;
     border: 2px solid #ff8800;
+  }
+
+  &.btn_clear {
+    color: #ff7070;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+
+  &.btn_clear_all {
+    color: #ff4444;
+
+    &:hover {
+      color: #fff;
+    }
   }
 }

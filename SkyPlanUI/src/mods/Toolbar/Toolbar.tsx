@@ -93,10 +93,8 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, view
 					<span className={styles.toggle_track} style={{ background: viewMode ? 'rgba(255,255,255,0.15)' : '#4a90d9' }}>
 						<span className={styles.toggle_knob} style={{ transform: viewMode ? 'translateX(0)' : 'translateX(18px)' }} />
 					</span>
-					<span className={styles.toggle_label} style={{ color: viewMode ? 'rgba(255,255,255,0.5)' : '#4a90d9' }}>{viewMode ? 'View' : 'Draw'}</span>
+					<span className={styles.toggle_label} style={{ color: viewMode ? 'rgba(255,255,255,0.5)' : '#4a90d9' }}>{viewMode ? ' View' : ' Draw'}</span>
 				</label>
-				<button onClick={onClear} className={styles.btn_base} style={{ color: '#ff7070' }}>Clear</button>
-				<button onClick={onClearAll} className={styles.btn_base} style={{ color: '#ff4444' }}>Clear All</button>
 			</div>
 
 			{!viewMode && <div className={styles.body}>
@@ -140,6 +138,10 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, view
 								</button>
 							);
 						})}
+					</div>
+					<div className={styles.layer_actions}>
+						<button onClick={onClear} className={`${styles.btn_base} ${styles.btn_clear}`}>Clear</button>
+						<button onClick={onClearAll} className={`${styles.btn_base} ${styles.btn_clear_all}`}>Clear All</button>
 					</div>
 				</div>
 			</div>}
