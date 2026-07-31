@@ -132,18 +132,15 @@ const SkyplanOverlay: React.FC = () => {
 					onClearAll={handleClearAll}
 					onClose={handleClose}
 				/>
-				<div className="drawing-canvas">
-					<DrawingCanvas
-						activeTool={activeTool}
-						viewMode={viewMode}
-						shapes={shapes}
-						preview={preview}
-						highlightId={highlightId}
-						svgSize={svgSize}
-					/>
-
-				</div>
 			</div>
+			<DrawingCanvas
+				activeTool={activeTool}
+				viewMode={viewMode}
+				shapes={shapes}
+				preview={preview}
+				highlightId={highlightId}
+				svgSize={svgSize}
+			/>
 		</div>
 	);
 };
