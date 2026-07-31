@@ -5,7 +5,6 @@ using Game.SceneFlow;
 using Game.UI;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
 using UnityEngine;
 using Skyplan.Models;
 using Skyplan.Models.dto;
@@ -44,8 +43,6 @@ namespace skyplan.Systems {
 
 		private ValueBinding<bool> m_PanelVisibleBinding;
 		private ValueBinding<string> m_ShapesBinding;
-		private ValueBinding<string> m_ShapesBaselineBinding;
-		private ValueBinding<string> m_TransformBinding;
 		private ValueBinding<string> m_PreviewBinding;
 		private ValueBinding<string> m_HighlightBinding;
 		private ValueBinding<string> m_LayersConfigBinding;
@@ -66,16 +63,12 @@ namespace skyplan.Systems {
 
 			m_PanelVisibleBinding = new ValueBinding<bool>("skyplan", "panelVisible", false);
 			m_ShapesBinding = new ValueBinding<string>("skyplan", "shapes", "[]");
-			m_ShapesBaselineBinding = new ValueBinding<string>("skyplan", "shapesBaseline", "[]");
-			m_TransformBinding = new ValueBinding<string>("skyplan", "transform", "");
 			m_PreviewBinding = new ValueBinding<string>("skyplan", "preview", "");
 			m_HighlightBinding = new ValueBinding<string>("skyplan", "highlight", "");
 			m_LayersConfigBinding = new ValueBinding<string>("skyplan", "layersConfig", "{\"layers\":[]}");
 
 			AddBinding(m_PanelVisibleBinding);
 			AddBinding(m_ShapesBinding);
-			AddBinding(m_ShapesBaselineBinding);
-			AddBinding(m_TransformBinding);
 			AddBinding(m_PreviewBinding);
 			AddBinding(m_HighlightBinding);
 			AddBinding(m_LayersConfigBinding);
@@ -173,7 +166,6 @@ namespace skyplan.Systems {
 				m_Camera.SetBaseline();
 				if (m_Camera.IsReady) {
 					UpdateShapesJson();
-					UpdateShapesJsonBaseline();
 				}
 			} else {
 				m_ActiveShape = null;
@@ -182,14 +174,6 @@ namespace skyplan.Systems {
 			m_PanelVisibleBinding.Update(m_PanelVisible);
 			Mod.log.Info($"Skyplan panel {(m_PanelVisible ? "shown" : "hidden")}");
 		}
-
-		// private void SyncCamera() {
-		// 	if (!m_Camera.HasChanged()) return;
-		// 	UpdateShapesJson();
-		// 	if (m_ActiveShape != null) UpdatePreviewJson();
-		// 	// string matrix = m_Camera.ComputeTransformMatrix();
-		// 	// if (matrix != null) m_TransformBinding.Update(matrix);
-		// }
 
 		/// <summary>
 		/// Converts a screen-space point to a world-space position on the XZ plane (y = 0) using the specified camera.
@@ -224,8 +208,6 @@ namespace skyplan.Systems {
 			if (!m_Camera.HasChanged()) return;
 			UpdateShapesJson();
 			if (m_ActiveShape != null) UpdatePreviewJson();
-			// string matrix = m_Camera.ComputeTransformMatrix();
-			// if (matrix != null) m_TransformBinding.Update(matrix);
 		}
 
 		private void HandleDrawStart(float sx, float sy) {
@@ -246,7 +228,9 @@ namespace skyplan.Systems {
 				};
 				m_Shapes.Add(s);
 				m_UndoStack.Add(new Op { type = OpType.Draw, shape = s });
-				if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
+				if (m_Camera.IsReady) {
+					UpdateShapesJson();
+				}
 				return;
 			}
 
@@ -294,7 +278,6 @@ namespace skyplan.Systems {
 					m_UndoStack.Add(new Op { type = OpType.Draw, shape = m_ActiveShape });
 					if (m_Camera.IsReady) {
 						UpdateShapesJson();
-						UpdateShapesJsonBaseline();
 					}
 				}
 				m_ActiveShape = null;
@@ -307,7 +290,9 @@ namespace skyplan.Systems {
 			if (m_ActiveShape.pts.Count >= 2) {
 				m_Shapes.Add(m_ActiveShape);
 				m_UndoStack.Add(new Op { type = OpType.Draw, shape = m_ActiveShape });
-				if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
+				if (m_Camera.IsReady) {
+					UpdateShapesJson();
+				}
 			}
 			m_ActiveShape = null;
 			_points = [];
@@ -319,7 +304,9 @@ namespace skyplan.Systems {
 			m_UndoStack.Add(new Op { type = OpType.ClearAll, cleared = [.. m_Shapes] });
 			m_Shapes.Clear();
 			m_ActiveShape = null;
-			if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
+			if (m_Camera.IsReady) {
+				UpdateShapesJson();
+			}
 			m_PreviewBinding.Update("");
 		}
 
@@ -330,7 +317,9 @@ namespace skyplan.Systems {
 			m_Shapes.RemoveAll(s => s.layer?.Id == layer);
 			if (m_ActiveShape != null && m_ActiveShape.layer?.Id == layer)
 				m_ActiveShape = null;
-			if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
+			if (m_Camera.IsReady) {
+				UpdateShapesJson();
+			}
 			m_PreviewBinding.Update("");
 		}
 
@@ -344,7 +333,9 @@ namespace skyplan.Systems {
 				case OpType.ClearLayer:
 				case OpType.ClearAll: m_Shapes.AddRange(op.cleared); break;
 			}
-			if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
+			if (m_Camera.IsReady) {
+			  UpdateShapesJson();
+			}
 		}
 
 		private void HandleEraseHover(float sx, float sy) {
@@ -382,33 +373,28 @@ namespace skyplan.Systems {
 		}
 
 		private ShapeDto CreateDto(Shape shape) {
-			if (shape.pts.Count == 0) {
-				return null;
-			}
+			if (shape.pts.Count == 0) return null;
 			ShapeDto shapeDto = new() {
 				Id = shape.id,
+				LayerId = shape.layer?.Id,
 				LayerDef = shape.layer,
 				Tag = shape.Type switch {
 					Tools.path => Tag.path,
 					Tools.polygon => Tag.polygon,
 					Tools.point => Tag.circle,
 					_ => Tag.none
-
 				}
 			};
-			for (int i = 0; i < shape.pts.Count; i++) {
-				Vector2 p = Proj(shape.pts[i]);
-				ScreenPt pt = new() { x = p.x, y = p.y };
-				shapeDto.Pts.Add(pt);
+			foreach (Vector3 pt in shape.pts) {
+				Vector2 p = m_Camera.WorldToSVG(pt);
+				shapeDto.Pts.Add(new ScreenPt { x = p.x, y = p.y });
 			}
 			return shapeDto;
 		}
-		private string ShapeToJSON(Shape s, bool baseline = false) {
+
+		private string ShapeToJSON(Shape s) {
 			return JsonConvert.SerializeObject(CreateDto(s));
 		}
-
-		Vector2 Proj(Vector3 w) =>
-			 m_Camera.WorldToSVG(w);
 
 		private void UpdateShapesJson() {
 			List<ShapeDto> shapeDtos = [];
@@ -419,26 +405,14 @@ namespace skyplan.Systems {
 			m_ShapesBinding.Update(JsonConvert.SerializeObject(shapeDtos));
 		}
 
-		private void UpdateShapesJsonBaseline() {
-			var sb = new StringBuilder("[");
-			bool first = true;
-			foreach (var s in m_Shapes) {
-				string json = ShapeToJSON(s, baseline: true);
-				if (json == null) continue;
-				if (!first) sb.Append(',');
-				first = false;
-				sb.Append(json);
-			}
-			sb.Append(']');
-			m_ShapesBaselineBinding.Update(sb.ToString());
-		}
-
 		public void LoadShapes(List<Shape> imported) {
 			m_Shapes.Clear();
 			m_UndoStack.Clear();
 			m_ActiveShape = null;
 			m_Shapes.AddRange(imported);
-			if (m_Camera.IsReady) { UpdateShapesJson(); UpdateShapesJsonBaseline(); }
+			if (m_Camera.IsReady) {
+			  UpdateShapesJson();
+			}
 			m_PreviewBinding.Update("");
 		}
 
