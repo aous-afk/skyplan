@@ -308,3 +308,7 @@ npm-debug.log
 */*.md
 */*/*.md
 !README.md
+
+*/game.dll
+
+*/Library/ilpp.pid

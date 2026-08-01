@@ -28,15 +28,15 @@ namespace Skyplan.Persistence {
 		}
 
 		private static void AppendFeature(StringBuilder sb, Shape s, int srid, double originX, double originY) {
-			string geomType = s.type == "rect" ? "Polygon" : "LineString";
+			string geomType = s.Type == Tools.polygon ? "Polygon" : "LineString";
 
 			sb.AppendLine("    {");
 			sb.AppendLine("      \"type\": \"Feature\",");
-			sb.AppendLine($"      \"properties\": {{ \"id\": \"{s.id}\", \"type\": \"{s.type}\", \"layer\": \"{s.layer}\" }},");
+			sb.AppendLine($"      \"properties\": {{ \"id\": \"{s.id}\", \"type\": \"{s.Type}\", \"layer\": \"{s.layer}\" }},");
 			sb.AppendLine($"      \"geometry\": {{");
 			sb.AppendLine($"        \"type\": \"{geomType}\",");
 
-			if (s.type == "rect") {
+			if (s.Type == Tools.polygon) {
 				sb.Append("        \"coordinates\": [[");
 				var corners = RectCorners(s, srid, originX, originY);
 				for (int i = 0; i < corners.Count; i++) {

@@ -48,7 +48,7 @@ namespace Skyplan.Persistence {
 
 			return new Shape {
 				id = $"s{nextId++}",
-				type = "path",
+				Type = Tools.path,
 				layer = ParseLayer(el),
 				pts = [
 					new Vector3(nums[0], y0, nums[1]),
@@ -92,7 +92,7 @@ namespace Skyplan.Persistence {
 
 			return new Shape {
 				id = $"s{nextId++}",
-				type = "polygon",
+				Type = Tools.polygon,
 				layer = ParseLayer(el),
 				pts = pts,
 			};
@@ -104,7 +104,7 @@ namespace Skyplan.Persistence {
 			float y = Attr(el, "data-y") ?? 0f;
 			return new Shape {
 				id = $"s{nextId++}",
-				type = "point",
+				Type = Tools.point,
 				layer = ParseLayer(el),
 				pts = [new Vector3(cx.Value, y, cz.Value)],
 			};

@@ -16,10 +16,10 @@ namespace Skyplan.Persistence {
 			sb.AppendLine("  <!-- Skyplan export: world XZ coordinates. x=east, y=north. -->");
 
 			foreach (Shape shape in shapes) {
-				string? elem = shape.type switch {
-					"path"    when shape.pts.Count >= 2 => ExportPath(shape),
-					"polygon" when shape.pts.Count >= 3 => ExportPolygon(shape),
-					"point"   when shape.pts.Count >= 1 => ExportCircle(shape),
+				string? elem = shape.Type switch {
+					Tools.path    when shape.pts.Count >= 2 => ExportPath(shape),
+					Tools.polygon when shape.pts.Count >= 3 => ExportPolygon(shape),
+					Tools.point   when shape.pts.Count >= 1 => ExportCircle(shape),
 					_ => null
 				};
 				if (elem != null) sb.AppendLine($"  {elem}");
