@@ -2,15 +2,7 @@ import React, {useEffect, useRef} from 'react';
 import {trigger} from 'cs2/api';
 import {ToolId, ShapeData, Tag} from '../types';
 import {buildPath, buildPolygon} from 'mods/utils/buildSvg';
-
-interface DrawingCanvasProps {
-	activeTool: ToolId;
-	viewMode: boolean ;
-	shapes: ShapeData[];
-	preview: ShapeData | null;
-	highlightId: string | null;
-	svgSize: { w: number; h: number };
-}
+import {useSkyplan} from '../SkyplanContext';
 
 function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null): string {
 	const seen = new Set<string>();
@@ -54,19 +46,16 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 	}
 }
 
-const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, viewMode, shapes, preview, highlightId, svgSize }) => {
+const DrawingCanvas: React.FC = () => {
+	const { activeTool, viewMode, shapes, preview, highlightId, svgSize } = useSkyplan();
+
 	const drawingRef = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
 	const toolRef = useRef<ToolId>('path');
 	const viewModeRef = useRef(true);
 
-	useEffect(() => {
-		toolRef.current = activeTool;
-	}, [activeTool]);
-
-	useEffect(() => {
-		viewModeRef.current = viewMode;
-	}, [viewMode]);
+	useEffect(() => { toolRef.current = activeTool; }, [activeTool]);
+	useEffect(() => { viewModeRef.current = viewMode; }, [viewMode]);
 
 	useEffect(() => {
 		function onDown(cx: number, cy: number, type: string): boolean {
@@ -82,7 +71,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, viewMode, sha
 				}
 				return true;
 			}
-
 			endDraw(cx, cy);
 			drawingRef.current = true;
 			trigger('skyplan', 'drawStart', `${cx},${cy}`);
@@ -92,13 +80,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, viewMode, sha
 
 		function onMove(cx: number, cy: number, type: string): boolean {
 			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
-
 			if (viewModeRef.current) return false;
 			if (!drawingRef.current && toolRef.current === 'erase') {
 				trigger('skyplan', 'eraseHover', `${cx},${cy}`);
 				return true;
 			}
-
 			if (drawingRef.current) {
 				trigger('skyplan', 'drawMove', `${cx},${cy}`);
 				return true;
@@ -149,7 +135,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, viewMode, sha
 
 		const mm = (e: MouseEvent) => {
 			if (viewModeRef.current) return;
-			if (e.buttons & 2) return; // right-drag = camera pan, let it through
+			if (e.buttons & 2) return;
 			if (onMove(e.clientX, e.clientY, 'mouse')) {
 				e.stopImmediatePropagation();
 				e.preventDefault();
@@ -166,6 +152,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, viewMode, sha
 		const pd = (e: PointerEvent) => {
 			if (viewModeRef.current) return;
 			if (e.button !== 0) return;
+			if ((e.target as Element).closest('[data-skyplan-ui]')) return;
 			if (onDown(e.clientX, e.clientY, 'pointer')) {
 				e.stopImmediatePropagation();
 				e.preventDefault();
@@ -173,7 +160,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ activeTool, viewMode, sha
 		};
 		const pm = (e: PointerEvent) => {
 			if (viewModeRef.current) return;
-			if (e.buttons & 2) return; // right-drag = camera pan, let it through
+			if (e.buttons & 2) return;
 			if (onMove(e.clientX, e.clientY, 'pointer')) {
 				e.stopImmediatePropagation();
 				e.preventDefault();

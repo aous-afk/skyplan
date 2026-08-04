@@ -1,51 +1,41 @@
 import React, {useEffect, useRef} from "react";
-import {ToolId, TOOLS, LayerDef} from '../types';
+import {TOOLS} from '../types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faArrowLeft, faXmark} from '@fortawesome/free-solid-svg-icons'
 import styles from './Toolbar.module.scss';
+import { useSkyplan } from '../SkyplanContext';
 
 const DRAG_THRESHOLD = 6;
 
+const Toolbar: React.FC = () => {
+	const {
+		activeTool, activeLayer, visibleLayers, viewMode,
+		toolbarPos, onToolbarPosChange,
+		onViewModeToggle, onToolChange, onLayerChange,
+		onUndo, onClear, onClearAll, onClose,
+	} = useSkyplan();
 
-interface ToolbarProps {
-	activeTool: ToolId;
-	activeLayer: LayerDef;
-	layers: LayerDef[];
-	viewMode: boolean;
-	toolbarPos: { left: number; top: number } | null;
-	onToolbarPosChange: (pos: { left: number; top: number }) => void;
-	onViewModeToggle: () => void;
-	onToolChange: (t: ToolId) => void;
-	onLayerChange: (l: LayerDef) => void;
-	onUndo: () => void;
-	onClear: () => void;
-	onClearAll: () => void;
-	onClose: () => void;
-}
-
-const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, viewMode, toolbarPos, onToolbarPosChange, onViewModeToggle, onToolChange, onLayerChange, onUndo, onClear, onClearAll, onClose }) => {
 	const toolbarEl = useRef<HTMLDivElement>(null);
+	const dragHandleEl = useRef<HTMLDivElement>(null);
 	const tbDownRef = useRef(false);
 	const tbDownPosRef = useRef({ x: 0, y: 0 });
 	const draggingRef = useRef(false);
 	const dragOffRef = useRef({ x: 0, y: 0 });
 
-	// position on first open
 	useEffect(() => {
 		if (!toolbarPos && toolbarEl.current) {
 			onToolbarPosChange({ left: 12, top: 12 });
 		}
 	}, []);
 
-	// drag logic
 	useEffect(() => {
-		function inToolbar(cx: number, cy: number) {
-			if (!toolbarEl.current) return false;
-			const r = toolbarEl.current.getBoundingClientRect();
+		function inDragHandle(cx: number, cy: number) {
+			if (!dragHandleEl.current) return false;
+			const r = dragHandleEl.current.getBoundingClientRect();
 			return cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
 		}
 		const md = (e: MouseEvent) => {
-			if (e.button !== 0 || !inToolbar(e.clientX, e.clientY)) return;
+			if (e.button !== 0 || !inDragHandle(e.clientX, e.clientY)) return;
 			tbDownRef.current = true;
 			tbDownPosRef.current = { x: e.clientX, y: e.clientY };
 		};
@@ -77,8 +67,10 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, view
 			position: 'absolute',
 			left: toolbarPos?.left ?? 0,
 			top: toolbarPos?.top ?? 12,
-			pointerEvents: 'auto', userSelect: 'none', cursor: 'grab',
+			pointerEvents: 'auto', userSelect: 'none',
 		}}>
+
+			<div ref={dragHandleEl} className={styles.drag_handle}>Skyplan</div>
 
 			<div className={styles.actions_container}>
 				<button onClick={onClose} className={styles.btn_base}>
@@ -113,16 +105,8 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTool, activeLayer, layers, view
 				</div>
 
 				<div className={styles.layers_panel}>
-
-					{ /*
-					  <div className={styles.search_bar}>
-						<span className={styles.search_icon}>⌕</span>
-						<span className={styles.search_placeholder}>Search layers...</span>
-					</div>
-				*/	}
-
 					<div className={styles.layers_grid}>
-						{layers.map(l => {
+						{visibleLayers.map(l => {
 							const active = activeLayer?.id === l.id;
 							return (
 								<button key={l.id}
