@@ -12,13 +12,13 @@ interface ShapeManagerProps {
 	shapes: ShapeData[];
 	globalOpacity: number;
 	onGlobalOpacityChange: (v: number) => void;
-	// layerOpacities: Record<string, number>;
-	// onLayerOpacityChange: (layerId: string, v: number) => void;
+	layerOpacities: Record<string, number>;
+	onLayerOpacityChange: (layerId: string, v: number) => void;
 	layerVisible: Record<string, boolean>;
 	onLayerVisibleToggle: (layerId: string) => void;
 }
 
-const ShapeManager: React.FC<ShapeManagerProps> = ({ shapes, globalOpacity, onGlobalOpacityChange, layerVisible, onLayerVisibleToggle }) => {
+const ShapeManager: React.FC<ShapeManagerProps> = ({ shapes, globalOpacity, onGlobalOpacityChange, layerOpacities, onLayerOpacityChange, layerVisible, onLayerVisibleToggle }) => {
 
 	const shapeGroups = useMemo(() => {
 		const map = new Map<string, { layerId: string; label: string; color: string; shapesCount: number }>();
@@ -46,7 +46,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({ shapes, globalOpacity, onGl
 				<Slider
 					focusKey={FOCUS_DISABLED}
 					value={globalOpacity}
-					start={0.1}
+					start={0}
 					end={1}
 					onChange={onGlobalOpacityChange}
 					className={shared.opacity_slider}
@@ -72,13 +72,13 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({ shapes, globalOpacity, onGl
 								<span className={shared.opacity_label}>Opacity</span>
 								<Slider
 									focusKey={FOCUS_DISABLED}
-									value={globalOpacity}
-									start={0.1}
+									value={layerOpacities[group.layerId] ?? 1}
+									start={0}
 									end={1}
-									onChange={onGlobalOpacityChange}
+									onChange={(v: number) => onLayerOpacityChange(group.layerId, v)}
 									className={shared.opacity_slider}
 								/>
-								<span className={shared.opacity_value}>{Math.round(globalOpacity * 100)}%</span>
+								<span className={shared.opacity_value}>{Math.round((layerOpacities[group.layerId] ?? 1) * 100)}%</span>
 							</div>
 						</div>
 					))}

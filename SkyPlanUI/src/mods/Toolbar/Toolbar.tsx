@@ -1,23 +1,13 @@
-import React, {useEffect, useMemo, useRef} from "react";
-import {ShapeData, Tag, TOOLS} from '../types';
+import React, {useEffect, useRef} from "react";
+import {TOOLS} from '../types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faArrowLeft, faXmark} from '@fortawesome/free-solid-svg-icons'
 import styles from './Toolbar.module.scss';
-import shared from '../shared.module.scss';
-import {getModule} from 'cs2/modding';
-import {FOCUS_DISABLED} from 'cs2/input';
 import {useSkyplan} from '../SkyplanContext';
 import {useDrawingContext} from "mods/DrawingContext";
 import ShapeManager from "mods/ShapeManager/ShapeManager";
 
-
 const DRAG_THRESHOLD = 6;
-
-const TAG_LABEL: Record<string, string> = {
-	[Tag.path]: 'Line',
-	[Tag.polygon]: 'Polygon',
-	[Tag.circle]: 'Point',
-};
 
 const Toolbar: React.FC = () => {
 	const {
@@ -31,6 +21,8 @@ const Toolbar: React.FC = () => {
 	  shapes,
 	  globalOpacity,
 	  onGlobalOpacityChange,
+	  layerOpacities,
+	  onLayerOpacityChange,
 	  layerVisible,
 	  onLayerVisibleToggle,
 	} = useDrawingContext();
@@ -116,6 +108,8 @@ const Toolbar: React.FC = () => {
 			  shapes={shapes}
 			  globalOpacity={globalOpacity}
 			  onGlobalOpacityChange={onGlobalOpacityChange}
+			  layerOpacities={layerOpacities}
+			  onLayerOpacityChange={onLayerOpacityChange}
 			  layerVisible={layerVisible}
 			  onLayerVisibleToggle={onLayerVisibleToggle}
 			  />}

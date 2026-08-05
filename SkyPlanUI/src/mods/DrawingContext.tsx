@@ -8,11 +8,9 @@ interface DrawingCtx {
 	preview: ShapeData | null;
 	highlightId: string | null;
 	svgSize: { w: number; h: number };
-	opacity: number;
 	globalOpacity: number;
 	layerOpacities: Record<string, number>;
 	layerVisible: Record<string, boolean>;
-	onOpacityChange: (v: number) => void;
 	onGlobalOpacityChange: (v: number) => void;
 	onLayerOpacityChange: (layerId: string, v: number) => void;
 	onLayerVisibleToggle: (layerId: string) => void;
@@ -42,7 +40,6 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	}, [previewJson]);
 
 	const [svgSize, setSvgSize] = useState({ w: 1920, h: 1080 });
-	const [opacity, setOpacity] = useState(1);
 	const [globalOpacity, setGlobalOpacity] = useState(1);
 	const [layerOpacities, setLayerOpacities] = useState<Record<string, number>>({});
 	const [layerVisible, setLayerVisible] = useState<Record<string, boolean>>({});
@@ -69,11 +66,9 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		preview,
 		highlightId,
 		svgSize,
-		opacity,
 		globalOpacity,
 		layerOpacities,
 		layerVisible,
-		onOpacityChange: setOpacity,
 		onGlobalOpacityChange: setGlobalOpacity,
 		onLayerOpacityChange,
 		onLayerVisibleToggle,

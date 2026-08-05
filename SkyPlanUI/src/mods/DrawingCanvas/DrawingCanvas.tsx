@@ -49,7 +49,7 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 
 const DrawingCanvas: React.FC = () => {
 	const { activeTool, viewMode } = useSkyplan();
-	const {shapes, preview, highlightId, svgSize, globalOpacity, layerVisible} = useDrawingContext();
+	const {shapes, preview, highlightId, svgSize, globalOpacity, layerOpacities, layerVisible} = useDrawingContext();
 
 	const drawingRef = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
@@ -234,7 +234,7 @@ const DrawingCanvas: React.FC = () => {
 
 
 			{Array.from(shapesByLayer.entries()).map(([layerId, layerShapes]) => (
-			  <g key={layerId} display={layerVisible[layerId] === false ? 'none' : undefined}>
+			  <g key={layerId} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
 				{layerShapes.map(s => renderShape(s, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
 			  </g>
 			))}
