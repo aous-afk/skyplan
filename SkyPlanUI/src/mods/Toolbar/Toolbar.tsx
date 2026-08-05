@@ -3,11 +3,9 @@ import {TOOLS} from '../types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faArrowLeft, faXmark} from '@fortawesome/free-solid-svg-icons'
 import styles from './Toolbar.module.scss';
-import {getModule} from 'cs2/modding';
-import {FOCUS_DISABLED} from 'cs2/input';
 import {useSkyplan} from '../SkyplanContext';
-
-const Slider = getModule('game-ui/common/input/slider/slider.tsx', 'Slider') as any;
+import {useDrawingContext} from "mods/DrawingContext";
+import ShapeManager from "mods/ShapeManager/ShapeManager";
 
 const DRAG_THRESHOLD = 6;
 
@@ -17,8 +15,18 @@ const Toolbar: React.FC = () => {
 		toolbarPos, onToolbarPosChange,
 		onViewModeToggle, onToolChange, onLayerChange,
 		onUndo, onClear, onClearAll, onClose,
-		opacity, onOpacityChange,
 	} = useSkyplan();
+
+	const {
+	  shapes,
+	  globalOpacity,
+	  onGlobalOpacityChange,
+	  layerOpacities,
+	  onLayerOpacityChange,
+	  layerVisible,
+	  onLayerVisibleToggle,
+	} = useDrawingContext();
+
 
 	const toolbarEl = useRef<HTMLDivElement>(null);
 	const dragHandleEl = useRef<HTMLDivElement>(null);
@@ -26,6 +34,7 @@ const Toolbar: React.FC = () => {
 	const tbDownPosRef = useRef({ x: 0, y: 0 });
 	const draggingRef = useRef(false);
 	const dragOffRef = useRef({ x: 0, y: 0 });
+
 
 	useEffect(() => {
 		if (!toolbarPos && toolbarEl.current) {
@@ -94,19 +103,16 @@ const Toolbar: React.FC = () => {
 				</label>
 			</div>
 
-			{viewMode && <div className={styles.opacity_row}>
-				<span className={styles.opacity_label}>Opacity</span>
-				<Slider
-					focusKey={FOCUS_DISABLED}
-					value={opacity}
-					start={0.1}
-					end={1}
-					onChange={onOpacityChange}
-					className={styles.opacity_slider}
-				/>
-				<span className={styles.opacity_value}>{Math.round(opacity * 100)}%</span>
-			</div>}
 
+			{viewMode && <ShapeManager
+			  shapes={shapes}
+			  globalOpacity={globalOpacity}
+			  onGlobalOpacityChange={onGlobalOpacityChange}
+			  layerOpacities={layerOpacities}
+			  onLayerOpacityChange={onLayerOpacityChange}
+			  layerVisible={layerVisible}
+			  onLayerVisibleToggle={onLayerVisibleToggle}
+			  />}
 			{!viewMode && <div className={styles.body}>
 				<div className={styles.tools_column}>
 					{TOOLS.map(t => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import {SkyplanProvider, useSkyplan} from './SkyplanContext';
+import {DrawingProvider} from './DrawingContext';
 import Toolbar from './Toolbar/Toolbar';
 import DrawingCanvas from './DrawingCanvas/DrawingCanvas';
 
@@ -20,7 +21,9 @@ const SkyplanOverlayInner: React.FC = () => {
 
 const SkyplanOverlay: React.FC = () => (
 	<SkyplanProvider>
-		<SkyplanOverlayInner />
+		<DrawingProvider>
+			<SkyplanOverlayInner />
+		</DrawingProvider>
 	</SkyplanProvider>
 );
 

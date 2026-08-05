@@ -3,6 +3,7 @@ import {trigger} from 'cs2/api';
 import {ToolId, ShapeData, Tag} from '../types';
 import {buildPath, buildPolygon} from 'mods/utils/buildSvg';
 import {useSkyplan} from '../SkyplanContext';
+import { useDrawingContext } from 'mods/DrawingContext';
 
 function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null): string {
 	const seen = new Set<string>();
@@ -47,7 +48,8 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 }
 
 const DrawingCanvas: React.FC = () => {
-	const { activeTool, viewMode, shapes, preview, highlightId, svgSize, opacity } = useSkyplan();
+	const { activeTool, viewMode } = useSkyplan();
+	const {shapes, preview, highlightId, svgSize, globalOpacity, layerOpacities, layerVisible} = useDrawingContext();
 
 	const drawingRef = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
@@ -222,15 +224,17 @@ const DrawingCanvas: React.FC = () => {
 	return (
 		<svg
 			key={shapes.length}
-			style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'hidden', opacity }}
+			style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'hidden', opacity: globalOpacity }}
 			width={svgSize.w} height={svgSize.h * 0.93}
 			viewBox={`0 0 ${svgSize.w} ${svgSize.h * 0.93}`}
 		>
 			<defs>
 				<style>{layerCSS}</style>
 			</defs>
+
+
 			{Array.from(shapesByLayer.entries()).map(([layerId, layerShapes]) => (
-			  <g key={layerId}>
+			  <g key={layerId} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
 				{layerShapes.map(s => renderShape(s, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
 			  </g>
 			))}

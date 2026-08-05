@@ -1,0 +1,41 @@
+.opacity_row {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  min-width: 290px;
+  box-sizing: border-box;
+}
+
+.opacity_label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(74, 144, 217, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  background: rgba(74, 144, 217, 0.15);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.opacity_slider {
+  flex: 1;
+  min-width: 0;
+  max-width: 160px;
+  padding: 2px 7px;
+}
+
+.opacity_value {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(74, 144, 217, 0.9);
+  background: rgba(74, 144, 217, 0.15);
+  padding: 2px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: center;
+}
+
