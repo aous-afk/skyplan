@@ -1,4 +1,4 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useMemo, useRef} from 'react';
 import {trigger} from 'cs2/api';
 import {ToolId, ShapeData, Tag} from '../types';
 import {buildPath, buildPolygon} from 'mods/utils/buildSvg';
@@ -204,6 +204,16 @@ const DrawingCanvas: React.FC = () => {
 		};
 	}, []);
 
+	const shapesByLayer = useMemo( ()=> {
+	  const map = new Map<string, ShapeData[]>();
+	  for (const s of shapes) {
+		if (!map.has(s.layerId)) map.set(s.layerId, []);
+		map.get(s.layerId)!.push(s);
+	  }
+	  return map;
+
+	}, [shapes]);
+
 	const hasHighlight = highlightId !== null;
 	const layerCSS = buildLayerCSS(shapes, preview);
 
@@ -219,7 +229,11 @@ const DrawingCanvas: React.FC = () => {
 			<defs>
 				<style>{layerCSS}</style>
 			</defs>
-			{shapes.map(s => renderShape(s, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
+			{Array.from(shapesByLayer.entries()).map(([layerId, layerShapes]) => (
+			  <g key={layerId}>
+				{layerShapes.map(s => renderShape(s, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
+			  </g>
+			))}
 			{preview && renderShape(preview)}
 		</svg>
 	);
