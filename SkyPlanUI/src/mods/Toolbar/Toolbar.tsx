@@ -30,8 +30,9 @@ const Toolbar: React.FC = () => {
 	const {
 	  shapes,
 	  globalOpacity,
-	  onOpacityChange,
 	  onGlobalOpacityChange,
+	  layerVisible,
+	  onLayerVisibleToggle,
 	} = useDrawingContext();
 
 
@@ -115,6 +116,8 @@ const Toolbar: React.FC = () => {
 			  shapes={shapes}
 			  globalOpacity={globalOpacity}
 			  onGlobalOpacityChange={onGlobalOpacityChange}
+			  layerVisible={layerVisible}
+			  onLayerVisibleToggle={onLayerVisibleToggle}
 			  />}
 			{!viewMode && <div className={styles.body}>
 				<div className={styles.tools_column}>

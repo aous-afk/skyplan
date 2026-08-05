@@ -6,6 +6,7 @@ import shared from '../shared.module.scss';
 import styles from './ShapeManager.module.scss';
 
 const Slider = getModule('game-ui/common/input/slider/slider.tsx', 'Slider') as any;
+const CheckBox = getModule('game-ui/common/input/toggle/checkbox/checkbox.tsx', 'Checkbox') as any;
 
 interface ShapeManagerProps {
 	shapes: ShapeData[];
@@ -13,19 +14,20 @@ interface ShapeManagerProps {
 	onGlobalOpacityChange: (v: number) => void;
 	// layerOpacities: Record<string, number>;
 	// onLayerOpacityChange: (layerId: string, v: number) => void;
-	// layerVisible: Record<string, boolean>;
-	// onLayerVisibleToggle: (layerId: string) => void;
+	layerVisible: Record<string, boolean>;
+	onLayerVisibleToggle: (layerId: string) => void;
 }
 
-const ShapeManager: React.FC<ShapeManagerProps> = ({ shapes, globalOpacity, onGlobalOpacityChange }) => {
+const ShapeManager: React.FC<ShapeManagerProps> = ({ shapes, globalOpacity, onGlobalOpacityChange, layerVisible, onLayerVisibleToggle }) => {
 
 	const shapeGroups = useMemo(() => {
-		const map = new Map<string, { label: string; color: string; shapesCount: number }>();
+		const map = new Map<string, { layerId: string; label: string; color: string; shapesCount: number }>();
 		for (const s of shapes) {
 			if (!s.layerDef) continue;
 			if (!map.has(s.layerId)) {
 				const style = s.layerDef.style;
 				map.set(s.layerId, {
+					layerId: s.layerId,
 					label: s.layerDef.label,
 					color: (style.stroke ?? style.fill ?? '#888') as string,
 					shapesCount: 1,
@@ -55,11 +57,16 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({ shapes, globalOpacity, onGl
 			{shapeGroups.length > 0 && (
 				<div className={styles.layer_list} onWheel={e => e.stopPropagation()}>
 					{shapeGroups.map(group => (
-						<div key={group.label} className={styles.layer_card}>
+						<div key={group.layerId} className={styles.layer_card}>
 							<div className={styles.shape_group_header}>
 								<span className={styles.shape_dot} style={{ background: group.color }} />
 								<span className={styles.shape_group_label}>{group.label}</span>
 								<span className={styles.shape_count}>{group.shapesCount}</span>
+								<CheckBox
+									focusKey={FOCUS_DISABLED}
+									checked={layerVisible[group.layerId] ?? true}
+									onChange={() => onLayerVisibleToggle(group.layerId)}
+								/>
 							</div>
 							<div className={shared.opacity_row}>
 								<span className={shared.opacity_label}>Opacity</span>
