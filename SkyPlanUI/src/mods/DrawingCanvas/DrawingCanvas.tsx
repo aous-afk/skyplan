@@ -47,7 +47,7 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 }
 
 const DrawingCanvas: React.FC = () => {
-	const { activeTool, viewMode, shapes, preview, highlightId, svgSize } = useSkyplan();
+	const { activeTool, viewMode, shapes, preview, highlightId, svgSize, opacity } = useSkyplan();
 
 	const drawingRef = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
@@ -212,7 +212,7 @@ const DrawingCanvas: React.FC = () => {
 	return (
 		<svg
 			key={shapes.length}
-			style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'hidden' }}
+			style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'hidden', opacity }}
 			width={svgSize.w} height={svgSize.h * 0.93}
 			viewBox={`0 0 ${svgSize.w} ${svgSize.h * 0.93}`}
 		>

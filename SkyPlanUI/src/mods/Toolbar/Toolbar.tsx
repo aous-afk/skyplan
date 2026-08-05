@@ -3,7 +3,11 @@ import {TOOLS} from '../types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faArrowLeft, faXmark} from '@fortawesome/free-solid-svg-icons'
 import styles from './Toolbar.module.scss';
-import { useSkyplan } from '../SkyplanContext';
+import {getModule} from 'cs2/modding';
+import {FOCUS_DISABLED} from 'cs2/input';
+import {useSkyplan} from '../SkyplanContext';
+
+const Slider = getModule('game-ui/common/input/slider/slider.tsx', 'Slider') as any;
 
 const DRAG_THRESHOLD = 6;
 
@@ -13,6 +17,7 @@ const Toolbar: React.FC = () => {
 		toolbarPos, onToolbarPosChange,
 		onViewModeToggle, onToolChange, onLayerChange,
 		onUndo, onClear, onClearAll, onClose,
+		opacity, onOpacityChange,
 	} = useSkyplan();
 
 	const toolbarEl = useRef<HTMLDivElement>(null);
@@ -70,12 +75,14 @@ const Toolbar: React.FC = () => {
 			pointerEvents: 'auto', userSelect: 'none',
 		}}>
 
-			<div ref={dragHandleEl} className={styles.drag_handle}>Skyplan</div>
+			<div ref={dragHandleEl} className={styles.drag_handle}>
+			  <span className={styles.title_handel_bar}>SkyPlan</span>
+			  <button onClick={onClose} className={`${styles.btn_base} ${styles.btn_right}`}>
+				<FontAwesomeIcon icon={faXmark} className={styles.svg} />
+			  </button>
+			</div>
 
 			<div className={styles.actions_container}>
-				<button onClick={onClose} className={styles.btn_base}>
-					<FontAwesomeIcon icon={faXmark} className={styles.svg} />
-				</button>
 				<button onClick={onUndo} className={styles.btn_base}>
 					<FontAwesomeIcon icon={faArrowLeft} className={styles.svg} />
 				</button>
@@ -86,6 +93,19 @@ const Toolbar: React.FC = () => {
 					<span className={styles.toggle_label} style={{ color: viewMode ? 'rgba(255,255,255,0.5)' : '#4a90d9' }}>{viewMode ? ' View' : ' Draw'}</span>
 				</label>
 			</div>
+
+			{viewMode && <div className={styles.opacity_row}>
+				<span className={styles.opacity_label}>Opacity</span>
+				<Slider
+					focusKey={FOCUS_DISABLED}
+					value={opacity}
+					start={0.1}
+					end={1}
+					onChange={onOpacityChange}
+					className={styles.opacity_slider}
+				/>
+				<span className={styles.opacity_value}>{Math.round(opacity * 100)}%</span>
+			</div>}
 
 			{!viewMode && <div className={styles.body}>
 				<div className={styles.tools_column}>
