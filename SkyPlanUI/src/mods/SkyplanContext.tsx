@@ -14,7 +14,9 @@ interface SkyplanCtx {
 	svgSize: { w: number; h: number };
 	viewMode: boolean;
 	toolbarPos: { left: number; top: number } | null;
+	opacity: number;
 	onToolbarPosChange: (pos: { left: number; top: number }) => void;
+	onOpacityChange: (v: number) => void;
 	onViewModeToggle: () => void;
 	onToolChange: (t: ToolId) => void;
 	onLayerChange: (l: LayerDef) => void;
@@ -59,6 +61,7 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const [svgSize, setSvgSize] = useState({ w: 1920, h: 1080 });
 	const [viewMode, setViewMode] = useState(false);
 	const [toolbarPos, setToolbarPos] = useState<{ left: number; top: number } | null>(null);
+	const [opacity, setOpacity] = useState(1);
 
 	const visibleLayers = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
 	const highlightId = highlightRaw || null;
@@ -120,7 +123,9 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		svgSize,
 		viewMode,
 		toolbarPos,
+		opacity,
 		onToolbarPosChange: setToolbarPos,
+		onOpacityChange: setOpacity,
 		onViewModeToggle,
 		onToolChange,
 		onLayerChange,

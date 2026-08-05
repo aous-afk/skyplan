@@ -9,10 +9,11 @@
 
 .drag_handle {
   height: 24px;
-  padding: 0 12px;
+  padding: 0px 0px 0px 12px;
   cursor: grab;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   font-size: 11px;
   font-weight: 600;
   color: rgba(255,255,255,0.4);
@@ -47,6 +48,7 @@
   flex: 1;
   min-width: 0;
   max-width: 160px;
+  padding: 2px 7px;
 }
 
 .opacity_value {
@@ -286,7 +288,7 @@
   align-items: center;
   justify-content: center;
   padding: 5px 10px;
-  border-radius: 5px;
+  border-radius: 2px;
   border: 2px solid transparent;
   cursor: pointer;
   font-size: 13px;
@@ -312,7 +314,7 @@
     transform: translateX(-50%);
     background: rgba(18,18,18,0.95);
     border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 4px;
+    border-radius: 2px;
     padding: 4px 8px;
     font-size: 11px;
     white-space: nowrap;
@@ -356,4 +358,12 @@
       color: #fff;
     }
   }
+
+  &.btn_right {
+	background: rgba(74, 144, 217, 0.15);
+  }
+}
+
+.title_handel_bar {
+  font-size: 150%;
 }
