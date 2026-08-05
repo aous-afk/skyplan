@@ -1,22 +1,16 @@
 import React, {createContext, useContext, useState, useEffect, useMemo, useCallback} from 'react';
 import {useValue, trigger} from 'cs2/api';
-import {panelVisible$, shapes$, preview$, highlight$, layersConfig$} from '../bindings';
-import {ToolId, ShapeData, LayerDef} from './types';
+import {panelVisible$, layersConfig$} from '../bindings';
+import {ToolId, LayerDef} from './types';
 
 interface SkyplanCtx {
 	visible: boolean;
-	shapes: ShapeData[];
-	preview: ShapeData | null;
-	highlightId: string | null;
 	activeTool: ToolId;
 	activeLayer: LayerDef | null;
 	visibleLayers: LayerDef[];
-	svgSize: { w: number; h: number };
 	viewMode: boolean;
 	toolbarPos: { left: number; top: number } | null;
-	opacity: number;
 	onToolbarPosChange: (pos: { left: number; top: number }) => void;
-	onOpacityChange: (v: number) => void;
 	onViewModeToggle: () => void;
 	onToolChange: (t: ToolId) => void;
 	onLayerChange: (l: LayerDef) => void;
@@ -36,20 +30,8 @@ export const useSkyplan = (): SkyplanCtx => {
 
 export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 	const visible = useValue(panelVisible$);
-	const shapesJson = useValue(shapes$);
-	const previewJson = useValue(preview$);
-	const highlightRaw = useValue(highlight$);
 	const layersConfigJson = useValue(layersConfig$);
 
-	const shapes = useMemo<ShapeData[]>(() => {
-		try { return JSON.parse(shapesJson) ?? []; }
-		catch { return []; }
-	}, [shapesJson]);
-
-	const preview = useMemo<ShapeData | null>(() => {
-		try { return previewJson ? JSON.parse(previewJson) : null; }
-		catch { return null; }
-	}, [previewJson]);
 
 	const layerConfig = useMemo<{ layers: LayerDef[] }>(() => {
 		try { return JSON.parse(layersConfigJson); }
@@ -58,20 +40,11 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 	const [activeTool, setActiveTool] = useState<ToolId>('path');
 	const [activeLayer, setActiveLayer] = useState<LayerDef | null>(null);
-	const [svgSize, setSvgSize] = useState({ w: 1920, h: 1080 });
 	const [viewMode, setViewMode] = useState(false);
 	const [toolbarPos, setToolbarPos] = useState<{ left: number; top: number } | null>(null);
-	const [opacity, setOpacity] = useState(1);
 
 	const visibleLayers = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
-	const highlightId = highlightRaw || null;
 
-	useEffect(() => {
-		const onResize = () => setSvgSize({ w: window.innerWidth || 1920, h: window.innerHeight || 1080 });
-		onResize();
-		window.addEventListener('resize', onResize);
-		return () => window.removeEventListener('resize', onResize);
-	}, []);
 
 	useEffect(() => {
 		const visible = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
@@ -114,18 +87,12 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 	const value: SkyplanCtx = {
 		visible,
-		shapes,
-		preview,
-		highlightId,
 		activeTool,
 		activeLayer,
 		visibleLayers,
-		svgSize,
 		viewMode,
 		toolbarPos,
-		opacity,
 		onToolbarPosChange: setToolbarPos,
-		onOpacityChange: setOpacity,
 		onViewModeToggle,
 		onToolChange,
 		onLayerChange,

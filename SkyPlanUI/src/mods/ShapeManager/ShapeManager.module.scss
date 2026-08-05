@@ -1,0 +1,65 @@
+.container {
+  border-top: 2px solid rgba(74, 144, 217, 0.35);
+  padding: 4px 0;
+}
+
+.layer_list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.layer_card {
+  background: rgba(30, 72, 128, 0.35);
+  border: 1px solid rgba(74, 144, 217, 0.2);
+  border-radius: 6px;
+  margin: 4px 8px;
+  overflow: hidden;
+}
+
+.shape_group_header {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  gap: 6px;
+}
+
+.shape_dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.shape_group_label {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(74, 144, 217, 0.95);
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shape_count {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(74, 144, 217, 0.7);
+  background: rgba(74, 144, 217, 0.12);
+  border-radius: 8px;
+  padding: 1px 6px;
+}
+
+.shape_row {
+  padding: 4px 10px 4px 26px;
+  font-size: 11px;
+  color: rgba(74, 144, 217, 0.9);
+  cursor: default;
+  border-radius: 4px;
+  margin: 1px 6px;
+  background: rgba(74, 144, 217, 0.12);
+
+  &:hover {
+    background: rgba(74, 144, 217, 0.25);
+    color: rgba(255,255,255,0.95);
+  }
+}
