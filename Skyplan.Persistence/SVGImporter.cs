@@ -25,6 +25,10 @@ namespace Skyplan.Persistence {
 				Shape? s = ParseCircle(el, ref nextId);
 				if (s != null) shapes.Add(s);
 			}
+			foreach (XElement el in Descendants(root, "text")) {
+				Shape? s = ParseText(el, ref nextId);
+				if (s != null) shapes.Add(s);
+			}
 			return shapes;
 		}
 
@@ -53,7 +57,9 @@ namespace Skyplan.Persistence {
 				pts = [
 					new Vector3(nums[0], y0, nums[1]),
 					new Vector3(nums[2], y1, nums[3]),
-				]
+				],
+				Label = el.Attribute("data-label")?.Value,
+				Description = el.Attribute("data-description")?.Value,
 			};
 		}
 
@@ -95,6 +101,8 @@ namespace Skyplan.Persistence {
 				Type = Tools.polygon,
 				layer = ParseLayer(el),
 				pts = pts,
+				Label = el.Attribute("data-label")?.Value,
+				Description = el.Attribute("data-description")?.Value,
 			};
 		}
 
@@ -107,6 +115,24 @@ namespace Skyplan.Persistence {
 				Type = Tools.point,
 				layer = ParseLayer(el),
 				pts = [new Vector3(cx.Value, y, cz.Value)],
+				Label = el.Attribute("data-label")?.Value,
+				Description = el.Attribute("data-description")?.Value,
+			};
+		}
+
+		private static Shape? ParseText(XElement el, ref int nextId) {
+			float? x = Attr(el, "x"), z = Attr(el, "y");
+			if (x == null || z == null) return null;
+			string? label = el.Value?.Trim();
+			if (string.IsNullOrEmpty(label)) return null;
+			float y = Attr(el, "data-y") ?? 0f;
+			return new Shape {
+				id = $"s{nextId++}",
+				Type = Tools.text,
+				layer = ParseLayer(el),
+				pts = [new Vector3(x.Value, y, z.Value)],
+				Label = label,
+				Description = el.Attribute("data-description")?.Value,
 			};
 		}
 

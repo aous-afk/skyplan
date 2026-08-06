@@ -20,6 +20,7 @@ namespace Skyplan.Persistence {
 					Tools.path    when shape.pts.Count >= 2 => ExportPath(shape),
 					Tools.polygon when shape.pts.Count >= 3 => ExportPolygon(shape),
 					Tools.point   when shape.pts.Count >= 1 => ExportCircle(shape),
+					Tools.text    when shape.pts.Count >= 1 => ExportText(shape),
 					_ => null
 				};
 				if (elem != null) sb.AppendLine($"  {elem}");
@@ -34,7 +35,7 @@ namespace Skyplan.Persistence {
 			var p1 = s.pts[1];
 			return $"<path d=\"M {F(p0.x)} {F(p0.z)} L {F(p1.x)} {F(p1.z)}\"" +
 			       $" data-layer=\"{s.layer?.Id}\" data-y0=\"{F(p0.y)}\" data-y1=\"{F(p1.y)}\"" +
-			       $" fill=\"none\" style=\"{BuildStyle(s)}\"/>";
+			       $"{Meta(s)} fill=\"none\" style=\"{BuildStyle(s)}\"/>";
 		}
 
 		private static string ExportPolygon(Shape s) {
@@ -42,15 +43,35 @@ namespace Skyplan.Persistence {
 			string dataY = string.Join(",", s.pts.Select(p => F(p.y)));
 			return $"<polygon points=\"{pts}\"" +
 			       $" data-layer=\"{s.layer?.Id}\" data-y=\"{dataY}\"" +
-			       $" style=\"{BuildStyle(s)}\"/>";
+			       $"{Meta(s)} style=\"{BuildStyle(s)}\"/>";
 		}
 
 		private static string ExportCircle(Shape s) {
 			var p = s.pts[0];
 			return $"<circle cx=\"{F(p.x)}\" cy=\"{F(p.z)}\" r=\"100\"" +
 			       $" data-layer=\"{s.layer?.Id}\" data-y=\"{F(p.y)}\"" +
-			       $" style=\"{BuildStyle(s)}\"/>";
+			       $"{Meta(s)} style=\"{BuildStyle(s)}\"/>";
 		}
+
+		private static string ExportText(Shape s) {
+			var p = s.pts[0];
+			string text = Esc(s.Label ?? "");
+			return $"<text x=\"{F(p.x)}\" y=\"{F(p.z)}\"" +
+			       $" data-layer=\"{s.layer?.Id}\" data-y=\"{F(p.y)}\"" +
+			       $"{Meta(s)}>{text}</text>";
+		}
+
+		private static string Meta(Shape s) {
+			string result = "";
+			if (!string.IsNullOrEmpty(s.Label)) {
+			  result += $" data-label=\"{Esc(s.Label)}\"";
+			}
+			if (!string.IsNullOrEmpty(s.Description)) result += $" data-description=\"{Esc(s.Description)}\"";
+			return result;
+		}
+
+		private static string Esc(string v) =>
+			v.Replace("&", "&amp;").Replace("\"", "&quot;").Replace("<", "&lt;").Replace(">", "&gt;");
 
 		private static string BuildStyle(Shape s) {
 			if (s.layer?.Style == null) return "stroke:#ffffff;stroke-width:2";
