@@ -18,6 +18,8 @@ namespace Skyplan.Models.dto {
 		public bool InFrame;
 		[JsonProperty("label")]
 		public string? Label;
+		[JsonProperty("description")]
+		public string? Description;
 	}
 
 	public class ScreenPt {
@@ -32,5 +34,6 @@ namespace Skyplan.Models.dto {
 	  path,
 	  polygon,
 	  circle,
+	  text,
 	}
 }

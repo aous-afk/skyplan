@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1-alpha.30",
+  "version": "0.0.3.35",
   "layers": [
     {
       "id": "train",
@@ -317,6 +317,18 @@
       "style": {
         "fill": "#33bb55",
         "stroke": "#33bb55",
+        "stroke-width": 1
+      }
+    },
+    {
+      "id": "annotations",
+      "label": "Annotations",
+      "allowedTools": [
+        "text"
+      ],
+      "style": {
+        "fill": "#facc15",
+        "stroke": "#facc15",
         "stroke-width": 1
       }
     }

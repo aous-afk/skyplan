@@ -39,3 +39,15 @@
   text-align: center;
 }
 
+// shared button base
+.svg {
+  display: block;
+  width: 13px;
+  height: 13px;
+  overflow: hidden;
+  color: #bbb;
+
+  &.svg_active {
+    color: #9c6d6d !important;
+  }
+}
