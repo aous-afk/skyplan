@@ -84,10 +84,12 @@ const DrawingCanvas: React.FC = () => {
 
 	useEffect(() => {
 		const onMove = (e: MouseEvent) => {
-			if (toolRef.current === 'text' && !viewModeRef.current)
+			if (toolRef.current === 'text' && !viewModeRef.current) {
 				setCursorPos({ x: e.clientX, y: e.clientY });
-			else
+			}
+			else {
 				setCursorPos(null);
+			}
 		};
 		const onLeave = () => setCursorPos(null);
 		document.addEventListener('mousemove', onMove, true);
@@ -258,7 +260,8 @@ const DrawingCanvas: React.FC = () => {
 	const hasHighlight = highlightId !== null;
 	const layerCSS = buildLayerCSS(shapes, preview);
 
-	if (shapes.length === 0 && !preview) return null;
+	const showCursor = !!cursorPos && activeTool === 'text' && !viewMode;
+	if (shapes.length === 0 && !preview && !showCursor) return null;
 
 	return (
 		<svg
@@ -289,6 +292,7 @@ const DrawingCanvas: React.FC = () => {
 						</text>
 					  );
 					}
+
 					if (!s.label) return null;
 					const pos = labelPosition(s);
 					if (!pos) return null;
@@ -307,7 +311,7 @@ const DrawingCanvas: React.FC = () => {
 			  </g>
 			))}
 			{preview && renderShape(preview)}
-			{cursorPos && activeTool === 'text' && !viewMode && (
+			{showCursor && (
 				<circle
 					cx={cursorPos.x} cy={cursorPos.y} r={5}
 					fill="rgba(250,204,21,0.25)" stroke="#facc15" strokeWidth={1.5}
