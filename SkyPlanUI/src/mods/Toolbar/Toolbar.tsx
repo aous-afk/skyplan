@@ -2,7 +2,7 @@ import React, {useEffect, useRef, useState} from "react";
 import {trigger} from 'cs2/api';
 import {TOOLS, Tag} from '../types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
-import {faArrowLeft, faXmark} from '@fortawesome/free-solid-svg-icons'
+import {faXmark, faUndo} from '@fortawesome/free-solid-svg-icons'
 import styles from './Toolbar.module.scss';
 import {useSkyplan} from '../SkyplanContext';
 import {useDrawingContext} from "mods/DrawingContext";
@@ -111,7 +111,7 @@ const Toolbar: React.FC = () => {
 
 			<div className={styles.actions_container}>
 				<button onClick={onUndo} className={styles.btn_base}>
-					<FontAwesomeIcon icon={faArrowLeft} className={styles.svg} />
+					<FontAwesomeIcon icon={faUndo} className={styles.svg} />
 				</button>
 				<label className={styles.mode_toggle} onClick={onViewModeToggle}>
 					<span className={styles.toggle_track} style={{ background: viewMode ? 'rgba(255,255,255,0.15)' : '#4a90d9' }}>
