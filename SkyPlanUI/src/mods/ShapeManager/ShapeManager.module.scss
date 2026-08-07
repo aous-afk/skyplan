@@ -75,6 +75,11 @@
   margin: 2px 8px;
   background: rgba(74, 144, 217, 0.07);
   overflow: hidden;
+
+  &:hover {
+    background: rgba(74, 144, 217, 0.18);
+    outline: 1px solid rgba(74, 144, 217, 0.35);
+  }
 }
 
 .shape_row_header {

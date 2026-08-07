@@ -5,6 +5,7 @@ import {getModule} from 'cs2/modding';
 import {faDrawPolygon, faEye, faEyeSlash, faFont, faLocationDot, faRoad} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {ShapeData, Tag} from 'mods/types';
+import {useDrawingContext} from 'mods/DrawingContext';
 import shared from '../shared.module.scss';
 import styles from './ShapeManager.module.scss';
 
@@ -39,6 +40,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 	layerVisible, onLayerVisibleToggle,
 	layerLabels, onLayerLabelsToggle,
 }) => {
+	const { onHoverShape } = useDrawingContext();
 	const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
 	const [editName, setEditName] = useState('');
 	const [editNote, setEditNote] = useState('');
@@ -135,6 +137,8 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 											<div
 												className={styles.shape_row_header}
 												onClick={() => isEditing ? setEditingShapeId(null) : startEdit(s)}
+												onMouseEnter={() => onHoverShape(s.id)}
+												onMouseLeave={() => onHoverShape(null)}
 											>
 												<FontAwesomeIcon icon={tagIcon(s.tag)} className={styles.shape_row_icon} />
 												<span className={styles.shape_row_name} style={{ color: 'rgba(255,255,255,0.8)' }}>{s.label || fallback}</span>

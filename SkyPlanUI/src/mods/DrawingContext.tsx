@@ -16,6 +16,7 @@ interface DrawingCtx {
 	onLayerOpacityChange: (layerId: string, v: number) => void;
 	onLayerVisibleToggle: (layerId: string) => void;
 	onLayerLabelsToggle: (layerId: string) => void;
+	onHoverShape: (id: string | null) => void;
 }
 
 const DrawingContext = createContext<DrawingCtx | null>(null);
@@ -46,8 +47,9 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const [layerOpacities, setLayerOpacities] = useState<Record<string, number>>({});
 	const [layerVisible, setLayerVisible] = useState<Record<string, boolean>>({});
 	const [layerLabels, setLayerLabels] = useState<Record<string, boolean>>({});
+	const [hoverShapeId, setHoverShapeId] = useState<string | null>(null);
 
-	const highlightId = highlightRaw || null;
+	const highlightId = hoverShapeId ?? (highlightRaw || null);
 
 	useEffect(() => {
 		const onResize = () => setSvgSize({ w: window.innerWidth || 1920, h: window.innerHeight || 1080 });
@@ -68,6 +70,10 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		setLayerLabels(prev => ({ ...prev, [layerId]: !(prev[layerId] ?? false) }));
 	}, []);
 
+	const onHoverShape = useCallback((id: string | null) => {
+		setHoverShapeId(id);
+	}, []);
+
 	const value: DrawingCtx = {
 		shapes,
 		preview,
@@ -81,6 +87,7 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		onLayerOpacityChange,
 		onLayerVisibleToggle,
 		onLayerLabelsToggle,
+		onHoverShape,
 	};
 
 	return (
