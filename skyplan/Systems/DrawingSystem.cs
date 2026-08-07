@@ -187,7 +187,7 @@ namespace skyplan.Systems {
 		}
 
 		private void LoadAndMergeLayers() {
-			string defaultPath = Path.Combine(Mod.modPath, "layer_default.json");
+			string defaultPath = Path.Combine(Mod.modPath, "layers_default.json");
 			string dataDir = Path.Combine(EnvPath.kUserDataPath, "ModsData", nameof(skyplan));
 			string userPath = Path.Combine(dataDir, "layer.json");
 
@@ -199,7 +199,7 @@ namespace skyplan.Systems {
 			}
 
 			if (!File.Exists(defaultPath)) {
-				Mod.log.Warn($"[Skyplan] layer_default.json not found at {defaultPath}");
+				Mod.log.Warn($"[Skyplan] layers_default.json not found at {defaultPath}");
 				return;
 			}
 
