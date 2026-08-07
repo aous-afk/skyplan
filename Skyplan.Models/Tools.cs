@@ -4,5 +4,6 @@ namespace Skyplan.Models {
 	polygon,
 	point,
 	erase,
+	text,
   }
 }

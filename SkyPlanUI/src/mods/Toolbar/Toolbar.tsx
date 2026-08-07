@@ -1,5 +1,6 @@
-import React, {useEffect, useRef} from "react";
-import {TOOLS} from '../types';
+import React, {useEffect, useRef, useState} from "react";
+import {trigger} from 'cs2/api';
+import {TOOLS, Tag} from '../types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faArrowLeft, faXmark} from '@fortawesome/free-solid-svg-icons'
 import styles from './Toolbar.module.scss';
@@ -25,8 +26,25 @@ const Toolbar: React.FC = () => {
 	  onLayerOpacityChange,
 	  layerVisible,
 	  onLayerVisibleToggle,
+	  layerLabels,
+	  onLayerLabelsToggle,
 	} = useDrawingContext();
 
+	const [pendingTextId, setPendingTextId] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (activeTool !== 'text') {
+			setPendingTextId(null);
+			return;
+		}
+		const unlabeled = shapes.find(s => s.tag === Tag.text && !s.label);
+		setPendingTextId(unlabeled?.id ?? null);
+	}, [shapes, activeTool]);
+
+	const commitText = (id: string, text: string) => {
+		trigger('skyplan', 'commitText', `${id}|${text}`);
+		setPendingTextId(null);
+	};
 
 	const toolbarEl = useRef<HTMLDivElement>(null);
 	const dragHandleEl = useRef<HTMLDivElement>(null);
@@ -112,6 +130,8 @@ const Toolbar: React.FC = () => {
 			  onLayerOpacityChange={onLayerOpacityChange}
 			  layerVisible={layerVisible}
 			  onLayerVisibleToggle={onLayerVisibleToggle}
+			  layerLabels={layerLabels}
+			  onLayerLabelsToggle={onLayerLabelsToggle}
 			  />}
 			{!viewMode && <div className={styles.body}>
 				<div className={styles.tools_column}>
@@ -131,22 +151,40 @@ const Toolbar: React.FC = () => {
 				</div>
 
 				<div className={styles.layers_panel}>
-					<div className={styles.layers_grid}>
-						{visibleLayers.map(l => {
-							const active = activeLayer?.id === l.id;
-							return (
-								<button key={l.id}
-									onClick={() => onLayerChange(l)}
-									className={`${styles.layer_btn} ${active ? styles.layer_btn_active : ''}`}
-									style={{
-										border: active ? `2px solid ${l.style.stroke}` : '2px solid transparent',
-									}}
-								>
-									{l.label}
-								</button>
-							);
-						})}
-					</div>
+					{activeTool === 'text' && pendingTextId ? (
+						<div className={styles.text_input_row}>
+							<span className={styles.text_input_label}>Annotation text</span>
+							<input
+								autoFocus
+								className={styles.text_input}
+								style={{ width: '100%', boxSizing: 'border-box' }}
+								placeholder="Type and press Enter…"
+								onKeyDown={e => {
+									e.stopPropagation();
+									if (e.key === 'Enter') commitText(pendingTextId, e.currentTarget.value);
+									if (e.key === 'Escape') commitText(pendingTextId, '');
+								}}
+								onBlur={e => commitText(pendingTextId, e.currentTarget.value)}
+							/>
+						</div>
+					) : (
+						<div className={styles.layers_grid}>
+							{visibleLayers.map(l => {
+								const active = activeLayer?.id === l.id;
+								return (
+									<button key={l.id}
+										onClick={() => onLayerChange(l)}
+										className={`${styles.layer_btn} ${active ? styles.layer_btn_active : ''}`}
+										style={{
+											border: active ? `2px solid ${l.style.stroke}` : '2px solid transparent',
+										}}
+									>
+										{l.label}
+									</button>
+								);
+							})}
+						</div>
+					)}
 					<div className={styles.layer_actions}>
 						<button onClick={onClear} className={`${styles.btn_base} ${styles.btn_clear}`}>Clear</button>
 						<button onClick={onClearAll} className={`${styles.btn_base} ${styles.btn_clear_all}`}>Clear All</button>

@@ -169,7 +169,7 @@
   display: block;
   width: 13px;
   height: 13px;
-  overflow: visible;
+  overflow: hidden;
   color: #bbb;
 
   &.svg_active {
@@ -261,4 +261,41 @@
 
 .title_handel_bar {
   font-size: 150%;
+}
+
+.text_input_row {
+  height: 160px;
+  padding: 8px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.text_input_label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(250, 204, 21, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.text_input {
+  width: 160px !important;
+  background: rgba(10, 30, 60, 0.85);
+  border: 1px solid rgba(74, 144, 217, 0.5);
+  border-radius: 4px;
+  color: #fff !important;
+  font-size: 12px;
+  padding: 4px 8px;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: rgba(74, 144, 217, 0.9);
+  }
 }

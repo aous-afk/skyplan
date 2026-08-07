@@ -11,9 +11,11 @@ interface DrawingCtx {
 	globalOpacity: number;
 	layerOpacities: Record<string, number>;
 	layerVisible: Record<string, boolean>;
+	layerLabels: Record<string, boolean>;
 	onGlobalOpacityChange: (v: number) => void;
 	onLayerOpacityChange: (layerId: string, v: number) => void;
 	onLayerVisibleToggle: (layerId: string) => void;
+	onLayerLabelsToggle: (layerId: string) => void;
 }
 
 const DrawingContext = createContext<DrawingCtx | null>(null);
@@ -43,6 +45,7 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const [globalOpacity, setGlobalOpacity] = useState(1);
 	const [layerOpacities, setLayerOpacities] = useState<Record<string, number>>({});
 	const [layerVisible, setLayerVisible] = useState<Record<string, boolean>>({});
+	const [layerLabels, setLayerLabels] = useState<Record<string, boolean>>({});
 
 	const highlightId = highlightRaw || null;
 
@@ -61,6 +64,10 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		setLayerVisible(prev => ({ ...prev, [layerId]: !(prev[layerId] ?? true) }));
 	}, []);
 
+	const onLayerLabelsToggle = useCallback((layerId: string) => {
+		setLayerLabels(prev => ({ ...prev, [layerId]: !(prev[layerId] ?? false) }));
+	}, []);
+
 	const value: DrawingCtx = {
 		shapes,
 		preview,
@@ -69,9 +76,11 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		globalOpacity,
 		layerOpacities,
 		layerVisible,
+		layerLabels,
 		onGlobalOpacityChange: setGlobalOpacity,
 		onLayerOpacityChange,
 		onLayerVisibleToggle,
+		onLayerLabelsToggle,
 	};
 
 	return (

@@ -1,10 +1,12 @@
 using Colossal.UI.Binding;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Game;
 using Game.SceneFlow;
 using Game.UI;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using UnityEngine;
 using Skyplan.Models;
 using Skyplan.Models.dto;
@@ -115,6 +117,10 @@ namespace skyplan.Systems {
 			}));
 
 			AddBinding(new TriggerBinding("skyplan", "panelClosed", HidePanel));
+
+			AddBinding(new TriggerBinding<string>("skyplan", "setShapeLabel", HandleSetShapeLabel));
+			AddBinding(new TriggerBinding<string>("skyplan", "setShapeNote", HandleSetShapeNote));
+			AddBinding(new TriggerBinding<string>("skyplan", "commitText", HandleCommitText));
 		}
 
 		protected override void OnUpdate() {
@@ -134,6 +140,44 @@ namespace skyplan.Systems {
 			}
 		}
 
+		private void HandleSetShapeLabel(string payload) {
+			int sep = payload.IndexOf('|');
+			if (sep < 0) return;
+			string id = payload[..sep];
+			string label = payload[(sep + 1)..];
+			Shape shape = m_Shapes.Find(s => s.id == id);
+			if (shape == null) return;
+			shape.Label = string.IsNullOrEmpty(label) ? null : label;
+			if (m_Camera.IsReady) UpdateShapesJson();
+		}
+
+		private void HandleSetShapeNote(string payload) {
+			int sep = payload.IndexOf('|');
+			if (sep < 0) return;
+			string id = payload[..sep];
+			string note = payload[(sep + 1)..];
+			Shape shape = m_Shapes.Find(s => s.id == id);
+			if (shape == null) return;
+			shape.Description = string.IsNullOrEmpty(note) ? null : note;
+			if (m_Camera.IsReady) UpdateShapesJson();
+		}
+
+		private void HandleCommitText(string payload) {
+			int sep = payload.IndexOf('|');
+			if (sep < 0) return;
+			string id = payload[..sep];
+			string text = payload[(sep + 1)..];
+			Shape shape = m_Shapes.Find(s => s.id == id);
+			if (shape == null) return;
+			if (string.IsNullOrEmpty(text)) {
+				m_UndoStack.RemoveAll(op => op.shape?.id == id);
+				m_Shapes.Remove(shape);
+			} else {
+				shape.Label = text;
+			}
+			if (m_Camera.IsReady) UpdateShapesJson();
+		}
+
 		private void HidePanel() {
 			m_PanelVisible = false;
 			m_ActiveShape = null;
@@ -142,27 +186,96 @@ namespace skyplan.Systems {
 			m_PreviewBinding.Update("");
 		}
 
-		private void EnsureLayersJson() {
+		private void LoadAndMergeLayers() {
+			string defaultPath = Path.Combine(Mod.modPath, "layer_default.json");
 			string dataDir = Path.Combine(EnvPath.kUserDataPath, "ModsData", nameof(skyplan));
-			string dest = Path.Combine(dataDir, "layers.json");
-			if (!File.Exists(dest)) {
-				string src = Path.Combine(Mod.modPath, "layers.json");
-				if (File.Exists(src)) {
-					Directory.CreateDirectory(dataDir);
-					File.Copy(src, dest);
-					Mod.log.Info($"[Skyplan] Seeded layers.json to {dest}");
-				} else {
-					Mod.log.Warn($"[Skyplan] Default layers.json not found at {src}");
-				}
+			string userPath = Path.Combine(dataDir, "layer.json");
+
+			// Backwards compat: migrate old layers.json → layer.json
+			string legacyPath = Path.Combine(dataDir, "layers.json");
+			if (!File.Exists(userPath) && File.Exists(legacyPath)) {
+				File.Move(legacyPath, userPath);
+				Mod.log.Info("[Skyplan] Migrated layers.json → layer.json");
 			}
-			if (File.Exists(dest))
-				m_LayersConfigBinding.Update(File.ReadAllText(dest));
+
+			if (!File.Exists(defaultPath)) {
+				Mod.log.Warn($"[Skyplan] layer_default.json not found at {defaultPath}");
+				return;
+			}
+
+			var defaults = ParseLayerList(File.ReadAllText(defaultPath));
+			var user = File.Exists(userPath) ? ParseLayerList(File.ReadAllText(userPath)) : [];
+
+			var merged = MergeLayers(defaults, user);
+			m_LayersConfigBinding.Update(JsonConvert.SerializeObject(new { layers = merged }));
+		}
+
+		private static List<JObject> ParseLayerList(string json) {
+			try {
+				var jobj = JObject.Parse(json);
+				if (jobj["layers"] is JArray arr)
+					return arr.OfType<JObject>().ToList();
+			} catch (Exception ex) {
+				Mod.log.Warn($"[Skyplan] Failed to parse layer list: {ex.Message}");
+			}
+			return [];
+		}
+
+		private static List<JObject> MergeLayers(List<JObject> defaults, List<JObject> user) {
+			var userById = user
+				.Where(l => l["id"]?.Value<string>() != null)
+				.ToDictionary(l => l["id"]!.Value<string>()!, StringComparer.OrdinalIgnoreCase);
+
+			var result = new List<JObject>();
+			var defaultIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+			foreach (var def in defaults) {
+				string id = def["id"]?.Value<string>() ?? "";
+				defaultIds.Add(id);
+				result.Add(userById.TryGetValue(id, out var u) ? MergeLayerJson(def, u) : def);
+			}
+
+			// Append user-only custom layers not present in defaults
+			foreach (var u in user) {
+				string id = u["id"]?.Value<string>() ?? "";
+				if (!string.IsNullOrEmpty(id) && !defaultIds.Contains(id))
+					result.Add(u);
+			}
+
+			return result;
+		}
+
+		private static JObject MergeLayerJson(JObject def, JObject user) {
+			var merged = (JObject)def.DeepClone();
+
+			// Label: user wins if non-empty
+			string userLabel = user["label"]?.Value<string>() ?? "";
+			if (!string.IsNullOrEmpty(userLabel))
+				merged["label"] = userLabel;
+
+			// Style: default base, user overrides per key
+			var defStyle = def["style"] as JObject ?? new JObject();
+			var userStyle = user["style"] as JObject ?? new JObject();
+			var mergedStyle = (JObject)defStyle.DeepClone();
+			foreach (var prop in userStyle.Properties())
+				mergedStyle[prop.Name] = prop.Value;
+			merged["style"] = mergedStyle;
+
+			// allowedTools: union of default and user lists
+			var defTools = def["allowedTools"] as JArray ?? new JArray();
+			var userTools = user["allowedTools"] as JArray ?? new JArray();
+			var toolSet = new HashSet<string>(defTools.Values<string>()!);
+			foreach (var t in userTools.Values<string>()!)
+				if (t != null) toolSet.Add(t);
+			merged["allowedTools"] = new JArray(toolSet.ToArray<object>());
+
+			return merged;
 		}
 
 		public void TogglePanel() {
 			m_PanelVisible = !m_PanelVisible;
 			if (m_PanelVisible) {
-				EnsureLayersJson();
+				LoadAndMergeLayers();
 				m_Camera.SetBaseline();
 				if (m_Camera.IsReady) {
 					UpdateShapesJson();
@@ -219,10 +332,10 @@ namespace skyplan.Systems {
 
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
 
-			if (m_CurrentTool == Tools.point) {
+			if (m_CurrentTool == Tools.point || m_CurrentTool == Tools.text) {
 				Shape s = new() {
 					id = $"s{m_NextId++}",
-					Type = Tools.point,
+					Type = m_CurrentTool,
 					layer = m_CurrentLayer,
 					pts = [world],
 				};
@@ -378,10 +491,13 @@ namespace skyplan.Systems {
 				Id = shape.id,
 				LayerId = shape.layer?.Id,
 				LayerDef = shape.layer,
+				Label = shape.Label,
+				Description = shape.Description,
 				Tag = shape.Type switch {
 					Tools.path => Tag.path,
 					Tools.polygon => Tag.polygon,
 					Tools.point => Tag.circle,
+					Tools.text => Tag.text,
 					_ => Tag.none
 				}
 			};

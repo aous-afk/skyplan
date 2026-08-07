@@ -7,5 +7,7 @@ namespace Skyplan.Models{
 		public Tools Type;
 		public LayerDefDto layer;
 		public List<Vector3> pts = [];
+		public string? Label;
+		public string? Description;
 	}
 }

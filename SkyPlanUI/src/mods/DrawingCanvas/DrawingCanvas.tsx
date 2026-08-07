@@ -1,9 +1,9 @@
-import React, {useEffect, useMemo, useRef} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {trigger} from 'cs2/api';
 import {ToolId, ShapeData, Tag} from '../types';
-import {buildPath, buildPolygon} from 'mods/utils/buildSvg';
+import {buildPath, buildPolygon, centroid} from 'mods/utils/buildSvg';
 import {useSkyplan} from '../SkyplanContext';
-import { useDrawingContext } from 'mods/DrawingContext';
+import {useDrawingContext} from 'mods/DrawingContext';
 
 function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null): string {
 	const seen = new Set<string>();
@@ -18,6 +18,14 @@ function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null): string {
 		rules.push(`.sp-${s.layerDef.id}{${decls}}`);
 	}
 	return rules.join('');
+}
+
+function labelPosition(s: ShapeData): { x: number; y: number } | null {
+	if (!s.pts.length) return null;
+	if (s.tag === Tag.polygon) return centroid(s.pts);
+	if (s.tag === Tag.path)    return centroid(s.pts);
+	if (s.tag === Tag.circle)  return { x: s.pts[0].x, y: s.pts[0].y - 12 };
+	return null;
 }
 
 function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null {
@@ -43,13 +51,28 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 			const p = s.pts[0];
 			return <circle key={s.id} className={cn} cx={p.x} cy={p.y} r={6} style={style} />;
 		}
+		case Tag.text: {
+			const p = s.pts[0];
+			if (!p || !s.label) return null;
+			return (
+				<text key={s.id} x={p.x} y={p.y}
+					textAnchor="middle" dominantBaseline="middle"
+					fontSize={13} fill="#facc15"
+					style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.7)', strokeWidth: 3, ...style }}
+				>
+					{s.label}
+				</text>
+			);
+		}
 		default: return null;
 	}
 }
 
 const DrawingCanvas: React.FC = () => {
 	const { activeTool, viewMode } = useSkyplan();
-	const {shapes, preview, highlightId, svgSize, globalOpacity, layerOpacities, layerVisible} = useDrawingContext();
+	const {shapes, preview, highlightId, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels} = useDrawingContext();
+
+	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
 	const drawingRef = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
@@ -58,6 +81,24 @@ const DrawingCanvas: React.FC = () => {
 
 	useEffect(() => { toolRef.current = activeTool; }, [activeTool]);
 	useEffect(() => { viewModeRef.current = viewMode; }, [viewMode]);
+
+	useEffect(() => {
+		const onMove = (e: MouseEvent) => {
+			if (toolRef.current === 'text' && !viewModeRef.current) {
+				setCursorPos({ x: e.clientX, y: e.clientY });
+			}
+			else {
+				setCursorPos(null);
+			}
+		};
+		const onLeave = () => setCursorPos(null);
+		document.addEventListener('mousemove', onMove, true);
+		document.addEventListener('mouseleave', onLeave, true);
+		return () => {
+			document.removeEventListener('mousemove', onMove, true);
+			document.removeEventListener('mouseleave', onLeave, true);
+		};
+	}, []);
 
 	useEffect(() => {
 		function onDown(cx: number, cy: number, type: string): boolean {
@@ -219,7 +260,8 @@ const DrawingCanvas: React.FC = () => {
 	const hasHighlight = highlightId !== null;
 	const layerCSS = buildLayerCSS(shapes, preview);
 
-	if (shapes.length === 0 && !preview) return null;
+	const showCursor = !!cursorPos && activeTool === 'text' && !viewMode;
+	if (shapes.length === 0 && !preview && !showCursor) return null;
 
 	return (
 		<svg
@@ -236,9 +278,46 @@ const DrawingCanvas: React.FC = () => {
 			{Array.from(shapesByLayer.entries()).map(([layerId, layerShapes]) => (
 			  <g key={layerId} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
 				{layerShapes.map(s => renderShape(s, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
+				{layerLabels[layerId] && layerShapes.map(s => {
+					if (s.tag === Tag.text) {
+					  if (!s.description || !s.pts[0]) return null;
+					  return (
+						<text key={`desc-${s.id}`}
+						  x={s.pts[0].x} y={s.pts[0].y + 18}
+						  textAnchor="middle" dominantBaseline="middle"
+						  fontSize={10} fill="#facc15"
+						  style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
+						>
+						  {s.description}
+						</text>
+					  );
+					}
+
+					if (!s.label) return null;
+					const pos = labelPosition(s);
+					if (!pos) return null;
+					return (
+					  <text key={`lbl-${s.id}`}
+						x={pos.x} y={pos.y}
+						textAnchor="middle" dominantBaseline="middle"
+						fontSize={12} fill="white"
+						style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 3 }}
+					  >
+						{s.label}
+					  </text>
+					);
+				  })
+				}
 			  </g>
 			))}
 			{preview && renderShape(preview)}
+			{showCursor && (
+				<circle
+					cx={cursorPos.x} cy={cursorPos.y} r={5}
+					fill="rgba(250,204,21,0.25)" stroke="#facc15" strokeWidth={1.5}
+					style={{ pointerEvents: 'none' }}
+				/>
+			)}
 		</svg>
 	);
 };
