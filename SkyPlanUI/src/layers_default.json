@@ -1,5 +1,11 @@
 {
-  "version": "0.0.1-alpha.36",
+  "version": "0.0.3.38",
+  "labelStyle": {
+    "color": "#ffffff",
+    "fontSize": 12,
+    "fontWeight": "normal",
+    "opacity": 1
+  },
   "layers": [
     {
       "id": "train",
@@ -14,7 +20,8 @@
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
         "stroke-opacity": "0.8"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "subway",
@@ -28,7 +35,8 @@
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
         "stroke-opacity": "0.8"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "tram",
@@ -42,7 +50,8 @@
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
         "stroke-opacity": "0.8"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "bus",
@@ -57,7 +66,8 @@
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
         "stroke-opacity": "0.8"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "highway",
@@ -71,7 +81,8 @@
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
         "stroke-opacity": "0.8"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "arterial",
@@ -85,7 +96,8 @@
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
         "stroke-opacity": "0.8"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "collector",
@@ -99,7 +111,8 @@
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
         "stroke-opacity": "0.8"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "local",
@@ -113,7 +126,8 @@
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
         "stroke-opacity": "0.8"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "residential",
@@ -126,6 +140,9 @@
         "stroke-width": 2,
         "fill": "#44cc88",
         "fill-opacity": "0.5"
+      },
+      "labelStyle": {
+        "color": "#ffff00"
       }
     },
     {
@@ -139,7 +156,8 @@
         "stroke-width": 2,
         "fill": "#4488ff",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "industrial",
@@ -152,7 +170,8 @@
         "stroke-width": 2,
         "fill": "#ffaa22",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "office",
@@ -165,7 +184,8 @@
         "stroke-width": 2,
         "fill": "#cc88ff",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "healthcare",
@@ -178,7 +198,8 @@
         "stroke-width": 2,
         "fill": "#ff4488",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "education",
@@ -191,7 +212,8 @@
         "stroke-width": 2,
         "fill": "#44ddff",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "police-admin",
@@ -204,7 +226,8 @@
         "stroke-width": 2,
         "fill": "#3366ff",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "fire-rescue",
@@ -217,7 +240,8 @@
         "stroke-width": 2,
         "fill": "#ff6622",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "parks",
@@ -230,7 +254,8 @@
         "stroke-width": 2,
         "fill": "#33bb55",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "utilities",
@@ -243,7 +268,8 @@
         "stroke-width": 2,
         "fill": "#ffdd00",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "garbage",
@@ -256,7 +282,8 @@
         "stroke-width": 2,
         "fill": "#996633",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "transport",
@@ -269,7 +296,8 @@
         "stroke-width": 2,
         "fill": "#cc44ff",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "telecom-post",
@@ -282,7 +310,8 @@
         "stroke-width": 2,
         "fill": "#66cccc",
         "fill-opacity": "0.5"
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "poi",
@@ -294,7 +323,8 @@
         "fill": "#ffcc00",
         "stroke": "#ffcc00",
         "stroke-width": 1
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "landmark",
@@ -306,7 +336,8 @@
         "fill": "#ff4488",
         "stroke": "#ff4488",
         "stroke-width": 1
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "tree",
@@ -318,7 +349,8 @@
         "fill": "#33bb55",
         "stroke": "#33bb55",
         "stroke-width": 1
-      }
+      },
+      "labelStyle": {}
     },
     {
       "id": "annotations",
@@ -330,6 +362,9 @@
         "fill": "#facc15",
         "stroke": "#facc15",
         "stroke-width": 1
+      },
+      "labelStyle": {
+        "color": "#facc15"
       }
     }
   ]

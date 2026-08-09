@@ -212,11 +212,29 @@ namespace skyplan.Systems {
 				return;
 			}
 
-			var defaults = ParseLayerList(File.ReadAllText(defaultPath));
-			var user = File.Exists(userPath) ? ParseLayerList(File.ReadAllText(userPath)) : [];
+			var defaultRoot = JObject.Parse(File.ReadAllText(defaultPath));
+			var defaults = defaultRoot["layers"] is JArray defArr ? defArr.OfType<JObject>().ToList() : [];
+
+			JObject userRoot = null;
+			if (File.Exists(userPath)) {
+				try { userRoot = JObject.Parse(File.ReadAllText(userPath)); }
+				catch (Exception ex) { Mod.log.Warn($"[Skyplan] Failed to parse layer.json: {ex.Message}"); }
+			}
+			var user = userRoot?["layers"] is JArray userArr ? userArr.OfType<JObject>().ToList() : [];
 
 			var merged = MergeLayers(defaults, user);
-			m_LayersConfigBinding.Update(JsonConvert.SerializeObject(new { layers = merged }));
+
+			// Global labelStyle: default base, user layer.json overrides per key
+			var output = new JObject();
+			if (defaultRoot["labelStyle"] is JObject defGlobalStyle) {
+				var globalStyle = (JObject)defGlobalStyle.DeepClone();
+				if (userRoot?["labelStyle"] is JObject userGlobalStyle)
+					foreach (var prop in userGlobalStyle.Properties())
+						globalStyle[prop.Name] = prop.Value;
+				output["labelStyle"] = globalStyle;
+			}
+			output["layers"] = JArray.FromObject(merged);
+			m_LayersConfigBinding.Update(output.ToString(Formatting.None));
 		}
 
 		private static List<JObject> ParseLayerList(string json) {
@@ -277,6 +295,17 @@ namespace skyplan.Systems {
 			foreach (var t in userTools.Values<string>()!)
 				if (t != null) toolSet.Add(t);
 			merged["allowedTools"] = new JArray(toolSet.ToArray<object>());
+
+			// labelStyle: default base, user overrides per key
+			var defLabelStyle = def["labelStyle"] as JObject;
+			var userLabelStyle = user["labelStyle"] as JObject;
+			if (defLabelStyle != null || userLabelStyle != null) {
+				var mergedLabelStyle = (JObject)(defLabelStyle?.DeepClone() ?? new JObject());
+				if (userLabelStyle != null)
+					foreach (var prop in userLabelStyle.Properties())
+						mergedLabelStyle[prop.Name] = prop.Value;
+				merged["labelStyle"] = mergedLabelStyle;
+			}
 
 			return merged;
 		}

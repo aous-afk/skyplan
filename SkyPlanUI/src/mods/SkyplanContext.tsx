@@ -1,13 +1,15 @@
 import React, {createContext, useContext, useState, useEffect, useMemo, useCallback} from 'react';
 import {useValue, trigger} from 'cs2/api';
 import {panelVisible$, layersConfig$} from '../bindings';
-import {ToolId, LayerDef} from './types';
+import {ToolId, LayerDef, LabelStyle} from './types';
 
 interface SkyplanCtx {
 	visible: boolean;
 	activeTool: ToolId;
 	activeLayer: LayerDef | null;
 	visibleLayers: LayerDef[];
+	allLayers: LayerDef[];
+	globalLabelStyle: LabelStyle;
 	viewMode: boolean;
 	toolbarPos: { left: number; top: number } | null;
 	onToolbarPosChange: (pos: { left: number; top: number }) => void;
@@ -33,7 +35,7 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const layersConfigJson = useValue(layersConfig$);
 
 
-	const layerConfig = useMemo<{ layers: LayerDef[] }>(() => {
+	const layerConfig = useMemo<{ labelStyle?: LabelStyle; layers: LayerDef[] }>(() => {
 		try { return JSON.parse(layersConfigJson); }
 		catch { return { layers: [] }; }
 	}, [layersConfigJson]);
@@ -90,6 +92,8 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		activeTool,
 		activeLayer,
 		visibleLayers,
+		allLayers: layerConfig.layers,
+		globalLabelStyle: layerConfig.labelStyle ?? {},
 		viewMode,
 		toolbarPos,
 		onToolbarPosChange: setToolbarPos,

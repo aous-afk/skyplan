@@ -51,11 +51,19 @@ export interface ShapeData {
 	description?: string;
 }
 
+export interface LabelStyle {
+	color?: string;
+	fontSize?: number;
+	fontWeight?: string;
+	opacity?: number;
+}
+
 export interface LayerDef {
 	id: string;
 	label: string;
 	allowedTools: ToolId[];
 	style: Record<string, string | number>;
+	labelStyle?: LabelStyle;
 }
 
 export enum Tag {
