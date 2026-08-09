@@ -69,9 +69,8 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 		setEditNote(s.description ?? '');
 	}, []);
 
-	const commitName = useCallback((shapeId: string, value: string) => {
+	const saveName = useCallback((shapeId: string, value: string) => {
 		trigger('skyplan', 'setShapeLabel', `${shapeId}|${value}`);
-		setEditingShapeId(null);
 	}, []);
 
 	const commitNote = useCallback((shapeId: string, value: string) => {
@@ -153,10 +152,10 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 														onChange={e => setEditName(e.currentTarget.value)}
 														onKeyDown={e => {
 															e.stopPropagation();
-															if (e.key === 'Enter') commitName(s.id, editName);
+															if (e.key === 'Enter') { saveName(s.id, editName); setEditingShapeId(null); }
 															if (e.key === 'Escape') setEditingShapeId(null);
 														}}
-														onBlur={() => commitName(s.id, editName)}
+														onBlur={() => saveName(s.id, editName)}
 													/>
 													<textarea
 														className={styles.shape_textarea}
