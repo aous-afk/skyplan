@@ -70,7 +70,7 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 
 const DrawingCanvas: React.FC = () => {
 	const { activeTool, viewMode } = useSkyplan();
-	const {shapes, preview, highlightId, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels} = useDrawingContext();
+	const {shapes, preview, highlightId, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions} = useDrawingContext();
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -279,20 +279,7 @@ const DrawingCanvas: React.FC = () => {
 			  <g key={layerId} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
 				{layerShapes.map(s => renderShape(s, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
 				{layerLabels[layerId] && layerShapes.map(s => {
-					if (s.tag === Tag.text) {
-					  if (!s.description || !s.pts[0]) return null;
-					  return (
-						<text key={`desc-${s.id}`}
-						  x={s.pts[0].x} y={s.pts[0].y + 18}
-						  textAnchor="middle" dominantBaseline="middle"
-						  fontSize={10} fill="#facc15"
-						  style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
-						>
-						  {s.description}
-						</text>
-					  );
-					}
-
+					if (s.tag === Tag.text) return null;
 					if (!s.label) return null;
 					const pos = labelPosition(s);
 					if (!pos) return null;
@@ -306,8 +293,38 @@ const DrawingCanvas: React.FC = () => {
 						{s.label}
 					  </text>
 					);
-				  })
-				}
+				})}
+				{showDescriptions && layerShapes.map(s => {
+					if (!s.description) return null;
+					if (s.tag === Tag.text) {
+						if (!s.pts[0]) return null;
+						return (
+						  <text key={`desc-${s.id}`}
+							x={s.pts[0].x} y={s.pts[0].y + 18}
+							textAnchor="middle" dominantBaseline="middle"
+							fontSize={10} fill="#facc15"
+							style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
+						  >
+							{s.description}
+						  </text>
+						);
+					}
+					const pos = labelPosition(s);
+					if (!pos) return null;
+					const descY = s.tag === Tag.circle
+						? s.pts[0].y + 20
+						: pos.y + 16;
+					return (
+					  <text key={`desc-${s.id}`}
+						x={pos.x} y={descY}
+						textAnchor="middle" dominantBaseline="middle"
+						fontSize={10} fill="rgba(255,255,255,0.7)"
+						style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
+					  >
+						{s.description}
+					  </text>
+					);
+				})}
 			  </g>
 			))}
 			{preview && renderShape(preview)}

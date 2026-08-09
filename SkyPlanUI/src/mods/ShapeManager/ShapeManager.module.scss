@@ -139,6 +139,35 @@
   }
 }
 
+.display_section {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 10px 6px;
+}
+
+.display_section_title {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(74, 144, 217, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.display_row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.display_row_label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-left: 8px;
+}
+
 .shape_textarea {
   width: 100%;
   background: rgba(10, 30, 60, 0.8);

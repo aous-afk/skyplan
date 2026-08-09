@@ -48,6 +48,7 @@ namespace skyplan.Systems {
 		private ValueBinding<string> m_PreviewBinding;
 		private ValueBinding<string> m_HighlightBinding;
 		private ValueBinding<string> m_LayersConfigBinding;
+		private ValueBinding<bool> m_ShowDescriptionsBinding;
 
 		protected override void OnGamePreload(Colossal.Serialization.Entities.Purpose purpose, GameMode mode) {
 			try {
@@ -68,12 +69,20 @@ namespace skyplan.Systems {
 			m_PreviewBinding = new ValueBinding<string>("skyplan", "preview", "");
 			m_HighlightBinding = new ValueBinding<string>("skyplan", "highlight", "");
 			m_LayersConfigBinding = new ValueBinding<string>("skyplan", "layersConfig", "{\"layers\":[]}");
+			m_ShowDescriptionsBinding = new ValueBinding<bool>("skyplan", "showDescriptions", LoadDisplaySettings());
 
 			AddBinding(m_PanelVisibleBinding);
 			AddBinding(m_ShapesBinding);
 			AddBinding(m_PreviewBinding);
 			AddBinding(m_HighlightBinding);
 			AddBinding(m_LayersConfigBinding);
+			AddBinding(m_ShowDescriptionsBinding);
+
+			AddBinding(new TriggerBinding<string>("skyplan", "setShowDescriptions", val => {
+				bool newValue = val == "true";
+				m_ShowDescriptionsBinding.Update(newValue);
+				SaveDisplaySettings(newValue);
+			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "drawStart", csv => {
 				Vector2 p = CSV2(csv);
@@ -544,6 +553,34 @@ namespace skyplan.Systems {
 				pts = m_ActiveShape.pts,
 			};
 			m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
+		}
+
+		private static string DisplaySettingsPath =>
+			Path.Combine(EnvPath.kUserDataPath, "ModsSettings", nameof(skyplan), "display.json");
+
+		private static bool LoadDisplaySettings() {
+			try {
+				string path = DisplaySettingsPath;
+				if (!File.Exists(path)) return false;
+				var json = JObject.Parse(File.ReadAllText(path));
+				return json["showDescriptions"]?.Value<bool>() ?? false;
+			} catch (Exception ex) {
+				Mod.log.Warn($"[Skyplan] Failed to load display settings: {ex.Message}");
+				return false;
+			}
+		}
+
+		private static void SaveDisplaySettings(bool showDescriptions) {
+			try {
+				string path = DisplaySettingsPath;
+				Directory.CreateDirectory(Path.GetDirectoryName(path));
+				File.WriteAllText(path, JsonConvert.SerializeObject(
+					new { showDescriptions },
+					Formatting.Indented
+				));
+			} catch (Exception ex) {
+				Mod.log.Warn($"[Skyplan] Failed to save display settings: {ex.Message}");
+			}
 		}
 
 		private static string F(float v) => v.ToString("F1", CultureInfo.InvariantCulture);

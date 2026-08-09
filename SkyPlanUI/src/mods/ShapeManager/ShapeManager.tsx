@@ -40,7 +40,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 	layerVisible, onLayerVisibleToggle,
 	layerLabels, onLayerLabelsToggle,
 }) => {
-	const { onHoverShape } = useDrawingContext();
+	const { onHoverShape, showDescriptions, onShowDescriptionsToggle } = useDrawingContext();
 	const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
 	const [editName, setEditName] = useState('');
 	const [editNote, setEditNote] = useState('');
@@ -178,6 +178,18 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 					))}
 				</div>
 			)}
+
+			<div className={styles.display_section}>
+				<span className={styles.display_section_title}>Display</span>
+				<label className={styles.display_row}>
+					<CheckBox
+						focusKey={FOCUS_DISABLED}
+						checked={showDescriptions}
+						onChange={onShowDescriptionsToggle}
+					/>
+					<span className={styles.display_row_label} style={{ color: 'rgba(255,255,255,0.75)'}}>Show descriptions</span>
+				</label>
+			</div>
 		</div>
 	);
 };
