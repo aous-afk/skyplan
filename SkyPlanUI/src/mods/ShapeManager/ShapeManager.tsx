@@ -40,7 +40,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 	layerVisible, onLayerVisibleToggle,
 	layerLabels, onLayerLabelsToggle,
 }) => {
-	const { onHoverShape } = useDrawingContext();
+	const { onHoverShape, showDescriptions, onShowDescriptionsToggle } = useDrawingContext();
 	const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
 	const [editName, setEditName] = useState('');
 	const [editNote, setEditNote] = useState('');
@@ -69,9 +69,8 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 		setEditNote(s.description ?? '');
 	}, []);
 
-	const commitName = useCallback((shapeId: string, value: string) => {
+	const saveName = useCallback((shapeId: string, value: string) => {
 		trigger('skyplan', 'setShapeLabel', `${shapeId}|${value}`);
-		setEditingShapeId(null);
 	}, []);
 
 	const commitNote = useCallback((shapeId: string, value: string) => {
@@ -153,10 +152,10 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 														onChange={e => setEditName(e.currentTarget.value)}
 														onKeyDown={e => {
 															e.stopPropagation();
-															if (e.key === 'Enter') commitName(s.id, editName);
+															if (e.key === 'Enter') { saveName(s.id, editName); setEditingShapeId(null); }
 															if (e.key === 'Escape') setEditingShapeId(null);
 														}}
-														onBlur={() => commitName(s.id, editName)}
+														onBlur={() => saveName(s.id, editName)}
 													/>
 													<textarea
 														className={styles.shape_textarea}
@@ -178,6 +177,18 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 					))}
 				</div>
 			)}
+
+			<div className={styles.display_section}>
+				<span className={styles.display_section_title}>Display</span>
+				<label className={styles.display_row}>
+					<CheckBox
+						focusKey={FOCUS_DISABLED}
+						checked={showDescriptions}
+						onChange={onShowDescriptionsToggle}
+					/>
+					<span className={styles.display_row_label} style={{ color: 'rgba(255,255,255,0.75)'}}>Show descriptions</span>
+				</label>
+			</div>
 		</div>
 	);
 };

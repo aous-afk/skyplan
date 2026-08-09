@@ -1,6 +1,6 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from "react";
-import {useValue} from 'cs2/api';
-import {shapes$, preview$, highlight$} from '../bindings';
+import {useValue, trigger} from 'cs2/api';
+import {shapes$, preview$, highlight$, showDescriptions$} from '../bindings';
 import {ShapeData} from './types';
 
 interface DrawingCtx {
@@ -12,10 +12,12 @@ interface DrawingCtx {
 	layerOpacities: Record<string, number>;
 	layerVisible: Record<string, boolean>;
 	layerLabels: Record<string, boolean>;
+	showDescriptions: boolean;
 	onGlobalOpacityChange: (v: number) => void;
 	onLayerOpacityChange: (layerId: string, v: number) => void;
 	onLayerVisibleToggle: (layerId: string) => void;
 	onLayerLabelsToggle: (layerId: string) => void;
+	onShowDescriptionsToggle: () => void;
 	onHoverShape: (id: string | null) => void;
 }
 
@@ -31,6 +33,7 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const shapesJson = useValue(shapes$);
 	const previewJson = useValue(preview$);
 	const highlightRaw = useValue(highlight$);
+	const showDescriptions = useValue(showDescriptions$);
 
 	const shapes = useMemo<ShapeData[]>(() => {
 		try { return JSON.parse(shapesJson) ?? []; }
@@ -70,6 +73,10 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		setLayerLabels(prev => ({ ...prev, [layerId]: !(prev[layerId] ?? false) }));
 	}, []);
 
+	const onShowDescriptionsToggle = useCallback(() => {
+		trigger('skyplan', 'setShowDescriptions', (!showDescriptions).toString());
+	}, [showDescriptions]);
+
 	const onHoverShape = useCallback((id: string | null) => {
 		setHoverShapeId(id);
 	}, []);
@@ -83,10 +90,12 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		layerOpacities,
 		layerVisible,
 		layerLabels,
+		showDescriptions,
 		onGlobalOpacityChange: setGlobalOpacity,
 		onLayerOpacityChange,
 		onLayerVisibleToggle,
 		onLayerLabelsToggle,
+		onShowDescriptionsToggle,
 		onHoverShape,
 	};
 

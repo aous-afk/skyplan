@@ -7,3 +7,4 @@ export const preview$ = bindValue<string> ('skyplan', 'preview', '');
 export const highlight$ = bindValue<string> ('skyplan', 'highlight', '');
 export const transform$ = bindValue<string> ('skyplan', 'transform', '');
 export const layersConfig$ = bindValue<string>('skyplan', 'layersConfig', '{"layers":[]}');
+export const showDescriptions$ = bindValue<boolean>('skyplan', 'showDescriptions', false);

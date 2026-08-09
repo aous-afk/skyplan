@@ -1,6 +1,6 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {trigger} from 'cs2/api';
-import {ToolId, ShapeData, Tag} from '../types';
+import {ToolId, ShapeData, Tag, LayerDef, LabelStyle} from '../types';
 import {buildPath, buildPolygon, centroid} from 'mods/utils/buildSvg';
 import {useSkyplan} from '../SkyplanContext';
 import {useDrawingContext} from 'mods/DrawingContext';
@@ -18,6 +18,15 @@ function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null): string {
 		rules.push(`.sp-${s.layerDef.id}{${decls}}`);
 	}
 	return rules.join('');
+}
+
+function resolveLabelStyle(layerDef: LayerDef | undefined, global: LabelStyle): Required<LabelStyle> {
+	return {
+		color:      layerDef?.labelStyle?.color      ?? global.color      ?? '#ffffff',
+		fontSize:   layerDef?.labelStyle?.fontSize   ?? global.fontSize   ?? 12,
+		fontWeight: layerDef?.labelStyle?.fontWeight ?? global.fontWeight ?? 'normal',
+		opacity:    layerDef?.labelStyle?.opacity    ?? global.opacity    ?? 1,
+	};
 }
 
 function labelPosition(s: ShapeData): { x: number; y: number } | null {
@@ -69,8 +78,12 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 }
 
 const DrawingCanvas: React.FC = () => {
-	const { activeTool, viewMode } = useSkyplan();
-	const {shapes, preview, highlightId, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels} = useDrawingContext();
+	const { activeTool, viewMode, globalLabelStyle, allLayers } = useSkyplan();
+	const layerDefsMap = useMemo(() =>
+		Object.fromEntries(allLayers.map(l => [l.id, l])),
+		[allLayers]
+	);
+	const {shapes, preview, highlightId, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions} = useDrawingContext();
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -275,41 +288,64 @@ const DrawingCanvas: React.FC = () => {
 			</defs>
 
 
-			{Array.from(shapesByLayer.entries()).map(([layerId, layerShapes]) => (
-			  <g key={layerId} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
-				{layerShapes.map(s => renderShape(s, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
-				{layerLabels[layerId] && layerShapes.map(s => {
-					if (s.tag === Tag.text) {
-					  if (!s.description || !s.pts[0]) return null;
-					  return (
-						<text key={`desc-${s.id}`}
-						  x={s.pts[0].x} y={s.pts[0].y + 18}
-						  textAnchor="middle" dominantBaseline="middle"
-						  fontSize={10} fill="#facc15"
-						  style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
-						>
-						  {s.description}
-						</text>
-					  );
-					}
-
-					if (!s.label) return null;
-					const pos = labelPosition(s);
-					if (!pos) return null;
-					return (
-					  <text key={`lbl-${s.id}`}
-						x={pos.x} y={pos.y}
-						textAnchor="middle" dominantBaseline="middle"
-						fontSize={12} fill="white"
-						style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 3 }}
-					  >
-						{s.label}
-					  </text>
-					);
-				  })
-				}
-			  </g>
-			))}
+			{Array.from(shapesByLayer.entries()).map(([layerId, layerShapes]) => {
+				const ls = resolveLabelStyle(layerDefsMap[layerId], globalLabelStyle);
+				const descFontSize = Math.max(8, ls.fontSize - 2);
+				const descOpacity = ls.opacity * 0.7;
+				return (
+				  <g key={layerId} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
+					{layerShapes.map(s => renderShape(s, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
+					{layerLabels[layerId] && layerShapes.map(s => {
+						if (s.tag === Tag.text) return null;
+						if (!s.label) return null;
+						const pos = labelPosition(s);
+						if (!pos) return null;
+						return (
+						  <text key={`lbl-${s.id}`}
+							x={pos.x} y={pos.y}
+							textAnchor="middle" dominantBaseline="middle"
+							fontSize={ls.fontSize} fill={ls.color}
+							fontWeight={ls.fontWeight} opacity={ls.opacity}
+							style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 3 }}
+						  >
+							{s.label}
+						  </text>
+						);
+					})}
+					{showDescriptions && layerShapes.map(s => {
+						if (!s.description) return null;
+						if (s.tag === Tag.text) {
+							if (!s.pts[0]) return null;
+							return (
+							  <text key={`desc-${s.id}`}
+								x={s.pts[0].x} y={s.pts[0].y + 18}
+								textAnchor="middle" dominantBaseline="middle"
+								fontSize={descFontSize} fill={ls.color}
+								opacity={descOpacity}
+								style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
+							  >
+								{s.description}
+							  </text>
+							);
+						}
+						const pos = labelPosition(s);
+						if (!pos) return null;
+						const descY = s.tag === Tag.circle ? s.pts[0].y + 20 : pos.y + 16;
+						return (
+						  <text key={`desc-${s.id}`}
+							x={pos.x} y={descY}
+							textAnchor="middle" dominantBaseline="middle"
+							fontSize={descFontSize} fill={ls.color}
+							opacity={descOpacity}
+							style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
+						  >
+							{s.description}
+						  </text>
+						);
+					})}
+				  </g>
+				);
+			})}
 			{preview && renderShape(preview)}
 			{showCursor && (
 				<circle
