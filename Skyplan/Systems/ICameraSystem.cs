@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace skyplan.Systems {
+namespace Skyplan.Systems {
 	public interface ICameraSystem {
 		#region Core
 		bool IsReady { get; }

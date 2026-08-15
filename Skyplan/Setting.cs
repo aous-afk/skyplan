@@ -6,14 +6,14 @@ using Game.Modding;
 using Game.Settings;
 using Game.UI.Localization;
 using Game.UI.Widgets;
-using skyplan.Systems;
+using Skyplan.Systems;
 using Skyplan.Models;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace skyplan {
-	[FileLocation(nameof(skyplan))]
+namespace Skyplan {
+	[FileLocation(nameof(Skyplan))]
 	[SettingsUIGroupOrder(kPanelGroup, kKeybindingGroup, kAboutGroup, kExportGroup, kImportGroup)]
 	[SettingsUIShowGroupName(kPanelGroup, kKeybindingGroup, kAboutGroup, kExportGroup, kImportGroup)]
 	[SettingsUIKeyboardAction(Mod.kToggleActionName, ActionType.Button,
@@ -82,7 +82,7 @@ namespace skyplan {
 		public int GetFileListVersion() => m_FileListVersion;
 
 		public DropdownItem<string>[] GetSVGFiles() {
-			string dir = Path.Combine(EnvPath.kUserDataPath, "ModsData", nameof(skyplan));
+			string dir = Path.Combine(EnvPath.kUserDataPath, "ModsData", nameof(Skyplan));
 			if (!Directory.Exists(dir))
 				return [new DropdownItem<string> { value = "", displayName = LocalizedString.Value("No files found") }];
 			var files = Directory.GetFiles(dir, "*.svg")
