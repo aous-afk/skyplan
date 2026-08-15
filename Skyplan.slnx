@@ -2,5 +2,5 @@
   <Project Path="Skyplan.Export.Tests/Skyplan.Export.Tests.csproj" />
   <Project Path="Skyplan.Persistence/Skyplan.Persistence.csproj" />
   <Project Path="Skyplan.Models/Skyplan.Models.csproj" />
-  <Project Path="skyplan/skyplan.csproj" />
+  <Project Path="Skyplan/Skyplan.csproj" />
 </Solution>

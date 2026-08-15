@@ -1,14 +1,14 @@
 using System.IO;
 using System.Linq;
 using Unity.Entities;
-using Colossal.PSI.Environment;
 using Skyplan.Models;
 using Skyplan.Persistence;
 using System.Collections.Generic;
+using Skyplan.Cross;
 
-namespace skyplan.Systems {
+namespace Skyplan.Systems {
 	public partial class ExportSystem : SystemBase {
-		public static ExportSystem Instance() {
+	public static ExportSystem Instance() {
 			return World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<ExportSystem>();
 		}
 
@@ -22,11 +22,10 @@ namespace skyplan.Systems {
 
 			string json = GeoJsonExporter.Export(shapes, srid, originX, originY);
 
-			string modDataPath = Path.Combine(EnvPath.kUserDataPath, "ModsData", nameof(skyplan));
-			Directory.CreateDirectory(modDataPath);
-			File.WriteAllText(Path.Combine(modDataPath, "Plan_1.geojson"), json);
+			Directory.CreateDirectory(Paths.ModDataPath);
+			File.WriteAllText(Path.Combine(Paths.ModDataPath, "Plan_1.geojson"), json);
 
-			Mod.log.Info($"Exported to {modDataPath}\\Plan_1.geojson");
+			Mod.log.Info($"Exported to {Paths.ModDataPath}\\Plan_1.geojson");
 		}
 
 		public void ExportToSVG(string fileName = "Plan_1.svg") {
@@ -39,16 +38,14 @@ namespace skyplan.Systems {
 
 			string svg = SVGExporter.Export(shapes);
 
-			string modDataPath = Path.Combine(EnvPath.kUserDataPath, "ModsData", nameof(skyplan));
-			Directory.CreateDirectory(modDataPath);
-			File.WriteAllText(Path.Combine(modDataPath, fileName), svg);
+			Directory.CreateDirectory(Paths.ModDataPath);
+			File.WriteAllText(Path.Combine(Paths.ModDataPath, fileName), svg);
 
-			Mod.log.Info($"Exported to {modDataPath}\\{fileName}");
+			Mod.log.Info($"Exported to {Paths.ModDataPath}\\{fileName}");
 		}
 
 		public void ImportFromSVG(string fileName) {
-			string modDataPath = Path.Combine(EnvPath.kUserDataPath, "ModsData", nameof(skyplan));
-			string filePath = Path.Combine(modDataPath, fileName);
+			string filePath = Path.Combine(Paths.ModDataPath, fileName);
 			if (!File.Exists(filePath)) {
 				Mod.log.Warn($"[Skyplan] Import: file not found: {filePath}");
 				return;

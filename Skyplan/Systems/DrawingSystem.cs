@@ -12,9 +12,9 @@ using Skyplan.Models;
 using Skyplan.Models.dto;
 using System;
 using System.IO;
-using Colossal.PSI.Environment;
+using Skyplan.Cross;
 
-namespace skyplan.Systems {
+namespace Skyplan.Systems {
 
 	internal enum OpType { Draw, Delete, ClearLayer, ClearAll }
 
@@ -197,7 +197,7 @@ namespace skyplan.Systems {
 
 		private void LoadAndMergeLayers() {
 			string defaultPath = Path.Combine(Mod.modPath, "layers_default.json");
-			string dataDir = Path.Combine(EnvPath.kUserDataPath, "ModsData", nameof(skyplan));
+			string dataDir = Paths.ModDataPath;
 			string userPath = Path.Combine(dataDir, "layer.json");
 
 			// Backwards compat: migrate old layers.json → layer.json
@@ -584,12 +584,10 @@ namespace skyplan.Systems {
 			m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
 		}
 
-		private static string DisplaySettingsPath =>
-			Path.Combine(EnvPath.kUserDataPath, "ModsSettings", nameof(skyplan), "display.json");
 
 		private static bool LoadDisplaySettings() {
 			try {
-				string path = DisplaySettingsPath;
+				string path = Paths.DisplaySettingsPath;
 				if (!File.Exists(path)) return false;
 				var json = JObject.Parse(File.ReadAllText(path));
 				return json["showDescriptions"]?.Value<bool>() ?? false;
@@ -601,7 +599,7 @@ namespace skyplan.Systems {
 
 		private static void SaveDisplaySettings(bool showDescriptions) {
 			try {
-				string path = DisplaySettingsPath;
+				string path = Paths.DisplaySettingsPath;
 				Directory.CreateDirectory(Path.GetDirectoryName(path));
 				File.WriteAllText(path, JsonConvert.SerializeObject(
 					new { showDescriptions },

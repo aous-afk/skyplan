@@ -4,12 +4,12 @@ using Game;
 using Game.Input;
 using Game.Modding;
 using Game.SceneFlow;
-using skyplan.Systems;
+using Skyplan.Systems;
 using System.IO;
 
-namespace skyplan {
+namespace Skyplan {
 	public class Mod : IMod {
-		public static ILog log = LogManager.GetLogger($"{nameof(skyplan)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
+		public static ILog log = LogManager.GetLogger($"{nameof(Skyplan)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
 		public static Mod instance;
 		public static string modPath;
 
@@ -37,7 +37,7 @@ namespace skyplan {
 
 			updateSystem.UpdateAt<DrawingSystem>(SystemUpdatePhase.UIUpdate);
 
-			AssetDatabase.global.LoadSettings(nameof(skyplan), m_Setting, new Setting(this));
+			AssetDatabase.global.LoadSettings(nameof(Skyplan), m_Setting, new Setting(this));
 		}
 
 		public void OnDispose() {

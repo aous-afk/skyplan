@@ -5,7 +5,7 @@ using System.Globalization;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace skyplan.Systems {
+namespace Skyplan.Systems {
 	public partial class CameraSystem : GameSystemBase, ICameraSystem {
 
 		#region Core
