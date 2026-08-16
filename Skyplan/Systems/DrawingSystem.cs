@@ -314,7 +314,6 @@ namespace Skyplan.Systems {
 			m_PanelVisible = !m_PanelVisible;
 			if (m_PanelVisible) {
 				LoadAndMergeLayers();
-				m_Camera.SetBaseline();
 				if (m_Camera.IsReady) {
 					UpdateShapesJson();
 				}
@@ -324,28 +323,6 @@ namespace Skyplan.Systems {
 			}
 			m_PanelVisibleBinding.Update(m_PanelVisible);
 			Mod.log.Info($"Skyplan panel {(m_PanelVisible ? "shown" : "hidden")}");
-		}
-
-		/// <summary>
-		/// Converts a screen-space point to a world-space position on the XZ plane (y = 0) using the specified camera.
-		/// </summary>
-		/// <remarks>The method returns <see langword="false"/> if the ray from the screen point is parallel to the XZ
-		/// plane or points away from it. The resulting XZ coordinates are valid only when the method returns <see
-		/// langword="true"/>.</remarks>
-		/// <param name="cam">The camera used to perform the screen-to-world transformation.</param>
-		/// <param name="sx">The horizontal screen coordinate, in pixels.</param>
-		/// <param name="sy">The vertical screen coordinate, in pixels.</param>
-		/// <param name="xz">When this method returns, contains the world-space XZ coordinates corresponding to the screen point if the
-		/// conversion succeeds; otherwise, contains <see cref="Vector2.zero"/>.</param>
-		/// <returns><see langword="true"/> if the screen point projects onto the XZ plane; otherwise, <see langword="false"/>.</returns>
-		private static bool ScreenToWorldXZ(Camera cam, float sx, float sy, out Vector2 xz) {
-			Ray ray = cam.ScreenPointToRay(new Vector3(sx, cam.pixelHeight - sy, 0f));
-			if (Mathf.Abs(ray.direction.y) < 0.0001f) { xz = Vector2.zero; return false; }
-			float t = -ray.origin.y / ray.direction.y;
-			if (t < 0f) { xz = Vector2.zero; return false; }
-			Vector3 w = ray.origin + ray.direction * t;
-			xz = new Vector2(w.x, w.z);
-			return true;
 		}
 
 		/// <summary>
