@@ -4,12 +4,13 @@ using Game;
 using Game.Input;
 using Game.Modding;
 using Game.SceneFlow;
+using Skyplan.Persistence.Helpers;
 using Skyplan.Systems;
 using System.IO;
 
 namespace Skyplan {
 	public class Mod : IMod {
-		public static ILog log = LogManager.GetLogger($"{nameof(Skyplan)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
+		public static ILog log = LogManager.GetLogger($"{nameof(Skyplan)}.{nameof(Mod)}").SetShowsErrorsInUI(true);
 		public static Mod instance;
 		public static string modPath;
 
@@ -21,6 +22,8 @@ namespace Skyplan {
 		public void OnLoad(UpdateSystem updateSystem) {
 			log.Info(nameof(OnLoad));
 			instance = this;
+			LayerMerger.LogInfo = msg => log.Info(msg);
+			LayerMerger.LogWarn = msg => log.Warn(msg);
 
 			if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset)) {
 				log.Info($"Current mod asset at {asset.path}");

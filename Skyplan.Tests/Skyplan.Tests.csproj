@@ -4,10 +4,11 @@
 		<TargetFramework>net48</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<LangVersion>12.0</LangVersion>
 		<IsPackable>false</IsPackable>
 		<ManagedPath>$([System.Environment]::GetEnvironmentVariable('CSII_MANAGEDPATH', 'EnvironmentVariableTarget.User'))</ManagedPath>
 	</PropertyGroup>
+
+	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.props" />
 
 	<ItemGroup>
 		<PackageReference Include="coverlet.collector" Version="6.0.4" />
@@ -21,18 +22,22 @@
 		<ProjectReference Include="..\Skyplan.Models\Skyplan.Models.csproj" />
 	</ItemGroup>
 
-	<!-- Unity DLLs must be in test output dir for the runtime to resolve them -->
 	<ItemGroup>
-		<Reference Include="UnityEngine.CoreModule">
-			<HintPath>$(ManagedPath)\UnityEngine.CoreModule.dll</HintPath>
-		</Reference>
-		<Reference Include="Unity.Mathematics">
-			<HintPath>$(ManagedPath)\Unity.Mathematics.dll</HintPath>
+		<Reference Include="Newtonsoft.Json">
+			<Private>true</Private>
 		</Reference>
 	</ItemGroup>
 
 	<ItemGroup>
 		<Using Include="Xunit" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="$(ModPropsFile)" Link="Properties\Mod.props" />
+		<None Include="$(ModTargetsFile)" Link="Properties\Mod.targets" />
+	</ItemGroup>
+	<PropertyGroup>
+		<LangVersion>12.0</LangVersion>
+	</PropertyGroup>
 
 </Project>
