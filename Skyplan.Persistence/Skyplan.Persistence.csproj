@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
 		<TargetFramework>net48</TargetFramework>
 		<LangVersion>12.0</LangVersion>
@@ -8,18 +7,24 @@
 		<ManagedPath>$([System.Environment]::GetEnvironmentVariable('CSII_MANAGEDPATH', 'EnvironmentVariableTarget.User'))</ManagedPath>
 	</PropertyGroup>
 
+	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.props" />
+
 	<ItemGroup>
 		<ProjectReference Include="..\Skyplan.Models\Skyplan.Models.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Reference Include="UnityEngine.CoreModule">
-			<HintPath>$(ManagedPath)\UnityEngine.CoreModule.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="Unity.Mathematics">
-			<HintPath>$(ManagedPath)\Unity.Mathematics.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Newtonsoft.Json">
 			<Private>false</Private>
 		</Reference>
 	</ItemGroup>
+	<PropertyGroup>
+		<LangVersion>12.0</LangVersion>
+	</PropertyGroup>
 </Project>

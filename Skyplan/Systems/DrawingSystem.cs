@@ -13,6 +13,7 @@ using Skyplan.Models.dto;
 using System;
 using System.IO;
 using Skyplan.Cross;
+using Skyplan.Persistence.Helpers;
 
 namespace Skyplan.Systems {
 
@@ -195,125 +196,10 @@ namespace Skyplan.Systems {
 			m_PreviewBinding.Update("");
 		}
 
-		private void LoadAndMergeLayers() {
-			string defaultPath = Path.Combine(Mod.modPath, "layers_default.json");
-			string dataDir = Paths.ModDataPath;
-			string userPath = Path.Combine(dataDir, "layer.json");
-
-			// Backwards compat: migrate old layers.json → layer.json
-			string legacyPath = Path.Combine(dataDir, "layers.json");
-			if (!File.Exists(userPath) && File.Exists(legacyPath)) {
-				File.Move(legacyPath, userPath);
-				Mod.log.Info("[Skyplan] Migrated layers.json → layer.json");
-			}
-
-			if (!File.Exists(defaultPath)) {
-				Mod.log.Warn($"[Skyplan] layers_default.json not found at {defaultPath}");
-				return;
-			}
-
-			var defaultRoot = JObject.Parse(File.ReadAllText(defaultPath));
-			var defaults = defaultRoot["layers"] is JArray defArr ? defArr.OfType<JObject>().ToList() : [];
-
-			JObject userRoot = null;
-			if (File.Exists(userPath)) {
-				try { userRoot = JObject.Parse(File.ReadAllText(userPath)); }
-				catch (Exception ex) { Mod.log.Warn($"[Skyplan] Failed to parse layer.json: {ex.Message}"); }
-			}
-			var user = userRoot?["layers"] is JArray userArr ? userArr.OfType<JObject>().ToList() : [];
-
-			var merged = MergeLayers(defaults, user);
-
-			// Global labelStyle: default base, user layer.json overrides per key
-			var output = new JObject();
-			if (defaultRoot["labelStyle"] is JObject defGlobalStyle) {
-				var globalStyle = (JObject)defGlobalStyle.DeepClone();
-				if (userRoot?["labelStyle"] is JObject userGlobalStyle)
-					foreach (var prop in userGlobalStyle.Properties())
-						globalStyle[prop.Name] = prop.Value;
-				output["labelStyle"] = globalStyle;
-			}
-			output["layers"] = JArray.FromObject(merged);
-			m_LayersConfigBinding.Update(output.ToString(Formatting.None));
-		}
-
-		private static List<JObject> ParseLayerList(string json) {
-			try {
-				var jobj = JObject.Parse(json);
-				if (jobj["layers"] is JArray arr)
-					return arr.OfType<JObject>().ToList();
-			} catch (Exception ex) {
-				Mod.log.Warn($"[Skyplan] Failed to parse layer list: {ex.Message}");
-			}
-			return [];
-		}
-
-		private static List<JObject> MergeLayers(List<JObject> defaults, List<JObject> user) {
-			var userById = user
-				.Where(l => l["id"]?.Value<string>() != null)
-				.ToDictionary(l => l["id"]!.Value<string>()!, StringComparer.OrdinalIgnoreCase);
-
-			var result = new List<JObject>();
-			var defaultIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-			foreach (var def in defaults) {
-				string id = def["id"]?.Value<string>() ?? "";
-				defaultIds.Add(id);
-				result.Add(userById.TryGetValue(id, out var u) ? MergeLayerJson(def, u) : def);
-			}
-
-			// Append user-only custom layers not present in defaults
-			foreach (var u in user) {
-				string id = u["id"]?.Value<string>() ?? "";
-				if (!string.IsNullOrEmpty(id) && !defaultIds.Contains(id))
-					result.Add(u);
-			}
-
-			return result;
-		}
-
-		private static JObject MergeLayerJson(JObject def, JObject user) {
-			var merged = (JObject)def.DeepClone();
-
-			// Label: user wins if non-empty
-			string userLabel = user["label"]?.Value<string>() ?? "";
-			if (!string.IsNullOrEmpty(userLabel))
-				merged["label"] = userLabel;
-
-			// Style: default base, user overrides per key
-			var defStyle = def["style"] as JObject ?? new JObject();
-			var userStyle = user["style"] as JObject ?? new JObject();
-			var mergedStyle = (JObject)defStyle.DeepClone();
-			foreach (var prop in userStyle.Properties())
-				mergedStyle[prop.Name] = prop.Value;
-			merged["style"] = mergedStyle;
-
-			// allowedTools: union of default and user lists
-			var defTools = def["allowedTools"] as JArray ?? new JArray();
-			var userTools = user["allowedTools"] as JArray ?? new JArray();
-			var toolSet = new HashSet<string>(defTools.Values<string>()!);
-			foreach (var t in userTools.Values<string>()!)
-				if (t != null) toolSet.Add(t);
-			merged["allowedTools"] = new JArray(toolSet.ToArray<object>());
-
-			// labelStyle: default base, user overrides per key
-			var defLabelStyle = def["labelStyle"] as JObject;
-			var userLabelStyle = user["labelStyle"] as JObject;
-			if (defLabelStyle != null || userLabelStyle != null) {
-				var mergedLabelStyle = (JObject)(defLabelStyle?.DeepClone() ?? new JObject());
-				if (userLabelStyle != null)
-					foreach (var prop in userLabelStyle.Properties())
-						mergedLabelStyle[prop.Name] = prop.Value;
-				merged["labelStyle"] = mergedLabelStyle;
-			}
-
-			return merged;
-		}
-
 		public void TogglePanel() {
 			m_PanelVisible = !m_PanelVisible;
 			if (m_PanelVisible) {
-				LoadAndMergeLayers();
+				LayerMerger.LoadAndMerge(Paths.DefaultLayers, Paths.UserLayers);
 				if (m_Camera.IsReady) {
 					UpdateShapesJson();
 				}
