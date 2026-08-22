@@ -2,6 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFramework>net48</TargetFramework>
+		<Version>0.1.0-beta</Version>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<IsPackable>false</IsPackable>

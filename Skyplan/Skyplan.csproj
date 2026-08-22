@@ -5,8 +5,8 @@
 	
 		<!--The file where mod information which is required for publishing mod on PDX mods are stored-->
 		<PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
-		<Version>0.0.1-alpha.1</Version>
-		 <InformationalVersion>0.0.1.677b897.alpha</InformationalVersion>
+		<Version>0.1.0-beta</Version>
+		 <InformationalVersion>0.1.0-beta</InformationalVersion>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 	</PropertyGroup>
 	
@@ -90,10 +90,10 @@
 		<None Include="$(ModTargetsFile)" Link="Properties\Mod.targets" />
 	</ItemGroup>
 
-	<Target Name="GenerateVersionInfo" BeforeTargets="Build">
-		<Exec Command="pwsh -NonInteractive -File &quot;$(MSBuildProjectDirectory)\..\version.ps1&quot;"
-		      WorkingDirectory="$(MSBuildProjectDirectory)\.." />
-	</Target>
+	<!-- <Target Name="GenerateVersionInfo" BeforeTargets="Build"> -->
+	<!-- 	<Exec Command="pwsh -NonInteractive -File &quot;$(MSBuildProjectDirectory)\..\version.ps1&quot;" -->
+	<!-- 	      WorkingDirectory="$(MSBuildProjectDirectory)\.." /> -->
+	<!-- </Target> -->
 
 	<Target Name="BuildSkyPlanUI" BeforeTargets="Build">
 		<Exec Command="npm run build"
