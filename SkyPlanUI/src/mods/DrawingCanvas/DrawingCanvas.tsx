@@ -130,7 +130,7 @@ const DrawingCanvas: React.FC = () => {
 			endDraw(cx, cy);
 			drawingRef.current = true;
 			trigger('skyplan', 'drawStart', `${cx},${cy}`);
-			if (toolRef.current === 'erase' || toolRef.current === 'point') drawingRef.current = false;
+			if (toolRef.current === 'erase' || toolRef.current === 'point' || toolRef.current === 'text') drawingRef.current = false;
 			return true;
 		}
 

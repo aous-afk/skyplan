@@ -113,7 +113,7 @@ const Toolbar: React.FC = () => {
 				<button onClick={onUndo} className={styles.btn_base}>
 					<FontAwesomeIcon icon={faUndo} className={styles.svg} />
 				</button>
-				<label className={styles.mode_toggle} onClick={onViewModeToggle}>
+				<label className={styles.mode_toggle} onClick={() => { if (pendingTextId) commitText(pendingTextId, ''); onViewModeToggle(); }}>
 					<span className={styles.toggle_track} style={{ background: viewMode ? 'rgba(255,255,255,0.15)' : '#4a90d9' }}>
 						<span className={styles.toggle_knob} style={{ transform: viewMode ? 'translateX(0)' : 'translateX(18px)' }} />
 					</span>
