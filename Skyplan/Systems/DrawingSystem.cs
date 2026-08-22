@@ -199,7 +199,8 @@ namespace Skyplan.Systems {
 		public void TogglePanel() {
 			m_PanelVisible = !m_PanelVisible;
 			if (m_PanelVisible) {
-				LayerMerger.LoadAndMerge(Paths.DefaultLayers, Paths.UserLayers);
+				JObject merged = LayerMerger.LoadAndMerge(Paths.DefaultLayers, Paths.UserLayers);
+				m_LayersConfigBinding.Update(merged.ToString(Formatting.None));
 				if (m_Camera.IsReady) {
 					UpdateShapesJson();
 				}
