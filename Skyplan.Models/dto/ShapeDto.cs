@@ -35,5 +35,6 @@ namespace Skyplan.Models.dto {
 	  polygon,
 	  circle,
 	  text,
+	  curve,
 	}
 }
