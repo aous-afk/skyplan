@@ -2,7 +2,7 @@ import React, {useMemo, useState, useCallback} from 'react';
 import {trigger} from 'cs2/api';
 import {FOCUS_DISABLED} from 'cs2/input';
 import {getModule} from 'cs2/modding';
-import {faDrawPolygon, faEye, faEyeSlash, faFont, faLocationDot, faRoad} from '@fortawesome/free-solid-svg-icons';
+import {faChevronDown, faChevronRight, faDrawPolygon, faEye, faEyeSlash, faFont, faLocationDot, faRoad} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {ShapeData, Tag} from 'mods/types';
 import {useDrawingContext} from 'mods/DrawingContext';
@@ -44,6 +44,11 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 	const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
 	const [editName, setEditName] = useState('');
 	const [editNote, setEditNote] = useState('');
+	const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+	const toggleCollapsed = useCallback((layerId: string) => {
+		setCollapsed(prev => ({ ...prev, [layerId]: !prev[layerId] }));
+	}, []);
 
 	const shapeGroups = useMemo(() => {
 		const map = new Map<string, { layerId: string; label: string; color: string; shapes: ShapeData[] }>();
@@ -94,9 +99,18 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 
 			{shapeGroups.length > 0 && (
 				<div className={styles.layer_list} onWheel={e => e.stopPropagation()}>
-					{shapeGroups.map(group => (
+					{shapeGroups.map(group => {
+						const isCollapsed = collapsed[group.layerId] ?? true;
+						return (
 						<div key={group.layerId} className={styles.layer_card}>
 							<div className={styles.shape_group_header}>
+								<button
+									className={styles.collapse_toggle}
+									onClick={() => toggleCollapsed(group.layerId)}
+									title={isCollapsed ? 'Expand' : 'Collapse'}
+								>
+									<FontAwesomeIcon icon={isCollapsed ? faChevronRight : faChevronDown} className={shared.svg} />
+								</button>
 								<span className={styles.shape_dot} style={{ background: group.color }} />
 								<span className={styles.shape_group_label}>{group.label}</span>
 								<span className={styles.shape_count}>{group.shapes.length}</span>
@@ -114,6 +128,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 								/>
 							</div>
 
+							{!isCollapsed && <>
 							<div className={shared.opacity_row}>
 								<span className={shared.opacity_label}>Opacity</span>
 								<Slider
@@ -173,8 +188,10 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 									);
 								})}
 							</div>
+							</>}
 						</div>
-					))}
+						);
+					})}
 				</div>
 			)}
 
