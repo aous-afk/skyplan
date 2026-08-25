@@ -52,6 +52,20 @@
   margin-right: 8px;
 }
 
+.collapse_toggle {
+  background: none;
+  border: none;
+  color: rgba(74, 144, 217, 0.6);
+  padding: 0 2px;
+  cursor: pointer;
+  font-size: 9px;
+  flex-shrink: 0;
+
+  &:hover {
+    color: rgba(74, 144, 217, 1);
+  }
+}
+
 .labels_toggle {
   background: none;
   border: none;
