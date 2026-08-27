@@ -59,6 +59,23 @@ namespace Skyplan.Systems {
 			}
 		}
 
+		public void ImportFromSVG(string fileName) {
+			string filePath = Path.Combine(Paths.ModDataPath, fileName);
+			if (!File.Exists(filePath)) {
+				Mod.log.Warn($"[Skyplan] Import: file not found: {filePath}");
+				return;
+			}
+			DrawingSystem drawing = DrawingSystem.instance;
+			if (drawing == null) return;
+
+			string svg = File.ReadAllText(filePath);
+			int nextId = drawing.m_NextId;
+			List<Shape> shapes = SVGImporter.Import(svg, ref nextId);
+			drawing.m_NextId = nextId;
+			drawing.LoadShapes(shapes);
+			Mod.log.Info($"[Skyplan] Imported {shapes.Count} shapes from {fileName}");
+		}
+
 		private void LoadLatestPlan() {
 			DrawingSystem drawing = DrawingSystem.instance;
 			if (drawing == null) return;
