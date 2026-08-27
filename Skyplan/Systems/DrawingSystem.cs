@@ -2,7 +2,6 @@ using Colossal.UI.Binding;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Game;
-using Game.City;
 using Game.SceneFlow;
 using Game.UI;
 using System.Collections.Generic;
@@ -14,7 +13,6 @@ using Skyplan.Models.dto;
 using System;
 using System.IO;
 using Skyplan.Cross;
-using Skyplan.Persistence;
 using Skyplan.Persistence.Helpers;
 
 namespace Skyplan.Systems {
@@ -45,11 +43,6 @@ namespace Skyplan.Systems {
 		};
 		internal int m_NextId;
 		private string m_EraseTarget;
-
-		private bool m_WasInGame;
-		private string m_PlanFilePath;
-		private float m_LastAutosaveTime;
-		private const float AutosaveIntervalSeconds = 30f;
 
 		private ValueBinding<bool> m_PanelVisibleBinding;
 		private ValueBinding<string> m_ShapesBinding;
@@ -140,23 +133,10 @@ namespace Skyplan.Systems {
 			AddBinding(new TriggerBinding<string>("skyplan", "commitText", HandleCommitText));
 		}
 
-		protected override void OnGameLoadingComplete(Colossal.Serialization.Entities.Purpose purpose, GameMode mode) {
-			base.OnGameLoadingComplete(purpose, mode);
-			if ((mode & GameMode.Game) == 0) return;
-			m_PlanFilePath = null;
-			LoadLatestPlan();
-		}
-
 		protected override void OnUpdate() {
 			base.OnUpdate();
 			bool inGame = GameManager.instance != null &&
 				(GameManager.instance.gameMode & GameMode.Game) != 0;
-
-			if (!inGame && m_WasInGame) {
-				SavePlan();
-			}
-			m_WasInGame = inGame;
-
 			if (inGame && Mod.m_ToggleAction?.WasPressedThisFrame() == true)
 				TogglePanel();
 			if (m_PanelVisible) {
@@ -167,11 +147,6 @@ namespace Skyplan.Systems {
 				} else {
 					SyncCamera();
 				}
-			}
-
-			if (inGame && UnityEngine.Time.realtimeSinceStartup - m_LastAutosaveTime >= AutosaveIntervalSeconds) {
-				m_LastAutosaveTime = UnityEngine.Time.realtimeSinceStartup;
-				SavePlan();
 			}
 		}
 
@@ -219,7 +194,7 @@ namespace Skyplan.Systems {
 			_points.Clear();
 			m_PanelVisibleBinding.Update(false);
 			m_PreviewBinding.Update("");
-			SavePlan();
+			PlanPersistenceSystem.instance?.SavePlan();
 		}
 
 		public void TogglePanel() {
@@ -233,7 +208,7 @@ namespace Skyplan.Systems {
 			} else {
 				m_ActiveShape = null;
 				m_PreviewBinding.Update("");
-				SavePlan();
+				PlanPersistenceSystem.instance?.SavePlan();
 			}
 			m_PanelVisibleBinding.Update(m_PanelVisible);
 			Mod.log.Info($"Skyplan panel {(m_PanelVisible ? "shown" : "hidden")}");
@@ -473,55 +448,6 @@ namespace Skyplan.Systems {
 				pts = m_ActiveShape.pts,
 			};
 			m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
-		}
-
-
-		private void SavePlan() {
-			if (m_Shapes.Count == 0 && m_PlanFilePath == null) return;
-			try {
-				string path = GetPlanFilePath();
-				Directory.CreateDirectory(Path.GetDirectoryName(path));
-				File.WriteAllText(path, PlanPersistence.Export(m_Shapes));
-			} catch (Exception ex) {
-				Mod.log.Warn($"[Skyplan] Failed to save plan: {ex.Message}");
-			}
-		}
-
-		private void LoadLatestPlan() {
-			try {
-				string city = SanitizeFileName(GetCityName());
-				Directory.CreateDirectory(Paths.PlansDir);
-				string latest = Directory.GetFiles(Paths.PlansDir, $"{city}_*.json")
-					.OrderByDescending(f => f)
-					.FirstOrDefault();
-				if (latest == null || latest == m_PlanFilePath) return;
-				List<Shape> shapes = PlanPersistence.Import(File.ReadAllText(latest), ref m_NextId);
-				LoadShapes(shapes);
-				m_PlanFilePath = latest;
-				Mod.log.Info($"[Skyplan] Loaded plan from {latest}");
-			} catch (Exception ex) {
-				Mod.log.Warn($"[Skyplan] Failed to load plan: {ex.Message}");
-			}
-		}
-
-		private string GetPlanFilePath() {
-			if (m_PlanFilePath == null) {
-				string city = SanitizeFileName(GetCityName());
-				string stamp = DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'");
-				m_PlanFilePath = Path.Combine(Paths.PlansDir, $"{city}_{stamp}.json");
-			}
-			return m_PlanFilePath;
-		}
-
-		private string GetCityName() {
-			string name = World.GetOrCreateSystemManaged<CityConfigurationSystem>()?.cityName;
-			return string.IsNullOrWhiteSpace(name) ? "UnnamedCity" : name;
-		}
-
-		private static string SanitizeFileName(string name) {
-			foreach (char c in Path.GetInvalidFileNameChars())
-				name = name.Replace(c, '_');
-			return name;
 		}
 
 		private static bool LoadDisplaySettings() {
