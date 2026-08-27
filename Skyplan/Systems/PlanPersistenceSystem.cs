@@ -72,7 +72,7 @@ namespace Skyplan.Systems {
 			int nextId = drawing.m_NextId;
 			List<Shape> shapes = SVGImporter.Import(svg, ref nextId);
 			drawing.m_NextId = nextId;
-			drawing.LoadShapes(shapes);
+			drawing.MergeShapes(shapes);
 			Mod.log.Info($"[Skyplan] Imported {shapes.Count} shapes from {fileName}");
 		}
 

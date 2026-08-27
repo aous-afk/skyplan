@@ -104,7 +104,7 @@ namespace Skyplan {
 		public bool ImportSVG {
 			set {
 				if (!string.IsNullOrEmpty(ImportFileName))
-					ExportSystem.Instance()?.ImportFromSVG(ImportFileName);
+					PlanPersistenceSystem.instance?.ImportFromSVG(ImportFileName);
 			}
 		}
 

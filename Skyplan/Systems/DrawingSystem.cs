@@ -436,6 +436,21 @@ namespace Skyplan.Systems {
 			m_PreviewBinding.Update("");
 		}
 
+		public void MergeShapes(List<Shape> imported) {
+			if (m_Shapes.Count == 0) {
+				LoadShapes(imported);
+				return;
+			}
+			HashSet<string> existingIds = new(m_Shapes.Select(s => s.id));
+			foreach (Shape s in imported) {
+				if (existingIds.Add(s.id)) m_Shapes.Add(s);
+			}
+			if (m_Camera.IsReady) {
+				UpdateShapesJson();
+			}
+			m_PreviewBinding.Update("");
+		}
+
 		private void UpdatePreviewJson() {
 			if (m_ActiveShape == null || m_ActiveShape.pts.Count < 2) {
 				m_PreviewBinding.Update("");
