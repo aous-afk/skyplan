@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useState, useEffect, useMemo, useCallback} from 'react';
+import React, {createContext, useContext, useState, useEffect, useMemo, useCallback, useRef} from 'react';
 import {useValue, trigger} from 'cs2/api';
 import {panelVisible$, layersConfig$} from '../bindings';
 import {ToolId, LayerDef, LabelStyle} from './types';
@@ -49,11 +49,19 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const visibleLayers = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
 
 
+	const prevVisibleRef = useRef(false);
 	useEffect(() => {
-		const visible = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
-		if (visible.length > 0 && !visible.find(l => l.id === activeLayer?.id))
-			setActiveLayer(visible[0]);
-	}, [activeTool, layerConfig]);
+		const justOpened = visible && !prevVisibleRef.current;
+		prevVisibleRef.current = visible;
+		if (justOpened) {
+			setActiveLayer(null);
+			return;
+		}
+		if (!visible) return;
+		const visibleForTool = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
+		if (visibleForTool.length > 0 && !visibleForTool.find(l => l.id === activeLayer?.id))
+			setActiveLayer(visibleForTool[0]);
+	}, [activeTool, layerConfig, visible]);
 
 	useEffect(() => {
 		if (!visible || !activeLayer) return;
