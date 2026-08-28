@@ -34,6 +34,7 @@ namespace Skyplan.Systems {
 
 		internal readonly List<Shape> m_Shapes = [];
 		private readonly List<Op> m_UndoStack = [];
+		private readonly List<Op> m_RedoStack = [];
 		private Shape m_ActiveShape;
 		private List<Vector3> _points = [];
 		private Tools m_CurrentTool;
@@ -119,6 +120,7 @@ namespace Skyplan.Systems {
 			AddBinding(new TriggerBinding<string>("skyplan", "clearAll", _ => HandleClearAll()));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "undo", _ => HandleUndo()));
+			AddBinding(new TriggerBinding<string>("skyplan", "redo", _ => HandleRedo()));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "eraseHover", csv => {
 				Vector2 p = CSV2(csv);
@@ -244,7 +246,7 @@ namespace Skyplan.Systems {
 					pts = [world],
 				};
 				m_Shapes.Add(s);
-				m_UndoStack.Add(new Op { type = OpType.Draw, shape = s });
+				PushUndo(new Op { type = OpType.Draw, shape = s });
 				if (m_Camera.IsReady) {
 					UpdateShapesJson();
 				}
@@ -292,7 +294,7 @@ namespace Skyplan.Systems {
 				m_ActiveShape.pts.AddRange(_points);
 				if (m_ActiveShape.pts.Count >= 3) {
 					m_Shapes.Add(m_ActiveShape);
-					m_UndoStack.Add(new Op { type = OpType.Draw, shape = m_ActiveShape });
+					PushUndo(new Op { type = OpType.Draw, shape = m_ActiveShape });
 					if (m_Camera.IsReady) {
 						UpdateShapesJson();
 					}
@@ -306,7 +308,7 @@ namespace Skyplan.Systems {
 			HandleDrawMove(sx, sy);
 			if (m_ActiveShape.pts.Count >= 2) {
 				m_Shapes.Add(m_ActiveShape);
-				m_UndoStack.Add(new Op { type = OpType.Draw, shape = m_ActiveShape });
+				PushUndo(new Op { type = OpType.Draw, shape = m_ActiveShape });
 				if (m_Camera.IsReady) {
 					UpdateShapesJson();
 				}
@@ -318,7 +320,7 @@ namespace Skyplan.Systems {
 
 		private void HandleClearAll() {
 			if (m_Shapes.Count == 0) return;
-			m_UndoStack.Add(new Op { type = OpType.ClearAll, cleared = [.. m_Shapes] });
+			PushUndo(new Op { type = OpType.ClearAll, cleared = [.. m_Shapes] });
 			m_Shapes.Clear();
 			m_ActiveShape = null;
 			if (m_Camera.IsReady) {
@@ -330,7 +332,7 @@ namespace Skyplan.Systems {
 		private void HandleClearLayer(string layer) {
 			var removed = m_Shapes.FindAll(s => s.layer?.Id == layer);
 			if (removed.Count > 0)
-				m_UndoStack.Add(new Op { type = OpType.ClearLayer, layer = layer, cleared = removed });
+				PushUndo(new Op { type = OpType.ClearLayer, layer = layer, cleared = removed });
 			m_Shapes.RemoveAll(s => s.layer?.Id == layer);
 			if (m_ActiveShape != null && m_ActiveShape.layer?.Id == layer)
 				m_ActiveShape = null;
@@ -338,6 +340,11 @@ namespace Skyplan.Systems {
 				UpdateShapesJson();
 			}
 			m_PreviewBinding.Update("");
+		}
+
+		private void PushUndo(Op op) {
+			m_UndoStack.Add(op);
+			m_RedoStack.Clear();
 		}
 
 		private void HandleUndo() {
@@ -350,6 +357,23 @@ namespace Skyplan.Systems {
 				case OpType.ClearLayer:
 				case OpType.ClearAll: m_Shapes.AddRange(op.cleared); break;
 			}
+			m_RedoStack.Add(op);
+			if (m_Camera.IsReady) {
+			  UpdateShapesJson();
+			}
+		}
+
+		private void HandleRedo() {
+			if (m_RedoStack.Count == 0) return;
+			Op op = m_RedoStack[^1];
+			m_RedoStack.RemoveAt(m_RedoStack.Count - 1);
+			switch (op.type) {
+				case OpType.Draw: m_Shapes.Add(op.shape); break;
+				case OpType.Delete: m_Shapes.Remove(op.shape); break;
+				case OpType.ClearLayer:
+				case OpType.ClearAll: m_Shapes.RemoveAll(s => op.cleared.Contains(s)); break;
+			}
+			m_UndoStack.Add(op);
 			if (m_Camera.IsReady) {
 			  UpdateShapesJson();
 			}
@@ -375,7 +399,7 @@ namespace Skyplan.Systems {
 			if (m_EraseTarget == null) return;
 			Shape target = m_Shapes.Find(s => s.id == m_EraseTarget);
 			if (target == null) return;
-			m_UndoStack.Add(new Op { type = OpType.Delete, shape = target });
+			PushUndo(new Op { type = OpType.Delete, shape = target });
 			m_Shapes.Remove(target);
 			m_EraseTarget = null;
 			m_HighlightBinding.Update("");
