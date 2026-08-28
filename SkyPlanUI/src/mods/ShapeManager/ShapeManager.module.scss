@@ -34,7 +34,7 @@
 }
 
 .shape_group_label {
-  font-size: 11px;
+  font-size: var(--skyplan-font-size-sm);
   font-weight: 700;
   color: rgba(74, 144, 217, 0.95);
   flex: 1;
@@ -43,7 +43,7 @@
 }
 
 .shape_count {
-  font-size: 10px;
+  font-size: var(--skyplan-font-size-xs);
   font-weight: 600;
   color: rgba(74, 144, 217, 0.7);
   background: rgba(74, 144, 217, 0.12);
@@ -58,7 +58,7 @@
   color: rgba(74, 144, 217, 0.6);
   padding: 0 2px;
   cursor: pointer;
-  font-size: 9px;
+  font-size: var(--skyplan-font-size-2xs);
   flex-shrink: 0;
 
   &:hover {
@@ -72,7 +72,7 @@
   color: rgba(74, 144, 217, 0.6);
   padding: 0 4px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--skyplan-font-size-xs);
   margin-right: 4px;
 
   &:hover {
@@ -119,7 +119,7 @@
 }
 
 .shape_row_name {
-  font-size: 11px;
+  font-size: var(--skyplan-font-size-sm);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -139,7 +139,7 @@
   border: 1px solid rgba(74, 144, 217, 0.4);
   border-radius: 4px;
   color: #fff !important;
-  font-size: 11px;
+  font-size: var(--skyplan-font-size-sm);
   padding: 3px 6px;
   box-sizing: border-box;
 
@@ -160,7 +160,7 @@
 
 .display_section_title {
   display: block;
-  font-size: 10px;
+  font-size: var(--skyplan-font-size-xs);
   font-weight: 700;
   color: rgba(74, 144, 217, 0.7);
   text-transform: uppercase;
@@ -177,7 +177,7 @@
 }
 
 .display_row_label {
-  font-size: 11px;
+  font-size: var(--skyplan-font-size-sm);
   color: rgba(255, 255, 255, 0.75);
   margin-left: 8px;
 }
@@ -188,7 +188,7 @@
   border: 1px solid rgba(74, 144, 217, 0.4);
   border-radius: 4px;
   color: #fff !important;
-  font-size: 10px;
+  font-size: var(--skyplan-font-size-xs);
   padding: 3px 6px;
   box-sizing: border-box;
   resize: none;
