@@ -146,6 +146,63 @@
       }
     },
     {
+      "id": "residential-low",
+      "label": "Residential Low",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#8BDB46",
+        "stroke-width": 2,
+        "fill": "#8BDB46",
+        "fill-opacity": "0.5"
+      },
+      "labelStyle": {}
+    },
+    {
+      "id": "residential-medium",
+      "label": "Residential Medium",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#00AE1A",
+        "stroke-width": 2,
+        "fill": "#00AE1A",
+        "fill-opacity": "0.5"
+      },
+      "labelStyle": {}
+    },
+    {
+      "id": "residential-high",
+      "label": "Residential High",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#2B7600",
+        "stroke-width": 2,
+        "fill": "#2B7600",
+        "fill-opacity": "0.5"
+      },
+      "labelStyle": {}
+    },
+    {
+      "id": "mixed-use",
+      "label": "Mixed Use",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#2DDDBC",
+        "stroke-width": 2,
+        "stroke-dasharray": "10 4",
+        "fill": "#2DDDBC",
+        "fill-opacity": "0.5"
+      },
+      "labelStyle": {}
+    },
+    {
       "id": "commercial",
       "label": "Commercial",
       "allowedTools": [
@@ -155,6 +212,20 @@
         "stroke": "#4488ff",
         "stroke-width": 2,
         "fill": "#4488ff",
+        "fill-opacity": "0.5"
+      },
+      "labelStyle": {}
+    },
+    {
+      "id": "commercial-high",
+      "label": "Commercial High",
+      "allowedTools": [
+        "polygon"
+      ],
+      "style": {
+        "stroke": "#246076",
+        "stroke-width": 2,
+        "fill": "#246076",
         "fill-opacity": "0.5"
       },
       "labelStyle": {}

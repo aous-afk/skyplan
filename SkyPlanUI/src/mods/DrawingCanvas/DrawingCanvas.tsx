@@ -78,7 +78,7 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 }
 
 const DrawingCanvas: React.FC = () => {
-	const { activeTool, viewMode, globalLabelStyle, allLayers } = useSkyplan();
+	const { activeTool, activeLayer, viewMode, globalLabelStyle, allLayers } = useSkyplan();
 	const layerDefsMap = useMemo(() =>
 		Object.fromEntries(allLayers.map(l => [l.id, l])),
 		[allLayers]
@@ -91,9 +91,11 @@ const DrawingCanvas: React.FC = () => {
 	const lastInputRef = useRef<string | null>(null);
 	const toolRef = useRef<ToolId>('path');
 	const viewModeRef = useRef(true);
+	const activeLayerRef = useRef<LayerDef | null>(null);
 
 	useEffect(() => { toolRef.current = activeTool; }, [activeTool]);
 	useEffect(() => { viewModeRef.current = viewMode; }, [viewMode]);
+	useEffect(() => { activeLayerRef.current = activeLayer; }, [activeLayer]);
 
 	useEffect(() => {
 		const onMove = (e: MouseEvent) => {
@@ -117,6 +119,7 @@ const DrawingCanvas: React.FC = () => {
 		function onDown(cx: number, cy: number, type: string): boolean {
 			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
 			if (viewModeRef.current) return false;
+			if (toolRef.current !== 'erase' && !activeLayerRef.current) return false;
 			lastInputRef.current = type;
 			if (toolRef.current === 'polygon') {
 				if (!drawingRef.current) {

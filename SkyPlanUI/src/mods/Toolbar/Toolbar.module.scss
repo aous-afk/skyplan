@@ -4,7 +4,6 @@
   background: rgba(18,18,18,0.92);
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.12);
-  overflow: hidden;
 }
 
 .drag_handle {
@@ -85,13 +84,13 @@
   align-content: flex-start;
   align-items: flex-start;
   padding: 4px 6px;
-  height: 160px;
+  height: 300px;
   overflow-y: auto;
 }
 
 // layer button
 .layer_btn {
-  width: 33.33%;
+  width: 50%;
   box-sizing: border-box;
   padding: 4px 4px;
   margin: 1px 0;
@@ -102,9 +101,13 @@
   font-weight: 600;
   color: #bbb;
   background: rgba(255,255,255,0.07);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
+  min-height: 2.6em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background: rgba(255,255,255,0.15);
