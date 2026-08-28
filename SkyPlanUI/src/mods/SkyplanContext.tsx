@@ -17,6 +17,7 @@ interface SkyplanCtx {
 	onToolChange: (t: ToolId) => void;
 	onLayerChange: (l: LayerDef) => void;
 	onUndo: () => void;
+	onRedo: () => void;
 	onClear: () => void;
 	onClearAll: () => void;
 	onClose: () => void;
@@ -85,6 +86,7 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const onClearAll = useCallback(() => trigger('skyplan', 'clearAll', ''), []);
 	const onClose = useCallback(() => trigger('skyplan', 'panelClosed', ''), []);
 	const onUndo = useCallback(() => trigger('skyplan', 'undo', ''), []);
+	const onRedo = useCallback(() => trigger('skyplan', 'redo', ''), []);
 	const onViewModeToggle = useCallback(() => setViewMode(v => !v), []);
 
 	const value: SkyplanCtx = {
@@ -101,6 +103,7 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		onToolChange,
 		onLayerChange,
 		onUndo,
+		onRedo,
 		onClear,
 		onClearAll,
 		onClose,
