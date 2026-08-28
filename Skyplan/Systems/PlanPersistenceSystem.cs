@@ -8,7 +8,6 @@ using Skyplan.Persistence;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace Skyplan.Systems {
 	public partial class PlanPersistenceSystem : GameSystemBase {
@@ -43,7 +42,7 @@ namespace Skyplan.Systems {
 			base.OnGameLoadingComplete(purpose, mode);
 			if ((mode & GameMode.Game) == 0) return;
 			m_PlanFilePath = null;
-			LoadLatestPlan();
+			LoadPlan();
 		}
 
 		public void SavePlan() {
@@ -76,20 +75,15 @@ namespace Skyplan.Systems {
 			Mod.log.Info($"[Skyplan] Imported {shapes.Count} shapes from {fileName}");
 		}
 
-		private void LoadLatestPlan() {
+		private void LoadPlan() {
 			DrawingSystem drawing = DrawingSystem.instance;
 			if (drawing == null) return;
 			try {
-				string city = SanitizeFileName(GetCityName());
-				Directory.CreateDirectory(Paths.PlansDir);
-				string latest = Directory.GetFiles(Paths.PlansDir, $"{city}_*.json")
-					.OrderByDescending(f => f)
-					.FirstOrDefault();
-				if (latest == null || latest == m_PlanFilePath) return;
-				List<Shape> shapes = PlanPersistence.Import(File.ReadAllText(latest), ref drawing.m_NextId);
+				string path = GetPlanFilePath();
+				if (!File.Exists(path)) return;
+				List<Shape> shapes = PlanPersistence.Import(File.ReadAllText(path), ref drawing.m_NextId);
 				drawing.LoadShapes(shapes);
-				m_PlanFilePath = latest;
-				Mod.log.Info($"[Skyplan] Loaded plan from {latest}");
+				Mod.log.Info($"[Skyplan] Loaded plan from {path}");
 			} catch (Exception ex) {
 				Mod.log.Warn($"[Skyplan] Failed to load plan: {ex.Message}");
 			}
@@ -98,8 +92,7 @@ namespace Skyplan.Systems {
 		private string GetPlanFilePath() {
 			if (m_PlanFilePath == null) {
 				string city = SanitizeFileName(GetCityName());
-				string stamp = DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'");
-				m_PlanFilePath = Path.Combine(Paths.PlansDir, $"{city}_{stamp}.json");
+				m_PlanFilePath = Path.Combine(Paths.PlansDir, $"{city}.json");
 			}
 			return m_PlanFilePath;
 		}
