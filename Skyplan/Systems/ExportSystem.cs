@@ -1,14 +1,12 @@
 using System.IO;
 using System.Linq;
 using Unity.Entities;
-using Skyplan.Models;
 using Skyplan.Persistence;
-using System.Collections.Generic;
 using Skyplan.Cross;
 
 namespace Skyplan.Systems {
 	public partial class ExportSystem : SystemBase {
-	public static ExportSystem Instance() {
+		public static ExportSystem Instance() {
 			return World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<ExportSystem>();
 		}
 
@@ -42,22 +40,6 @@ namespace Skyplan.Systems {
 			File.WriteAllText(Path.Combine(Paths.ModDataPath, fileName), svg);
 
 			Mod.log.Info($"Exported to {Paths.ModDataPath}\\{fileName}");
-		}
-
-		public void ImportFromSVG(string fileName) {
-			string filePath = Path.Combine(Paths.ModDataPath, fileName);
-			if (!File.Exists(filePath)) {
-				Mod.log.Warn($"[Skyplan] Import: file not found: {filePath}");
-				return;
-			}
-
-			string svg = File.ReadAllText(filePath);
-			DrawingSystem drawing = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<DrawingSystem>();
-			int nextId = drawing.m_NextId;
-			List<Shape> shapes = SVGImporter.Import(svg, ref nextId);
-			drawing.m_NextId = nextId;
-			drawing.LoadShapes(shapes);
-			Mod.log.Info($"[Skyplan] Imported {shapes.Count} shapes from {fileName}");
 		}
 
 		protected override void OnUpdate() { }

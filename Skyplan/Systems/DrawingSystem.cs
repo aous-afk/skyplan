@@ -194,6 +194,7 @@ namespace Skyplan.Systems {
 			_points.Clear();
 			m_PanelVisibleBinding.Update(false);
 			m_PreviewBinding.Update("");
+			PlanPersistenceSystem.instance?.SavePlan();
 		}
 
 		public void TogglePanel() {
@@ -207,6 +208,7 @@ namespace Skyplan.Systems {
 			} else {
 				m_ActiveShape = null;
 				m_PreviewBinding.Update("");
+				PlanPersistenceSystem.instance?.SavePlan();
 			}
 			m_PanelVisibleBinding.Update(m_PanelVisible);
 			Mod.log.Info($"Skyplan panel {(m_PanelVisible ? "shown" : "hidden")}");
@@ -434,6 +436,21 @@ namespace Skyplan.Systems {
 			m_PreviewBinding.Update("");
 		}
 
+		public void MergeShapes(List<Shape> imported) {
+			if (m_Shapes.Count == 0) {
+				LoadShapes(imported);
+				return;
+			}
+			HashSet<string> existingIds = new(m_Shapes.Select(s => s.id));
+			foreach (Shape s in imported) {
+				if (existingIds.Add(s.id)) m_Shapes.Add(s);
+			}
+			if (m_Camera.IsReady) {
+				UpdateShapesJson();
+			}
+			m_PreviewBinding.Update("");
+		}
+
 		private void UpdatePreviewJson() {
 			if (m_ActiveShape == null || m_ActiveShape.pts.Count < 2) {
 				m_PreviewBinding.Update("");
@@ -447,7 +464,6 @@ namespace Skyplan.Systems {
 			};
 			m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
 		}
-
 
 		private static bool LoadDisplaySettings() {
 			try {

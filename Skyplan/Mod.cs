@@ -39,6 +39,7 @@ namespace Skyplan {
 			m_ToggleAction.shouldBeEnabled = true;
 
 			updateSystem.UpdateAt<DrawingSystem>(SystemUpdatePhase.UIUpdate);
+			updateSystem.UpdateAt<PlanPersistenceSystem>(SystemUpdatePhase.MainLoop);
 
 			AssetDatabase.global.LoadSettings(nameof(Skyplan), m_Setting, new Setting(this));
 		}

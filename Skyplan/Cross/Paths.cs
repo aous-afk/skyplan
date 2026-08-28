@@ -7,5 +7,6 @@ namespace Skyplan.Cross {
 		public readonly static string DisplaySettingsPath = Path.Combine(EnvPath.kUserDataPath, "ModsSettings", "skyplan", "display.json");
 		public readonly static string DefaultLayers = Path.Combine(Mod.modPath, "layers_default.json");
 		public readonly static string UserLayers = Path.Combine(ModDataPath, "layers.json");
+		public readonly static string PlansDir = Path.Combine(ModDataPath, "plans");
 	}
 }
