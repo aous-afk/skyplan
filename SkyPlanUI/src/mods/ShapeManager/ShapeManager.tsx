@@ -47,7 +47,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 	const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
 	const toggleCollapsed = useCallback((layerId: string) => {
-		setCollapsed(prev => ({ ...prev, [layerId]: !prev[layerId] }));
+		setCollapsed(prev => ({ ...prev, [layerId]: !(prev[layerId] ?? true) }));
 	}, []);
 
 	const shapeGroups = useMemo(() => {
