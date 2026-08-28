@@ -1,3 +1,11 @@
+:root {
+  --skyplan-font-size-2xs: 11px;
+  --skyplan-font-size-xs: 12px;
+  --skyplan-font-size-sm: 13px;
+  --skyplan-font-size-md: 14px;
+  --skyplan-font-size-lg: 15px;
+}
+
 .opacity_row {
   display: flex;
   align-items: center;
@@ -9,7 +17,7 @@
 }
 
 .opacity_label {
-  font-size: 10px;
+  font-size: var(--skyplan-font-size-xs);
   font-weight: 600;
   color: rgba(74, 144, 217, 0.9);
   text-transform: uppercase;
@@ -28,7 +36,7 @@
 }
 
 .opacity_value {
-  font-size: 10px;
+  font-size: var(--skyplan-font-size-xs);
   font-weight: 600;
   color: rgba(74, 144, 217, 0.9);
   background: rgba(74, 144, 217, 0.15);
