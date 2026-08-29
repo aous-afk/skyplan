@@ -23,6 +23,7 @@ namespace Skyplan {
 			log.Info(nameof(OnLoad));
 			instance = this;
 			LayerMerger.LogInfo = msg => log.Info(msg);
+			LayerMerger.LogDebug = msg => log.Debug(msg);
 			LayerMerger.LogWarn = msg => log.Warn(msg);
 
 			if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset)) {

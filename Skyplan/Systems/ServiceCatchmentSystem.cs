@@ -91,13 +91,8 @@ namespace Skyplan.Systems {
 			// Recomputed every frame (not just on selection change) so the legend's screen
 			// anchor tracks the camera - the world-space dots already do this for free,
 			// the legend can't since it's still a flat HTML/SVG overlay.
-			bool changed = m_LastSelected != selected;
 			m_LastSelected = selected;
 			string json = JsonConvert.SerializeObject(BuildLegend(selected, kind));
-			if (changed) {
-				Mod.log.Info($"[Catchment] selection changed -> entity {selected.Index}:{selected.Version}, json={json}");
-			}
-
 			m_CatchmentBinding.Update(json);
 
 			DrawCatchmentOverlay(selected, kind);

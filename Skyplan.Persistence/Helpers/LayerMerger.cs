@@ -4,6 +4,7 @@ using Skyplan.Models.Enums;
 namespace Skyplan.Persistence.Helpers {
 	public static class LayerMerger {
 		public static Action<string>? LogInfo;
+		public static Action<string>? LogDebug;
 		public static Action<string>? LogWarn;
 
 		public static JObject LoadAndMerge(string defaultLayerPath, string userLayersPath) {
@@ -18,7 +19,7 @@ namespace Skyplan.Persistence.Helpers {
 
 			try {
 				userLayers = JObject.Parse(File.ReadAllText(userLayersPath));
-				LogInfo?.Invoke($"[LayerMerger] loaded user layers from '{userLayersPath}'");
+				LogDebug?.Invoke($"[LayerMerger] loaded user layers from '{userLayersPath}'");
 			} catch (Exception ex) {
 				LogWarn?.Invoke($"[LayerMerger] failed to parse user layers file: {ex.Message}");
 			}
@@ -31,16 +32,15 @@ namespace Skyplan.Persistence.Helpers {
 			// logic for global label style
 			if (defaultLayers["labelStyle"] is JObject defaultGlobalLabelStyel && userLayers["labelStyle"] is JObject userGlobalLabelStyel) {
 				merged["labelStyle"] = MergeObjects(defaultGlobalLabelStyel, userGlobalLabelStyel);
-				LogInfo?.Invoke("[LayerMerger] merged global labelStyle");
+				LogDebug?.Invoke("[LayerMerger] merged global labelStyle");
 			}
 
 			// logic for the layers
 			List<JObject> defaultLayersDef = defaultLayers["layers"] is JArray defDefaultArray ? [.. defDefaultArray.OfType<JObject>()] : [];
 			List<JObject> userLayersDef = userLayers["layers"] is JArray defUserArray ? [.. defUserArray.OfType<JObject>()] : [];
 
-			LogInfo?.Invoke($"[LayerMerger] merging {defaultLayersDef.Count} default layers with {userLayersDef.Count} user layers");
 			List<JObject> mergedLayers = MergeLayers(defaultLayersDef, userLayersDef, MergePolicies.UserWins);
-			LogInfo?.Invoke($"[LayerMerger] merge result: {mergedLayers.Count} layers");
+			LogInfo?.Invoke($"[LayerMerger] merged {defaultLayersDef.Count} default + {userLayersDef.Count} user layers -> {mergedLayers.Count} total");
 
 			merged["layers"] = JArray.FromObject(mergedLayers);
 			return merged;
@@ -69,7 +69,7 @@ namespace Skyplan.Persistence.Helpers {
 				}
 				defIds.Add(defId);
 				if (userById.TryGetValue(defId, out JObject? userDef)) {
-					LogInfo?.Invoke($"[LayerMerger] merging user override for layer '{defId}'");
+					LogDebug?.Invoke($"[LayerMerger] merging user override for layer '{defId}'");
 					output.Add(MergeObjects(def, userDef));
 				} else {
 					output.Add(def);
@@ -79,7 +79,7 @@ namespace Skyplan.Persistence.Helpers {
 			foreach (JObject userLayer in user) {
 				string id = userLayer["id"]?.Value<string>() ?? "";
 				if (!defIds.Contains(id)) {
-					LogInfo?.Invoke($"[LayerMerger] appending user-only layer '{id}'");
+					LogDebug?.Invoke($"[LayerMerger] appending user-only layer '{id}'");
 					output.Add(userLayer);
 				}
 			}
