@@ -26,40 +26,41 @@ For Annotation, a small circle preview will be shown on the map where you clicke
 
 This is a rough beta version, a lot of the feedback that i got on reddit is not yet implemented. even the Thumbnail is under development.
 
-There is no auto-save nor auto load. please export the plans before closing the game.
-
 The next minor beta version (milestone) will include:
 
-v0.1.1:
+v0.1.2:
 
-*   Redo support
-*   Fuzzy search for layers in the toolbar
-*	Performanc improvment
+* TBD
+
+### Experimental Features
+
+* Planing Tools:
+  * ServiceCatchmentSystem: when SkyPlan panel is open, if you clicked on a school or a hospital the UI will show you where its students/patients live. 
 
 ### Features
 
-*   Line, polygon, point and annotation drawing tools: plan roads, mark zones, drop points of interest
-*   24 built-in layers: Transit (Train, Subway, Tram, Bus), Roads (Highway to Local), Zones (Residential, Commercial, Industrial, Office), Public Services, and Points of Interest — each with its own colour and style
-*   Fully customisable layers: edit `layers.json` to add, remove, or restyle any layer. Changes hot-swap without a game restart
-*   World-space coordinates: shapes stay pinned to the map as you pan and zoom
-*   SVG export and import: save your plans as standard SVG files, open them in Inkscape, share them, or import them back later
-*   Erase tool: with hover highlight
-*   Undo: (Ctrl+Z)
-*   Draggable toolbar
-*	Shape Manager: view all shapes grouped by layer, edit the name and description of each shape, toggle layer visibility and label display
-*	Canvas labels: shape names can be toggled to appear on the map at the shape's anchor point
-*	Visual: global and per-layer opacity sliders
-*	Per-layer visibility toggle
+* Line, polygon, point and annotation drawing tools: plan roads, mark zones, drop points of interest
+* 29 built-in layers: Transit (Train, Subway, Tram, Bus), Roads (Highway to Local), Zones (Residential, Commercial, Industrial, Office), Public Services, and Points of Interest — each with its own colour and style
+* Fully customisable layers: edit `layers.json` to add, remove, or restyle any layer. Changes hot-swap without a game restart
+* World-space coordinates: shapes stay pinned to the map as you pan and zoom
+* Erase tool: with hover highlight
+* SVG export and import: save your plans as standard SVG files, open them in Inkscape, share them, or import them back later
+* Auto Save/Load: the game will auto save your shapes per city, and will load them on start
+* Undo/Redo: (Ctrl+Z)/(Ctrl+Y)
+* Draggable toolbar
+* Shape Manager: view all shapes grouped by layer, edit the name and description of each shape, toggle layer visibility and label display
+* Canvas labels: shape names can be toggled to appear on the map at the shape's anchor point
+* Visual: global and per-layer opacity sliders
+* Per-layer visibility toggle
 
 ## Known Issues
 
-*   changing the styles in `layers.json` while already having shapes in the current session wont hot reload. it needs clear-all for the new style to take effect.
+* changing the styles in `layers.json` while already having shapes in the current session wont hot reload. it needs clear-all for the new style to take effect.
 
 ## Limitations
 
-*   No redo, only undo (Ctrl+Z) is supported.
-*   No snapping, lines do not snap to roads, the grid, or other shapes.
-*   Each line is a separate two-point segment, continuous polylines are planned but not yet implemented.
+* No snapping, lines do not snap to roads, the grid, or other shapes.
+* Each line is a separate two-point segment, continuous polylines are planned but not yet implemented.
 
 ### Usage
 
@@ -75,7 +76,7 @@ Load a city, press **Alt+P**, draw.
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/skyplan-support-and-feedback.1936742/#post-31440244" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.1.0-beta" />
+	<ModVersion Value="0.1.1-beta" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.6.*" />
 	<!--Dependency for the mod, can be set multiple times-->
@@ -84,16 +85,15 @@ Load a city, press **Alt+P**, draw.
 	<RequiredDLC Value="" />
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
 	<ChangeLog>
-## 0.1.0-beta
-- Added: Labeling system: Annotation tool. Every shape has a title and description.
-- Added: Layer merge system: user customisations in layers.json are merged with the shipped defaults. New default layers appear automatically on update without overwriting your changes.
-- Added: Hover highlight: hovering a shape row in the Shape Manager highlights the shape on the map.
-- Visual enhancements:
-	- Global opacity and per-layer opacity sliders.
-	- Layer visibility toggle (eye icon per layer).
-	- Label eye-toggle per layer (show/hide shape names on the canvas).
-	- Global description visibility toggle.
-	- Shapes grouped per layer in the SVG for correct stacking and opacity behaviour.
+## 0.1.1-beta
+- Added: (Experimental) Service building info overlay (ServiceCatchmentSystem): click a school or hospital while the panel is open to see capacity/enrolled and where its students/patients live.
+- Added: Redo support (Ctrl+Z / Ctrl+Y), alongside undo.
+- Added: Auto-save and auto-load: your plan is saved per-city automatically.
+- UX enhancements:
+  - Default layers for all residential zone types (Low/Medium/High), Mixed Use, and Commercial High.
+  - Shapes in the Shape-Manager is now Collapsible. Collapsed per default.
+  - No layer is pre-selected when the panel opens, preventing accidental drawing.
+  - Increased UI text size for readability.
 	</ChangeLog>
 	<!--External link, can be set multiple times. supported types are "discord", "github", "youtube", "twitch", "x", "paypal", "patreon", "buymeacoffee", "kofi", "crowdin", "gitlab", "gofundme"-->
 	<ExternalLink Type="github" Url="https://github.com/aous-afk/skyplan" />
