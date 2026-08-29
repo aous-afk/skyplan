@@ -29,6 +29,8 @@ namespace Skyplan.Systems {
 	public partial class DrawingSystem : UISystemBase {
 		public static DrawingSystem instance;
 
+		public bool IsPanelVisible => m_PanelVisible;
+
 		private ICameraSystem m_Camera;
 		private bool m_PanelVisible;
 

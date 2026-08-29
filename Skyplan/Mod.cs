@@ -40,6 +40,7 @@ namespace Skyplan {
 
 			updateSystem.UpdateAt<DrawingSystem>(SystemUpdatePhase.UIUpdate);
 			updateSystem.UpdateAt<PlanPersistenceSystem>(SystemUpdatePhase.MainLoop);
+			updateSystem.UpdateAt<ServiceCatchmentSystem>(SystemUpdatePhase.UIUpdate);
 
 			AssetDatabase.global.LoadSettings(nameof(Skyplan), m_Setting, new Setting(this));
 		}
