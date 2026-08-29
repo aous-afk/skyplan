@@ -1,6 +1,5 @@
 using Colossal.Mathematics;
 using Colossal.UI.Binding;
-using Game;
 using Game.Citizens;
 using Game.Prefabs;
 using Game.Rendering;
@@ -69,7 +68,10 @@ namespace Skyplan.Systems {
 
 		protected override void OnUpdate() {
 			if (DrawingSystem.instance?.IsPanelVisible != true) {
-				if (m_LastSelected != Entity.Null) m_CatchmentBinding.Update("");
+				if (m_LastSelected != Entity.Null) {
+					m_CatchmentBinding.Update("");
+				}
+
 				m_LastSelected = Entity.Null;
 				return;
 			}
@@ -78,7 +80,10 @@ namespace Skyplan.Systems {
 			FacilityKind kind = DetectFacility(selected);
 
 			if (kind == FacilityKind.None || !m_Camera.IsReady) {
-				if (m_LastSelected != Entity.Null) m_CatchmentBinding.Update("");
+				if (m_LastSelected != Entity.Null) {
+					m_CatchmentBinding.Update("");
+				}
+
 				m_LastSelected = Entity.Null;
 				return;
 			}
@@ -86,16 +91,31 @@ namespace Skyplan.Systems {
 			// Recomputed every frame (not just on selection change) so the legend's screen
 			// anchor tracks the camera - the world-space dots already do this for free,
 			// the legend can't since it's still a flat HTML/SVG overlay.
+			bool changed = m_LastSelected != selected;
 			m_LastSelected = selected;
-			m_CatchmentBinding.Update(JsonConvert.SerializeObject(BuildLegend(selected, kind)));
+			string json = JsonConvert.SerializeObject(BuildLegend(selected, kind));
+			if (changed) {
+				Mod.log.Info($"[Catchment] selection changed -> entity {selected.Index}:{selected.Version}, json={json}");
+			}
+
+			m_CatchmentBinding.Update(json);
 
 			DrawCatchmentOverlay(selected, kind);
 		}
 
 		private FacilityKind DetectFacility(Entity entity) {
-			if (entity == Entity.Null) return FacilityKind.None;
-			if (EntityManager.HasComponent<BuildingSchool>(entity)) return FacilityKind.School;
-			if (EntityManager.HasComponent<BuildingHospital>(entity)) return FacilityKind.Hospital;
+			if (entity == Entity.Null) {
+				return FacilityKind.None;
+			}
+
+			if (EntityManager.HasComponent<BuildingSchool>(entity)) {
+				return FacilityKind.School;
+			}
+
+			if (EntityManager.HasComponent<BuildingHospital>(entity)) {
+				return FacilityKind.Hospital;
+			}
+
 			return FacilityKind.None;
 		}
 
@@ -103,29 +123,44 @@ namespace Skyplan.Systems {
 			List<Entity> clients = [];
 			switch (kind) {
 				case FacilityKind.School:
-					if (EntityManager.HasBuffer<BuildingStudent>(facility))
-						foreach (BuildingStudent s in EntityManager.GetBuffer<BuildingStudent>(facility, isReadOnly: true))
+					if (EntityManager.HasBuffer<BuildingStudent>(facility)) {
+						foreach (BuildingStudent s in EntityManager.GetBuffer<BuildingStudent>(facility, isReadOnly: true)) {
 							clients.Add(s.m_Student);
+						}
+					}
+
 					break;
 				case FacilityKind.Hospital:
-					if (EntityManager.HasBuffer<BuildingPatient>(facility))
-						foreach (BuildingPatient p in EntityManager.GetBuffer<BuildingPatient>(facility, isReadOnly: true))
+					if (EntityManager.HasBuffer<BuildingPatient>(facility)) {
+						foreach (BuildingPatient p in EntityManager.GetBuffer<BuildingPatient>(facility, isReadOnly: true)) {
 							clients.Add(p.m_Patient);
+						}
+					}
+
 					break;
 			}
 			return clients;
 		}
 
+		// Extensions (eg. school playground) are separate InstalledUpgrade entities whose
+		// prefab stats get merged onto the base building's - see UpgradeUtils.CombineStats,
+		// same helper SchoolAISystem uses to compute the real (post-extension) capacity.
 		private int GetCapacity(Entity facility, FacilityKind kind) {
-			if (!EntityManager.HasComponent<PrefabRef>(facility)) return 0;
+			if (!EntityManager.HasComponent<PrefabRef>(facility)) {
+				return 0;
+			}
+
 			Entity prefab = EntityManager.GetComponentData<PrefabRef>(facility).m_Prefab;
-			return kind switch {
-				FacilityKind.School when EntityManager.HasComponent<SchoolData>(prefab)
-					=> EntityManager.GetComponentData<SchoolData>(prefab).m_StudentCapacity,
-				FacilityKind.Hospital when EntityManager.HasComponent<HospitalData>(prefab)
-					=> EntityManager.GetComponentData<HospitalData>(prefab).m_PatientCapacity,
-				_ => 0
-			};
+			switch (kind) {
+				case FacilityKind.School:
+					UpgradeUtils.TryGetCombinedComponent(EntityManager, facility, prefab, out SchoolData schoolData);
+					return schoolData.m_StudentCapacity;
+				case FacilityKind.Hospital:
+					UpgradeUtils.TryGetCombinedComponent(EntityManager, facility, prefab, out HospitalData hospitalData);
+					return hospitalData.m_PatientCapacity;
+				default:
+					return 0;
+			}
 		}
 
 		private static string NameFor(FacilityKind kind, Entity entity) => kind switch {
@@ -151,7 +186,9 @@ namespace Skyplan.Systems {
 
 		private void DrawCatchmentOverlay(Entity facility, FacilityKind kind) {
 			List<Entity> clients = GetClients(facility, kind);
-			if (clients.Count == 0) return;
+			if (clients.Count == 0) {
+				return;
+			}
 
 			float3 facilityPos = WorldPositionOf(facility);
 			OverlayRenderSystem.Buffer buf = m_OverlaySystem.GetBuffer(out JobHandle deps);
@@ -161,7 +198,10 @@ namespace Skyplan.Systems {
 
 			foreach (Entity citizen in clients) {
 				Entity home = HomeOf(citizen);
-				if (home == Entity.Null || !EntityManager.HasComponent<ObjectTransform>(home)) continue;
+				if (home == Entity.Null || !EntityManager.HasComponent<ObjectTransform>(home)) {
+					continue;
+				}
+
 				float3 homePos = WorldPositionOf(home);
 				buf.DrawLine(LineColor, new Line3.Segment(facilityPos, homePos), 1f);
 				buf.DrawCircle(HomeColor, homePos, 8f);
@@ -171,15 +211,27 @@ namespace Skyplan.Systems {
 		}
 
 		private Entity HomeOf(Entity citizen) {
-			if (citizen == Entity.Null || !EntityManager.Exists(citizen)) return Entity.Null;
-			if (!EntityManager.HasComponent<HouseholdMember>(citizen)) return Entity.Null;
+			if (citizen == Entity.Null || !EntityManager.Exists(citizen)) {
+				return Entity.Null;
+			}
+
+			if (!EntityManager.HasComponent<HouseholdMember>(citizen)) {
+				return Entity.Null;
+			}
+
 			Entity household = EntityManager.GetComponentData<HouseholdMember>(citizen).m_Household;
-			if (household == Entity.Null || !EntityManager.HasComponent<PropertyRenter>(household)) return Entity.Null;
+			if (household == Entity.Null || !EntityManager.HasComponent<PropertyRenter>(household)) {
+				return Entity.Null;
+			}
+
 			return EntityManager.GetComponentData<PropertyRenter>(household).m_Property;
 		}
 
 		private float3 WorldPositionOf(Entity entity) {
-			if (entity == Entity.Null || !EntityManager.HasComponent<ObjectTransform>(entity)) return float3.zero;
+			if (entity == Entity.Null || !EntityManager.HasComponent<ObjectTransform>(entity)) {
+				return float3.zero;
+			}
+
 			return EntityManager.GetComponentData<ObjectTransform>(entity).m_Position;
 		}
 

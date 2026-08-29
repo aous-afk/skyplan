@@ -30,7 +30,7 @@ const ServiceCatchmentOverlay: React.FC = () => {
 		<svg
 			style={{ position: 'absolute', top: 0, left: 0, width: '100vw', height: '100vh', pointerEvents: 'none', overflow: 'hidden' }}
 		>
-			<g transform={`translate(${data.facilityPos.x + 16}, ${data.facilityPos.y - 16})`}>
+			<g key={json} transform={`translate(${data.facilityPos.x + 16}, ${data.facilityPos.y - 16})`}>
 				<rect x={0} y={-14} width={170} height={54} rx={6} fill="rgba(0,0,0,0.7)" />
 				<text x={10} y={2} fill="#facc15" fontSize={13} fontWeight="bold">{data.name}</text>
 				<text x={10} y={20} fill={over ? '#ff5555' : '#ffffff'} fontSize={12}>
