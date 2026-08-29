@@ -13,7 +13,9 @@ namespace Skyplan.Persistence.Helpers {
 			JObject? userLayers = null;
 
 			if (!File.Exists(userLayersPath)) {
-				LogInfo?.Invoke($"[LayerMerger] no user layers file found at '{userLayersPath}', using defaults");
+				LogInfo?.Invoke($"[LayerMerger] no user layers file found, creating one from defaults at '{userLayersPath}'");
+				Directory.CreateDirectory(Path.GetDirectoryName(userLayersPath)!);
+				File.Copy(defaultLayerPath, userLayersPath);
 				return defaultLayers;
 			}
 
