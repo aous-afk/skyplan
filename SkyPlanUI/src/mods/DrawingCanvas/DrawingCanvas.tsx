@@ -245,6 +245,10 @@ const DrawingCanvas: React.FC = () => {
 				trigger('skyplan', 'undo', '');
 				e.stopImmediatePropagation(); e.preventDefault();
 			}
+			if (e.ctrlKey && (e.key === 'y' || e.key === 'Y')) {
+				trigger('skyplan', 'redo', '');
+				e.stopImmediatePropagation(); e.preventDefault();
+			}
 		};
 
 		document.addEventListener('mousedown', md, true);
