@@ -34,7 +34,6 @@ function labelPosition(s: ShapeData): { x: number; y: number } | null {
 	if (s.tag === Tag.polygon) return centroid(s.pts);
 	if (s.tag === Tag.path)    return centroid(s.pts);
 	if (s.tag === Tag.circle)  return { x: s.pts[0].x, y: s.pts[0].y - 12 };
-	if (s.tag === Tag.curve)   return centroid(s.pts);
 	return null;
 }
 
@@ -56,11 +55,6 @@ function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null 
 			}
 			const points = buildPolygon(s.pts);
 			return <polygon key={s.id} className={cn} points={points} style={style} />;
-		}
-		case Tag.curve: {
-			const d = buildCurve(s.pts);
-			if (!d) return null;
-			return <path key={s.id} className={cn} d={d} fill="none" style={style} />;
 		}
 		case Tag.circle: {
 			const p = s.pts[0];

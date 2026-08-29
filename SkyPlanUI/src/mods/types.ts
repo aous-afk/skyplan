@@ -1,15 +1,9 @@
-import {faBezierCurve, faDrawPolygon, faEraser, faFont, faLocationDot, faRoad} from '@fortawesome/free-solid-svg-icons';
+import {faDrawPolygon, faEraser, faFont, faLocationDot, faRoad} from '@fortawesome/free-solid-svg-icons';
 
 export const TOOLS = [
   { id: 'path',
 	label: 'Line',
 	icon: faRoad,
-	activeStyle: {}
-  },
-
-  { id: 'curve',
-	label: 'Curve',
-	icon: faBezierCurve,
 	activeStyle: {}
   },
 
@@ -78,5 +72,4 @@ export enum Tag {
   polygon = 'polygon',
   circle = 'circle',
   text = 'text',
-  curve = 'curve',
 }

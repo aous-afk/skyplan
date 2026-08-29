@@ -5,6 +5,5 @@ namespace Skyplan.Models {
 	point,
 	erase,
 	text,
-	curve,
   }
 }

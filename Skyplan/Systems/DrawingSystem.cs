@@ -428,7 +428,6 @@ namespace Skyplan.Systems {
 					Tools.polygon => Tag.polygon,
 					Tools.point => Tag.circle,
 					Tools.text => Tag.text,
-					Tools.curve => Tag.curve,
 					_ => Tag.none
 				}
 			};
