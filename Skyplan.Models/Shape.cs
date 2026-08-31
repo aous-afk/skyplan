@@ -18,5 +18,8 @@ namespace Skyplan.Models{
 		public string? Label;
 		[JsonProperty("description")]
 		public string? Description;
+		[JsonProperty("planId")]
+		public int PlanId;
+		public Bounds Extents;
 	}
 }

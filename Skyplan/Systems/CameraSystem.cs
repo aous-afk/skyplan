@@ -84,6 +84,26 @@ namespace Skyplan.Systems {
 			return new Vector2(sx, ph - sy);
 		}
 
-		#endregion
-	}
+		public bool IsInView(Vector3 min, Vector3 max) {
+		  Camera cam = GetCamera();
+		  if (cam == null) {
+			return false;
+		  }
+		  Bounds b = default;
+		  b.SetMinMax(min, max);
+		  Plane[] planes = GeometryUtility.CalculateFrustumPlanes(cam);
+		  return GeometryUtility.TestPlanesAABB(planes, b);
+		}
+
+		public bool IsInView(Bounds extents) {
+		  Camera cam = GetCamera();
+		  if (cam == null) {
+			return false;
+		  }
+		  Plane[] planes = GeometryUtility.CalculateFrustumPlanes(cam);
+		  return GeometryUtility.TestPlanesAABB(planes, extents);
+		}
+
+	#endregion
+  }
 }
