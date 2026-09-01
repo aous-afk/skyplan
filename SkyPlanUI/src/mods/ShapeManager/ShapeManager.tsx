@@ -6,6 +6,7 @@ import {faChevronDown, faChevronRight, faDrawPolygon, faEye, faEyeSlash, faFont,
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {ShapeData, Tag} from 'mods/types';
 import {useDrawingContext} from 'mods/DrawingContext';
+import {useSkyplan} from 'mods/SkyplanContext';
 import shared from '../shared.module.scss';
 import styles from './ShapeManager.module.scss';
 
@@ -41,6 +42,11 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 	layerLabels, onLayerLabelsToggle,
 }) => {
 	const { onHoverShape, showDescriptions, onShowDescriptionsToggle } = useDrawingContext();
+	const { allLayers } = useSkyplan();
+	const layerDefsMap = useMemo(() =>
+		Object.fromEntries(allLayers.map(l => [l.id, l])),
+		[allLayers]
+	);
 	const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
 	const [editName, setEditName] = useState('');
 	const [editNote, setEditNote] = useState('');
@@ -53,12 +59,13 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 	const shapeGroups = useMemo(() => {
 		const map = new Map<string, { layerId: string; label: string; color: string; shapes: ShapeData[] }>();
 		for (const s of shapes) {
-			if (!s.layerDef) continue;
+			const layerDef = layerDefsMap[s.layerId];
+			if (!layerDef) continue;
 			if (!map.has(s.layerId)) {
-				const style = s.layerDef.style;
+				const style = layerDef.style;
 				map.set(s.layerId, {
 					layerId: s.layerId,
-					label: s.layerDef.label,
+					label: layerDef.label,
 					color: (style.stroke ?? style.fill ?? '#888') as string,
 					shapes: [],
 				});
@@ -66,7 +73,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 			map.get(s.layerId)!.shapes.push(s);
 		}
 		return Array.from(map.values());
-	}, [shapes]);
+	}, [shapes, layerDefsMap]);
 
 	const startEdit = useCallback((s: ShapeData) => {
 		setEditingShapeId(s.id);

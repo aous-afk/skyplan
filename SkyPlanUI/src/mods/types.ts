@@ -34,17 +34,10 @@ export type ToolId = typeof TOOLS[number]['id'];
 
 export type Layer = string;
 
-export interface ShapeLayerDef {
-	id: string;
-	label: string;
-	style: Record<string, string>;
-}
-
 export interface ShapeData {
 	id: string;
 	tag: Tag;
 	layerId: string;
-	layerDef?: ShapeLayerDef;
 	pts: { x: number; y: number }[];
 	inFrame: boolean;
 	label?: string;

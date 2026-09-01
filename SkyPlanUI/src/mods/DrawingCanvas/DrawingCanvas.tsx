@@ -5,17 +5,18 @@ import {buildPath, buildPolygon, centroid} from 'mods/utils/buildSvg';
 import {useSkyplan} from '../SkyplanContext';
 import {useDrawingContext} from 'mods/DrawingContext';
 
-function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null): string {
+function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null, layerDefsMap: Record<string, LayerDef>): string {
 	const seen = new Set<string>();
 	const rules: string[] = [];
 	const all = preview ? [...shapes, preview] : shapes;
 	for (const s of all) {
-		if (!s.layerDef?.style || seen.has(s.layerDef.id)) continue;
-		seen.add(s.layerDef.id);
-		const decls = Object.entries(s.layerDef.style)
+		const style = layerDefsMap[s.layerId]?.style;
+		if (!style || seen.has(s.layerId)) continue;
+		seen.add(s.layerId);
+		const decls = Object.entries(style)
 			.map(([k, v]) => `${k}:${v}`)
 			.join(';');
-		rules.push(`.sp-${s.layerDef.id}{${decls}}`);
+		rules.push(`.sp-${s.layerId}{${decls}}`);
 	}
 	return rules.join('');
 }
@@ -38,7 +39,7 @@ function labelPosition(s: ShapeData): { x: number; y: number } | null {
 }
 
 function renderShape(s: ShapeData, opacity?: string): React.ReactElement | null {
-	const cn = `sp-${s.layerDef?.id ?? ''}`;
+	const cn = `sp-${s.layerId}`;
 	const style = opacity !== undefined ? { opacity } : undefined;
 
 	switch (s.tag) {
@@ -278,7 +279,7 @@ const DrawingCanvas: React.FC = () => {
 	}, [shapes]);
 
 	const hasHighlight = highlightId !== null;
-	const layerCSS = buildLayerCSS(shapes, preview);
+	const layerCSS = buildLayerCSS(shapes, preview, layerDefsMap);
 
 	const showCursor = !!cursorPos && activeTool === 'text' && !viewMode;
 	if (shapes.length === 0 && !preview && !showCursor) return null;
