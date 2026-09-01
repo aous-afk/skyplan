@@ -446,6 +446,7 @@ namespace Skyplan.Systems {
 		}
 
 		private void UpdateShapesJson() {
+			m_Camera.RefreshFrustum();
 			List<ShapeDto> shapeDtos = [];
 			foreach (Shape s in m_Shapes) {
 				if (!ShapeInView(s)) continue;
