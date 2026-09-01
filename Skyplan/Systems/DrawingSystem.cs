@@ -434,7 +434,7 @@ namespace Skyplan.Systems {
 				}
 			};
 			foreach (Vector3 pt in shape.pts) {
-				Vector2 p = m_Camera.WorldToSVG(pt);
+				if (!m_Camera.WorldToSVG(pt, out Vector2 p)) return null;
 				shapeDto.Pts.Add(new ScreenPt { x = p.x, y = p.y });
 			}
 			return shapeDto;
@@ -449,6 +449,7 @@ namespace Skyplan.Systems {
 			foreach (Shape s in m_Shapes) {
 				if (!ShapeInView(s)) continue;
 				ShapeDto dto = CreateDto(s);
+				if (dto == null) continue;
 				shapeDtos.Add(dto);
 			}
 			string json = JsonConvert.SerializeObject(shapeDtos);

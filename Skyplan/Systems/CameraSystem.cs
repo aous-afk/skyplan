@@ -34,8 +34,16 @@ namespace Skyplan.Systems {
 		}
 
 		public Vector2 WorldToSVG(Vector3 world) {
-			if (!RefreshIfNeeded()) return Vector2.zero;
-			return ProjectWithMatrices(world, m_W2C, m_Proj, m_PixelWidth, m_PixelHeight);
+			WorldToSVG(world, out Vector2 svg);
+			return svg;
+		}
+
+		// Returns false when the point is behind/at the camera's near plane (clip.w <= 0) instead of
+		// silently snapping to (0,0) - callers that render a whole shape from multiple points need to
+		// know a point failed so they can skip the shape instead of drawing a corrupted vertex.
+		public bool WorldToSVG(Vector3 world, out Vector2 svg) {
+			if (!RefreshIfNeeded()) { svg = Vector2.zero; return false; }
+			return ProjectWithMatrices(world, m_W2C, m_Proj, m_PixelWidth, m_PixelHeight, out svg);
 		}
 
 		public bool ScreenToWorld(float sx, float sy, out Vector3 world) {
@@ -71,13 +79,14 @@ namespace Skyplan.Systems {
 		#endregion
 
 		#region CSS Transform / Baseline
-		private static Vector2 ProjectWithMatrices(Vector3 world, Matrix4x4 worldToCam, Matrix4x4 proj, int pw, int ph) {
+		private static bool ProjectWithMatrices(Vector3 world, Matrix4x4 worldToCam, Matrix4x4 proj, int pw, int ph, out Vector2 result) {
 			Vector4 viewPos = worldToCam * new Vector4(world.x, world.y, world.z, 1f);
 			Vector4 clip = proj * viewPos;
-			if (clip.w <= 0f) return Vector2.zero;
+			if (clip.w <= 0f) { result = Vector2.zero; return false; }
 			float sx = (clip.x / clip.w + 1f) * 0.5f * pw;
 			float sy = (clip.y / clip.w + 1f) * 0.5f * ph;
-			return new Vector2(sx, ph - sy);
+			result = new Vector2(sx, ph - sy);
+			return true;
 		}
 
 		private readonly Plane[] m_FrustumPlanes = new Plane[6];
