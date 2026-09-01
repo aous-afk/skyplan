@@ -10,8 +10,6 @@ namespace Skyplan.Models.dto {
 		public Tag Tag;
 		[JsonProperty("layerId")]
 		public string? LayerId;
-		[JsonProperty("layerDef")]
-		public LayerDefDto? LayerDef;
 		[JsonProperty("pts")]
 		public List<ScreenPt> Pts = [];
 		[JsonProperty("inFrame")]

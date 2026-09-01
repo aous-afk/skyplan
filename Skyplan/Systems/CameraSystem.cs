@@ -34,12 +34,8 @@ namespace Skyplan.Systems {
 		}
 
 		public Vector2 WorldToSVG(Vector3 world) {
-			Camera cam = GetCamera();
-			if (cam == null) return Vector2.zero;
-			// worldToCameraMatrix is stale in CS2 (set once, never updated);
-			// derive the view matrix from the live transform instead.
-			Matrix4x4 w2c = Matrix4x4.Scale(new Vector3(1, 1, -1)) * cam.transform.worldToLocalMatrix;
-			return ProjectWithMatrices(world, w2c, cam.projectionMatrix, cam.pixelWidth, cam.pixelHeight);
+			if (!RefreshIfNeeded()) return Vector2.zero;
+			return ProjectWithMatrices(world, m_W2C, m_Proj, m_PixelWidth, m_PixelHeight);
 		}
 
 		public bool ScreenToWorld(float sx, float sy, out Vector3 world) {
@@ -86,22 +82,44 @@ namespace Skyplan.Systems {
 
 		private readonly Plane[] m_FrustumPlanes = new Plane[6];
 		private bool m_FrustumValid;
+		private Matrix4x4 m_W2C;
+		private Matrix4x4 m_Proj;
+		private int m_PixelWidth, m_PixelHeight;
+		private Vector3 m_CachedPos;
+		private Quaternion m_CachedRot;
+		private float m_CachedFov;
 
-		public void RefreshFrustum() {
+		// Lazily rebuilds the frustum planes + projection matrices only when the camera actually
+		// moved since the last call - safe to call from any number of independent callers/systems
+		// in any order, unlike an explicit "refresh once per frame" call.
+		private bool RefreshIfNeeded() {
 		  Camera cam = GetCamera();
-		  m_FrustumValid = cam != null;
-		  if (m_FrustumValid) GeometryUtility.CalculateFrustumPlanes(cam, m_FrustumPlanes);
+		  if (cam == null) { m_FrustumValid = false; return false; }
+		  Vector3 pos = cam.transform.position;
+		  Quaternion rot = cam.transform.rotation;
+		  float fov = cam.fieldOfView;
+		  if (m_FrustumValid && pos == m_CachedPos && rot == m_CachedRot && fov == m_CachedFov) return true;
+		  m_CachedPos = pos; m_CachedRot = rot; m_CachedFov = fov;
+		  GeometryUtility.CalculateFrustumPlanes(cam, m_FrustumPlanes);
+		  // worldToCameraMatrix is stale in CS2 (set once, never updated);
+		  // derive the view matrix from the live transform instead.
+		  m_W2C = Matrix4x4.Scale(new Vector3(1, 1, -1)) * cam.transform.worldToLocalMatrix;
+		  m_Proj = cam.projectionMatrix;
+		  m_PixelWidth = cam.pixelWidth;
+		  m_PixelHeight = cam.pixelHeight;
+		  m_FrustumValid = true;
+		  return true;
 		}
 
 		public bool IsInView(Vector3 min, Vector3 max) {
-		  if (!m_FrustumValid) return false;
+		  if (!RefreshIfNeeded()) return false;
 		  Bounds b = default;
 		  b.SetMinMax(min, max);
 		  return GeometryUtility.TestPlanesAABB(m_FrustumPlanes, b);
 		}
 
 		public bool IsInView(Bounds extents) {
-		  if (!m_FrustumValid) return false;
+		  if (!RefreshIfNeeded()) return false;
 		  return GeometryUtility.TestPlanesAABB(m_FrustumPlanes, extents);
 		}
 

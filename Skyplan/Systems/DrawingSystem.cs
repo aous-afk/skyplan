@@ -423,7 +423,6 @@ namespace Skyplan.Systems {
 			ShapeDto shapeDto = new() {
 				Id = shape.id,
 				LayerId = shape.layer?.Id,
-				LayerDef = shape.layer,
 				Label = shape.Label,
 				Description = shape.Description,
 				Tag = shape.Type switch {
@@ -446,14 +445,14 @@ namespace Skyplan.Systems {
 		}
 
 		private void UpdateShapesJson() {
-			m_Camera.RefreshFrustum();
 			List<ShapeDto> shapeDtos = [];
 			foreach (Shape s in m_Shapes) {
 				if (!ShapeInView(s)) continue;
 				ShapeDto dto = CreateDto(s);
 				shapeDtos.Add(dto);
 			}
-			m_ShapesBinding.Update(JsonConvert.SerializeObject(shapeDtos));
+			string json = JsonConvert.SerializeObject(shapeDtos);
+			m_ShapesBinding.Update(json);
 		}
 		private bool ShapeInView(Shape s) {
 			if (s.pts.Count == 0) return false;
