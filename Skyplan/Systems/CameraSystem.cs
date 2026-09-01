@@ -84,6 +84,27 @@ namespace Skyplan.Systems {
 			return new Vector2(sx, ph - sy);
 		}
 
-		#endregion
-	}
+		private readonly Plane[] m_FrustumPlanes = new Plane[6];
+		private bool m_FrustumValid;
+
+		public void RefreshFrustum() {
+		  Camera cam = GetCamera();
+		  m_FrustumValid = cam != null;
+		  if (m_FrustumValid) GeometryUtility.CalculateFrustumPlanes(cam, m_FrustumPlanes);
+		}
+
+		public bool IsInView(Vector3 min, Vector3 max) {
+		  if (!m_FrustumValid) return false;
+		  Bounds b = default;
+		  b.SetMinMax(min, max);
+		  return GeometryUtility.TestPlanesAABB(m_FrustumPlanes, b);
+		}
+
+		public bool IsInView(Bounds extents) {
+		  if (!m_FrustumValid) return false;
+		  return GeometryUtility.TestPlanesAABB(m_FrustumPlanes, extents);
+		}
+
+	#endregion
+  }
 }

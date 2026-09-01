@@ -7,6 +7,9 @@ namespace Skyplan.Systems {
 		bool HasChanged();
 		Vector2 WorldToSVG(Vector3 world);
 		bool ScreenToWorld(float sx, float sy, out Vector3 world);
+		bool IsInView(Vector3 min, Vector3 max);
+		bool IsInView(Bounds extents);
+		void RefreshFrustum();
 		#endregion
 	}
 }

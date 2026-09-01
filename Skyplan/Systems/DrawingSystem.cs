@@ -247,6 +247,7 @@ namespace Skyplan.Systems {
 					layer = m_CurrentLayer,
 					pts = [world],
 				};
+				s.CalcBounds();
 				m_Shapes.Add(s);
 				PushUndo(new Op { type = OpType.Draw, shape = s });
 				if (m_Camera.IsReady) {
@@ -295,6 +296,7 @@ namespace Skyplan.Systems {
 				m_ActiveShape.pts.Clear();
 				m_ActiveShape.pts.AddRange(_points);
 				if (m_ActiveShape.pts.Count >= 3) {
+					m_ActiveShape.CalcBounds();
 					m_Shapes.Add(m_ActiveShape);
 					PushUndo(new Op { type = OpType.Draw, shape = m_ActiveShape });
 					if (m_Camera.IsReady) {
@@ -309,6 +311,7 @@ namespace Skyplan.Systems {
 
 			HandleDrawMove(sx, sy);
 			if (m_ActiveShape.pts.Count >= 2) {
+				m_ActiveShape.CalcBounds();
 				m_Shapes.Add(m_ActiveShape);
 				PushUndo(new Op { type = OpType.Draw, shape = m_ActiveShape });
 				if (m_Camera.IsReady) {
@@ -361,7 +364,7 @@ namespace Skyplan.Systems {
 			}
 			m_RedoStack.Add(op);
 			if (m_Camera.IsReady) {
-			  UpdateShapesJson();
+				UpdateShapesJson();
 			}
 		}
 
@@ -377,7 +380,7 @@ namespace Skyplan.Systems {
 			}
 			m_UndoStack.Add(op);
 			if (m_Camera.IsReady) {
-			  UpdateShapesJson();
+				UpdateShapesJson();
 			}
 		}
 
@@ -443,21 +446,28 @@ namespace Skyplan.Systems {
 		}
 
 		private void UpdateShapesJson() {
+			m_Camera.RefreshFrustum();
 			List<ShapeDto> shapeDtos = [];
 			foreach (Shape s in m_Shapes) {
+				if (!ShapeInView(s)) continue;
 				ShapeDto dto = CreateDto(s);
 				shapeDtos.Add(dto);
 			}
 			m_ShapesBinding.Update(JsonConvert.SerializeObject(shapeDtos));
+		}
+		private bool ShapeInView(Shape s) {
+			if (s.pts.Count == 0) return false;
+			return m_Camera.IsInView(s.Extents);
 		}
 
 		public void LoadShapes(List<Shape> imported) {
 			m_Shapes.Clear();
 			m_UndoStack.Clear();
 			m_ActiveShape = null;
+			foreach (Shape s in imported) s.CalcBounds();
 			m_Shapes.AddRange(imported);
 			if (m_Camera.IsReady) {
-			  UpdateShapesJson();
+				UpdateShapesJson();
 			}
 			m_PreviewBinding.Update("");
 		}
@@ -467,9 +477,12 @@ namespace Skyplan.Systems {
 				LoadShapes(imported);
 				return;
 			}
-			HashSet<string> existingIds = new(m_Shapes.Select(s => s.id));
+			HashSet<string> existingIds = [.. m_Shapes.Select(s => s.id)];
 			foreach (Shape s in imported) {
-				if (existingIds.Add(s.id)) m_Shapes.Add(s);
+				if (existingIds.Add(s.id)) {
+					s.CalcBounds();
+					m_Shapes.Add(s);
+				}
 			}
 			if (m_Camera.IsReady) {
 				UpdateShapesJson();
