@@ -1,12 +1,19 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {useValue, trigger} from 'cs2/api';
-import {shapes$, preview$, highlight$, showDescriptions$} from '../bindings';
+import {shapes$, preview$, highlight$, showDescriptions$, indicator$} from '../bindings';
 import {ShapeData} from './types';
+
+export interface SnapIndicator {
+	x: number;
+	y: number;
+	kind: 'vertex' | 'edge';
+}
 
 interface DrawingCtx {
 	shapes: ShapeData[];
 	preview: ShapeData | null;
 	highlightId: string | null;
+	indicator: SnapIndicator | null;
 	svgSize: { w: number; h: number };
 	globalOpacity: number;
 	layerOpacities: Record<string, number>;
@@ -34,6 +41,7 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const previewJson = useValue(preview$);
 	const highlightRaw = useValue(highlight$);
 	const showDescriptions = useValue(showDescriptions$);
+	const indicatorRaw = useValue(indicator$);
 
 	const shapes = useMemo<ShapeData[]>(() => {
 		try { return JSON.parse(shapesJson) ?? []; }
@@ -44,6 +52,14 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		try { return previewJson ? JSON.parse(previewJson) : null; }
 		catch { return null; }
 	}, [previewJson]);
+
+	const indicator = useMemo<SnapIndicator | null>(() => {
+		if (!indicatorRaw) return null;
+		const [xRaw, yRaw, kind] = indicatorRaw.split(',');
+		const x = parseFloat(xRaw), y = parseFloat(yRaw);
+		if (Number.isNaN(x) || Number.isNaN(y) || (kind !== 'vertex' && kind !== 'edge')) return null;
+		return { x, y, kind };
+	}, [indicatorRaw]);
 
 	const [svgSize, setSvgSize] = useState({ w: 1920, h: 1080 });
 	const [globalOpacity, setGlobalOpacity] = useState(1);
@@ -85,6 +101,7 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		shapes,
 		preview,
 		highlightId,
+		indicator,
 		svgSize,
 		globalOpacity,
 		layerOpacities,

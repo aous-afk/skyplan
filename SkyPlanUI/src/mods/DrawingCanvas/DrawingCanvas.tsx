@@ -84,9 +84,15 @@ const DrawingCanvas: React.FC = () => {
 		Object.fromEntries(allLayers.map(l => [l.id, l])),
 		[allLayers]
 	);
-	const {shapes, preview, highlightId, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions} = useDrawingContext();
+	const {shapes, preview, highlightId, indicator, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions} = useDrawingContext();
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
+
+	// cohtml doesn't repaint the region a removed node used to occupy - keep the indicator
+	// circle always mounted and toggle opacity instead of conditionally rendering it.
+	const lastIndicatorRef = useRef({ x: 0, y: 0, kind: 'vertex' as 'vertex' | 'edge' });
+	if (indicator) lastIndicatorRef.current = indicator;
+	const shownIndicator = indicator ?? lastIndicatorRef.current;
 
 	const drawingRef = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
@@ -96,7 +102,10 @@ const DrawingCanvas: React.FC = () => {
 
 	useEffect(() => { toolRef.current = activeTool; }, [activeTool]);
 	useEffect(() => { viewModeRef.current = viewMode; }, [viewMode]);
-	useEffect(() => { activeLayerRef.current = activeLayer; }, [activeLayer]);
+	useEffect(() => {
+		activeLayerRef.current = activeLayer;
+		if (!activeLayer) trigger('skyplan', 'clearIndicator', '');
+	}, [activeLayer]);
 
 	useEffect(() => {
 		const onMove = (e: MouseEvent) => {
@@ -143,6 +152,10 @@ const DrawingCanvas: React.FC = () => {
 			if (viewModeRef.current) return false;
 			if (!drawingRef.current && toolRef.current === 'erase') {
 				trigger('skyplan', 'eraseHover', `${cx},${cy}`);
+				return true;
+			}
+			if (!drawingRef.current && activeLayerRef.current && (toolRef.current === 'path' || toolRef.current === 'polygon')) {
+				trigger('skyplan', 'drawHover', `${cx},${cy}`);
 				return true;
 			}
 			if (drawingRef.current) {
@@ -282,7 +295,7 @@ const DrawingCanvas: React.FC = () => {
 	const layerCSS = buildLayerCSS(shapes, preview, layerDefsMap);
 
 	const showCursor = !!cursorPos && activeTool === 'text' && !viewMode;
-	if (shapes.length === 0 && !preview && !showCursor) return null;
+	if (shapes.length === 0 && !preview && !showCursor && !indicator) return null;
 
 	return (
 		<svg
@@ -355,6 +368,15 @@ const DrawingCanvas: React.FC = () => {
 				);
 			})}
 			{preview && renderShape(preview)}
+			<circle
+				cx={shownIndicator.x} cy={shownIndicator.y}
+				r={shownIndicator.kind === 'vertex' ? 6 : 5}
+				fill="none"
+				stroke={shownIndicator.kind === 'vertex' ? '#4ade80' : '#38bdf8'}
+				strokeWidth={2}
+				opacity={indicator ? 1 : 0}
+				style={{ pointerEvents: 'none' }}
+			/>
 			{showCursor && (
 				<circle
 					cx={cursorPos.x} cy={cursorPos.y} r={5}

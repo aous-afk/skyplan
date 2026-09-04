@@ -10,6 +10,7 @@ using System.Linq;
 using UnityEngine;
 using Skyplan.Models;
 using Skyplan.Models.dto;
+using Skyplan.Models.Results;
 using System;
 using System.IO;
 using Skyplan.Cross;
@@ -53,6 +54,7 @@ namespace Skyplan.Systems {
 		private ValueBinding<string> m_HighlightBinding;
 		private ValueBinding<string> m_LayersConfigBinding;
 		private ValueBinding<bool> m_ShowDescriptionsBinding;
+		private ValueBinding<string> m_IndicatorBinding;
 
 		protected override void OnGamePreload(Colossal.Serialization.Entities.Purpose purpose, GameMode mode) {
 			try {
@@ -74,6 +76,7 @@ namespace Skyplan.Systems {
 			m_HighlightBinding = new ValueBinding<string>("skyplan", "highlight", "");
 			m_LayersConfigBinding = new ValueBinding<string>("skyplan", "layersConfig", "{\"layers\":[]}");
 			m_ShowDescriptionsBinding = new ValueBinding<bool>("skyplan", "showDescriptions", LoadDisplaySettings());
+			m_IndicatorBinding = new ValueBinding<string>("skyplan", "indicator", "");
 
 			AddBinding(m_PanelVisibleBinding);
 			AddBinding(m_ShapesBinding);
@@ -81,6 +84,7 @@ namespace Skyplan.Systems {
 			AddBinding(m_HighlightBinding);
 			AddBinding(m_LayersConfigBinding);
 			AddBinding(m_ShowDescriptionsBinding);
+			AddBinding(m_IndicatorBinding);
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setShowDescriptions", val => {
 				bool newValue = val == "true";
@@ -114,6 +118,7 @@ namespace Skyplan.Systems {
 					m_EraseTarget = null;
 					m_HighlightBinding.Update("");
 				}
+				m_IndicatorBinding.Update("");
 			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setLayer", json => m_CurrentLayer = JsonConvert.DeserializeObject<LayerDefDto>(json)));
@@ -129,6 +134,13 @@ namespace Skyplan.Systems {
 				HandleEraseHover(p.x, p.y);
 
 			}));
+
+			AddBinding(new TriggerBinding<string>("skyplan", "drawHover", csv => {
+				Vector2 p = CSV2(csv);
+				HandleDrawHover(p.x, p.y);
+			}));
+
+			AddBinding(new TriggerBinding("skyplan", "clearIndicator", () => m_IndicatorBinding.Update("")));
 
 			AddBinding(new TriggerBinding("skyplan", "panelClosed", HidePanel));
 
@@ -198,6 +210,7 @@ namespace Skyplan.Systems {
 			_points.Clear();
 			m_PanelVisibleBinding.Update(false);
 			m_PreviewBinding.Update("");
+			m_IndicatorBinding.Update("");
 			PlanPersistenceSystem.instance?.SavePlan();
 		}
 
@@ -212,6 +225,7 @@ namespace Skyplan.Systems {
 			} else {
 				m_ActiveShape = null;
 				m_PreviewBinding.Update("");
+				m_IndicatorBinding.Update("");
 				PlanPersistenceSystem.instance?.SavePlan();
 			}
 			m_PanelVisibleBinding.Update(m_PanelVisible);
@@ -240,6 +254,7 @@ namespace Skyplan.Systems {
 
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
 			ApplySnap(ref world, sx, sy);
+			m_IndicatorBinding.Update("");
 
 			if (m_CurrentTool == Tools.point || m_CurrentTool == Tools.text) {
 				Shape s = new() {
@@ -304,15 +319,40 @@ namespace Skyplan.Systems {
 			return Mathf.Sqrt((dx * dx) + (dz * dz)) * SnapPixelTolerance;
 		}
 
-		private bool ApplySnap(ref Vector3 world, float sx, float sy) {
+		private bool TrySnapHit(Vector3 world, float sx, float sy, out SnapHit hit) {
+			hit = default;
 			if (!m_SnapEnabled) return false;
 			float tol = SnapToleranceWorld(sx, sy);
 			if (tol <= 0f) return false;
-			if (SnapQuery.TrySnap(m_Shapes, m_ActiveShape, world, tol, out Vector3 snapped)) {
-				world = snapped;
+			return SnapQuery.TrySnap(m_Shapes, m_ActiveShape, world, tol, out hit);
+		}
+
+		private bool ApplySnap(ref Vector3 world, float sx, float sy) {
+			if (TrySnapHit(world, sx, sy, out SnapHit hit)) {
+				world = hit.Point;
 				return true;
 			}
 			return false;
+		}
+
+		// Runs while idle (before the first click), so the user sees where a click would land -
+		// only path/polygon benefit; mid-draw feedback is already the moving preview shape itself.
+		private void HandleDrawHover(float sx, float sy) {
+			if (!m_Camera.IsReady || m_ActiveShape != null) return;
+			if (m_CurrentTool != Tools.path && m_CurrentTool != Tools.polygon) {
+				m_IndicatorBinding.Update("");
+				return;
+			}
+			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) {
+				m_IndicatorBinding.Update("");
+				return;
+			}
+			if (TrySnapHit(world, sx, sy, out SnapHit hit) && m_Camera.WorldToSVG(hit.Point, out Vector2 svg)) {
+				string kind = hit.VertexIndex >= 0 ? "vertex" : "edge";
+				m_IndicatorBinding.Update($"{F(svg.x)},{F(svg.y)},{kind}");
+			} else {
+				m_IndicatorBinding.Update("");
+			}
 		}
 
 		private void HandleDrawEnd(float sx, float sy) {

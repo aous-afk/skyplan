@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Skyplan.Models;
+using Skyplan.Models.Results;
 using UnityEngine;
 
 namespace Skyplan.Cross {
@@ -8,18 +9,28 @@ namespace Skyplan.Cross {
 	/// height (Y) would make the snap radius inconsistent on slopes.
 	/// </summary>
 	public static class SnapQuery {
-		public static bool TrySnap(IReadOnlyList<Shape> shapes, Shape skip, Vector3 world, float toleranceWorld, out Vector3 snapped) {
+		public static bool TrySnap(IReadOnlyList<Shape> shapes, Shape skip, Vector3 world, float toleranceWorld, out SnapHit snapped) {
 			float tolSq = toleranceWorld * toleranceWorld;
-			snapped = world;
+
+			snapped.Point = world;
+			snapped.Shape = null;
+			snapped.VertexIndex = -1;
 
 			// Pass 1: vertices - a vertex hit always wins over an edge hit inside tolerance.
 			float bestSq = tolSq;
 			bool found = false;
 			foreach (Shape shape in shapes) {
 				if (shape == skip) continue;
-				foreach (Vector3 v in shape.GetSnapVertices()) {
-					float d = SqXZDistance(v, world);
-					if (d < bestSq) { bestSq = d; snapped = v; found = true; }
+				IReadOnlyList<Vector3> verts = shape.GetSnapVertices();
+				for (int i = 0; i < verts.Count; i++) {
+					float d = SqXZDistance(verts[i], world);
+					if (d < bestSq) {
+					  bestSq = d;
+					  snapped.Point = verts[i];
+					  snapped.Shape = shape;
+					  snapped.VertexIndex = i;
+					  found = true;
+					}
 				}
 			}
 			if (found) return true;
@@ -28,10 +39,15 @@ namespace Skyplan.Cross {
 			bestSq = tolSq;
 			foreach (Shape shape in shapes) {
 				if (shape == skip) continue;
-				foreach (var (a, b) in shape.GetSnapSegments()) {
+				foreach ((Vector3 a, Vector3 b) in shape.GetSnapSegments()) {
 					Vector3 candidate = ClosestPointOnSegment(a, b, world);
 					float d = SqXZDistance(candidate, world);
-					if (d < bestSq) { bestSq = d; snapped = candidate; found = true; }
+					if (d < bestSq) {
+					  bestSq = d;
+					  snapped.Point = candidate;
+					  snapped.Shape = shape;
+					  found = true;
+					}
 				}
 			}
 			return found;
