@@ -76,8 +76,9 @@ namespace Skyplan.Systems {
 			m_PreviewBinding = new ValueBinding<string>("skyplan", "preview", "");
 			m_HighlightBinding = new ValueBinding<string>("skyplan", "highlight", "");
 			m_LayersConfigBinding = new ValueBinding<string>("skyplan", "layersConfig", "{\"layers\":[]}");
-			m_ShowDescriptionsBinding = new ValueBinding<bool>("skyplan", "showDescriptions", LoadDisplaySettings());
+			m_ShowDescriptionsBinding = new ValueBinding<bool>("skyplan", "showDescriptions", LoadDisplaySettings("showDescriptions"));
 			m_IndicatorBinding = new ValueBinding<string>("skyplan", "indicator", "");
+			m_SnapEnabled = LoadDisplaySettings("snapEnabled", true);
 			m_SnapEnabledBinding = new ValueBinding<bool>("skyplan", "snapEnabled", m_SnapEnabled);
 
 			AddBinding(m_PanelVisibleBinding);
@@ -92,13 +93,14 @@ namespace Skyplan.Systems {
 			AddBinding(new TriggerBinding<string>("skyplan", "setSnapEnabled", val => {
 				m_SnapEnabled = val == "true";
 				m_SnapEnabledBinding.Update(m_SnapEnabled);
+				SaveSettings("snapEnabled", m_SnapEnabled);
 				if (!m_SnapEnabled) m_IndicatorBinding.Update("");
 			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setShowDescriptions", val => {
 				bool newValue = val == "true";
 				m_ShowDescriptionsBinding.Update(newValue);
-				SaveDisplaySettings(newValue);
+				SaveSettings("showDescriptions", newValue);
 			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "drawStart", csv => {
@@ -317,7 +319,7 @@ namespace Skyplan.Systems {
 		}
 
 		private const float SnapPixelTolerance = 12f;
-		private bool m_SnapEnabled = true;
+		private bool m_SnapEnabled;
 
 		// Meters-per-pixel at the cursor's own world depth, recomputed every call since zoom/tilt
 		// changes it continuously - can't be cached across frames.
@@ -579,26 +581,25 @@ namespace Skyplan.Systems {
 			m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
 		}
 
-		private static bool LoadDisplaySettings() {
+		private static bool LoadDisplaySettings(string key, bool defaultValue = false) {
 			try {
 				string path = Paths.DisplaySettingsPath;
-				if (!File.Exists(path)) return false;
+				if (!File.Exists(path)) return defaultValue;
 				var json = JObject.Parse(File.ReadAllText(path));
-				return json["showDescriptions"]?.Value<bool>() ?? false;
+				return json[key]?.Value<bool>() ?? defaultValue;
 			} catch (Exception ex) {
 				Mod.log.Warn($"[Skyplan] Failed to load display settings: {ex.Message}");
-				return false;
+				return defaultValue;
 			}
 		}
 
-		private static void SaveDisplaySettings(bool showDescriptions) {
+		private static void SaveSettings(string key, bool value) {
 			try {
 				string path = Paths.DisplaySettingsPath;
 				Directory.CreateDirectory(Path.GetDirectoryName(path));
-				File.WriteAllText(path, JsonConvert.SerializeObject(
-					new { showDescriptions },
-					Formatting.Indented
-				));
+				JObject json = File.Exists(path) ? JObject.Parse(File.ReadAllText(path)) : [];
+				json[key] = value;
+				File.WriteAllText(path, json.ToString(Formatting.Indented));
 			} catch (Exception ex) {
 				Mod.log.Warn($"[Skyplan] Failed to save display settings: {ex.Message}");
 			}
