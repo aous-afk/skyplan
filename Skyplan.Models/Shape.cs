@@ -21,5 +21,14 @@ namespace Skyplan.Models{
 		[JsonProperty("planId")]
 		public int PlanId;
 		public Bounds Extents;
+
+		public IReadOnlyList<Vector3> GetSnapVertices() => pts;
+
+		public IEnumerable<(Vector3 a, Vector3 b)> GetSnapSegments() {
+		  for (int i = 0; i < pts.Count - 1; i++)
+			yield return (pts[i], pts[i + 1]);
+		  if (Type == Tools.polygon && pts.Count > 2)
+			yield return (pts[pts.Count - 1], pts[0]);
+		}
 	}
 }

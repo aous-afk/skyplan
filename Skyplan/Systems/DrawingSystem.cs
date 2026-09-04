@@ -239,6 +239,7 @@ namespace Skyplan.Systems {
 			}
 
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
+			ApplySnap(ref world, sx, sy);
 
 			if (m_CurrentTool == Tools.point || m_CurrentTool == Tools.text) {
 				Shape s = new() {
@@ -268,6 +269,7 @@ namespace Skyplan.Systems {
 		private void HandleDrawMove(float sx, float sy) {
 			if (m_ActiveShape == null || !m_Camera.IsReady) return;
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
+			ApplySnap(ref world, sx, sy);
 
 			if (m_ActiveShape.Type == Tools.polygon) {
 				var previewPts = new List<Vector3>(_points) { world };
@@ -286,7 +288,31 @@ namespace Skyplan.Systems {
 		private void AddPoint(float sx, float sy) {
 			if (m_ActiveShape == null || !m_Camera.IsReady) return;
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
+			ApplySnap(ref world, sx, sy);
 			_points.Add(world);
+		}
+
+		private const float SnapPixelTolerance = 12f;
+		private bool m_SnapEnabled = true;
+
+		// Meters-per-pixel at the cursor's own world depth, recomputed every call since zoom/tilt
+		// changes it continuously - can't be cached across frames.
+		private float SnapToleranceWorld(float sx, float sy) {
+			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 p0)) return 0f;
+			if (!m_Camera.ScreenToWorld(sx + 1f, sy, out Vector3 p1)) return 0f;
+			float dx = p1.x - p0.x, dz = p1.z - p0.z;
+			return Mathf.Sqrt((dx * dx) + (dz * dz)) * SnapPixelTolerance;
+		}
+
+		private bool ApplySnap(ref Vector3 world, float sx, float sy) {
+			if (!m_SnapEnabled) return false;
+			float tol = SnapToleranceWorld(sx, sy);
+			if (tol <= 0f) return false;
+			if (SnapQuery.TrySnap(m_Shapes, m_ActiveShape, world, tol, out Vector3 snapped)) {
+				world = snapped;
+				return true;
+			}
+			return false;
 		}
 
 		private void HandleDrawEnd(float sx, float sy) {
