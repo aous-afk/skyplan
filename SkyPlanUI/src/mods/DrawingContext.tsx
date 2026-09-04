@@ -1,6 +1,6 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {useValue, trigger} from 'cs2/api';
-import {shapes$, preview$, highlight$, showDescriptions$, indicator$} from '../bindings';
+import {shapes$, preview$, highlight$, showDescriptions$, indicator$, snapEnabled$} from '../bindings';
 import {ShapeData} from './types';
 
 export interface SnapIndicator {
@@ -20,11 +20,13 @@ interface DrawingCtx {
 	layerVisible: Record<string, boolean>;
 	layerLabels: Record<string, boolean>;
 	showDescriptions: boolean;
+	snapEnabled: boolean;
 	onGlobalOpacityChange: (v: number) => void;
 	onLayerOpacityChange: (layerId: string, v: number) => void;
 	onLayerVisibleToggle: (layerId: string) => void;
 	onLayerLabelsToggle: (layerId: string) => void;
 	onShowDescriptionsToggle: () => void;
+	onSnapEnabledToggle: () => void;
 	onHoverShape: (id: string | null) => void;
 }
 
@@ -42,6 +44,7 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const highlightRaw = useValue(highlight$);
 	const showDescriptions = useValue(showDescriptions$);
 	const indicatorRaw = useValue(indicator$);
+	const snapEnabled = useValue(snapEnabled$);
 
 	const shapes = useMemo<ShapeData[]>(() => {
 		try { return JSON.parse(shapesJson) ?? []; }
@@ -93,6 +96,10 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		trigger('skyplan', 'setShowDescriptions', (!showDescriptions).toString());
 	}, [showDescriptions]);
 
+	const onSnapEnabledToggle = useCallback(() => {
+		trigger('skyplan', 'setSnapEnabled', (!snapEnabled).toString());
+	}, [snapEnabled]);
+
 	const onHoverShape = useCallback((id: string | null) => {
 		setHoverShapeId(id);
 	}, []);
@@ -108,11 +115,13 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		layerVisible,
 		layerLabels,
 		showDescriptions,
+		snapEnabled,
 		onGlobalOpacityChange: setGlobalOpacity,
 		onLayerOpacityChange,
 		onLayerVisibleToggle,
 		onLayerLabelsToggle,
 		onShowDescriptionsToggle,
+		onSnapEnabledToggle,
 		onHoverShape,
 	};
 

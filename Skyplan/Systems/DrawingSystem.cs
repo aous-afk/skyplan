@@ -55,6 +55,7 @@ namespace Skyplan.Systems {
 		private ValueBinding<string> m_LayersConfigBinding;
 		private ValueBinding<bool> m_ShowDescriptionsBinding;
 		private ValueBinding<string> m_IndicatorBinding;
+		private ValueBinding<bool> m_SnapEnabledBinding;
 
 		protected override void OnGamePreload(Colossal.Serialization.Entities.Purpose purpose, GameMode mode) {
 			try {
@@ -77,6 +78,7 @@ namespace Skyplan.Systems {
 			m_LayersConfigBinding = new ValueBinding<string>("skyplan", "layersConfig", "{\"layers\":[]}");
 			m_ShowDescriptionsBinding = new ValueBinding<bool>("skyplan", "showDescriptions", LoadDisplaySettings());
 			m_IndicatorBinding = new ValueBinding<string>("skyplan", "indicator", "");
+			m_SnapEnabledBinding = new ValueBinding<bool>("skyplan", "snapEnabled", m_SnapEnabled);
 
 			AddBinding(m_PanelVisibleBinding);
 			AddBinding(m_ShapesBinding);
@@ -85,6 +87,13 @@ namespace Skyplan.Systems {
 			AddBinding(m_LayersConfigBinding);
 			AddBinding(m_ShowDescriptionsBinding);
 			AddBinding(m_IndicatorBinding);
+			AddBinding(m_SnapEnabledBinding);
+
+			AddBinding(new TriggerBinding<string>("skyplan", "setSnapEnabled", val => {
+				m_SnapEnabled = val == "true";
+				m_SnapEnabledBinding.Update(m_SnapEnabled);
+				if (!m_SnapEnabled) m_IndicatorBinding.Update("");
+			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setShowDescriptions", val => {
 				bool newValue = val == "true";
