@@ -10,6 +10,7 @@ using System.Linq;
 using UnityEngine;
 using Skyplan.Models;
 using Skyplan.Models.dto;
+using Skyplan.Models.Results;
 using System;
 using System.IO;
 using Skyplan.Cross;
@@ -53,6 +54,10 @@ namespace Skyplan.Systems {
 		private ValueBinding<string> m_HighlightBinding;
 		private ValueBinding<string> m_LayersConfigBinding;
 		private ValueBinding<bool> m_ShowDescriptionsBinding;
+		private ValueBinding<string> m_IndicatorBinding;
+		private ValueBinding<bool> m_SnapEnabledBinding;
+		private ValueBinding<string> m_LayerVisibleBinding;
+		private readonly Dictionary<string, bool> m_LayerVisible = [];
 
 		protected override void OnGamePreload(Colossal.Serialization.Entities.Purpose purpose, GameMode mode) {
 			try {
@@ -73,7 +78,11 @@ namespace Skyplan.Systems {
 			m_PreviewBinding = new ValueBinding<string>("skyplan", "preview", "");
 			m_HighlightBinding = new ValueBinding<string>("skyplan", "highlight", "");
 			m_LayersConfigBinding = new ValueBinding<string>("skyplan", "layersConfig", "{\"layers\":[]}");
-			m_ShowDescriptionsBinding = new ValueBinding<bool>("skyplan", "showDescriptions", LoadDisplaySettings());
+			m_ShowDescriptionsBinding = new ValueBinding<bool>("skyplan", "showDescriptions", LoadDisplaySettings("showDescriptions"));
+			m_IndicatorBinding = new ValueBinding<string>("skyplan", "indicator", "");
+			m_SnapEnabled = LoadDisplaySettings("snapEnabled", true);
+			m_SnapEnabledBinding = new ValueBinding<bool>("skyplan", "snapEnabled", m_SnapEnabled);
+			m_LayerVisibleBinding = new ValueBinding<string>("skyplan", "layerVisible", "{}");
 
 			AddBinding(m_PanelVisibleBinding);
 			AddBinding(m_ShapesBinding);
@@ -81,11 +90,30 @@ namespace Skyplan.Systems {
 			AddBinding(m_HighlightBinding);
 			AddBinding(m_LayersConfigBinding);
 			AddBinding(m_ShowDescriptionsBinding);
+			AddBinding(m_IndicatorBinding);
+			AddBinding(m_SnapEnabledBinding);
+			AddBinding(m_LayerVisibleBinding);
+
+			AddBinding(new TriggerBinding<string>("skyplan", "setSnapEnabled", val => {
+				m_SnapEnabled = val == "true";
+				m_SnapEnabledBinding.Update(m_SnapEnabled);
+				SaveSettings("snapEnabled", m_SnapEnabled);
+				if (!m_SnapEnabled) m_IndicatorBinding.Update("");
+			}));
+
+			AddBinding(new TriggerBinding<string>("skyplan", "setLayerVisible", payload => {
+				int sep = payload.IndexOf('|');
+				if (sep < 0) return;
+				string layerId = payload[..sep];
+				bool visible = payload[(sep + 1)..] == "true";
+				m_LayerVisible[layerId] = visible;
+				m_LayerVisibleBinding.Update(JsonConvert.SerializeObject(m_LayerVisible));
+			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setShowDescriptions", val => {
 				bool newValue = val == "true";
 				m_ShowDescriptionsBinding.Update(newValue);
-				SaveDisplaySettings(newValue);
+				SaveSettings("showDescriptions", newValue);
 			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "drawStart", csv => {
@@ -114,6 +142,7 @@ namespace Skyplan.Systems {
 					m_EraseTarget = null;
 					m_HighlightBinding.Update("");
 				}
+				m_IndicatorBinding.Update("");
 			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setLayer", json => m_CurrentLayer = JsonConvert.DeserializeObject<LayerDefDto>(json)));
@@ -129,6 +158,13 @@ namespace Skyplan.Systems {
 				HandleEraseHover(p.x, p.y);
 
 			}));
+
+			AddBinding(new TriggerBinding<string>("skyplan", "drawHover", csv => {
+				Vector2 p = CSV2(csv);
+				HandleDrawHover(p.x, p.y);
+			}));
+
+			AddBinding(new TriggerBinding("skyplan", "clearIndicator", () => m_IndicatorBinding.Update("")));
 
 			AddBinding(new TriggerBinding("skyplan", "panelClosed", HidePanel));
 
@@ -198,6 +234,7 @@ namespace Skyplan.Systems {
 			_points.Clear();
 			m_PanelVisibleBinding.Update(false);
 			m_PreviewBinding.Update("");
+			m_IndicatorBinding.Update("");
 			PlanPersistenceSystem.instance?.SavePlan();
 		}
 
@@ -212,6 +249,7 @@ namespace Skyplan.Systems {
 			} else {
 				m_ActiveShape = null;
 				m_PreviewBinding.Update("");
+				m_IndicatorBinding.Update("");
 				PlanPersistenceSystem.instance?.SavePlan();
 			}
 			m_PanelVisibleBinding.Update(m_PanelVisible);
@@ -239,6 +277,8 @@ namespace Skyplan.Systems {
 			}
 
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
+			ApplySnap(ref world, sx, sy);
+			m_IndicatorBinding.Update("");
 
 			if (m_CurrentTool == Tools.point || m_CurrentTool == Tools.text) {
 				Shape s = new() {
@@ -268,6 +308,7 @@ namespace Skyplan.Systems {
 		private void HandleDrawMove(float sx, float sy) {
 			if (m_ActiveShape == null || !m_Camera.IsReady) return;
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
+			ApplySnap(ref world, sx, sy);
 
 			if (m_ActiveShape.Type == Tools.polygon) {
 				var previewPts = new List<Vector3>(_points) { world };
@@ -286,7 +327,62 @@ namespace Skyplan.Systems {
 		private void AddPoint(float sx, float sy) {
 			if (m_ActiveShape == null || !m_Camera.IsReady) return;
 			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) return;
+			ApplySnap(ref world, sx, sy);
 			_points.Add(world);
+		}
+
+		private const float SnapPixelTolerance = 12f;
+		private bool m_SnapEnabled;
+
+		// Meters-per-pixel at the cursor's own world depth, recomputed every call since zoom/tilt
+		// changes it continuously - can't be cached across frames.
+		private float SnapToleranceWorld(float sx, float sy) {
+			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 p0)) return 0f;
+			if (!m_Camera.ScreenToWorld(sx + 1f, sy, out Vector3 p1)) return 0f;
+			float dx = p1.x - p0.x, dz = p1.z - p0.z;
+			return Mathf.Sqrt((dx * dx) + (dz * dz)) * SnapPixelTolerance;
+		}
+
+		// Absent = visible, matching the JS-side default (prev[layerId] ?? true).
+		private bool IsLayerVisible(Shape shape) {
+			string layerId = shape.layer?.Id;
+			return layerId == null || !m_LayerVisible.TryGetValue(layerId, out bool visible) || visible;
+		}
+
+		private bool TrySnapHit(Vector3 world, float sx, float sy, out SnapHit hit) {
+			hit = default;
+			if (!m_SnapEnabled) return false;
+			float tol = SnapToleranceWorld(sx, sy);
+			if (tol <= 0f) return false;
+			return SnapQuery.TrySnap(m_Shapes, m_ActiveShape, world, tol, out hit, IsLayerVisible);
+		}
+
+		private bool ApplySnap(ref Vector3 world, float sx, float sy) {
+			if (TrySnapHit(world, sx, sy, out SnapHit hit)) {
+				world = hit.Point;
+				return true;
+			}
+			return false;
+		}
+
+		// Runs while idle (before the first click), so the user sees where a click would land -
+		// only path/polygon benefit; mid-draw feedback is already the moving preview shape itself.
+		private void HandleDrawHover(float sx, float sy) {
+			if (!m_Camera.IsReady || m_ActiveShape != null) return;
+			if (m_CurrentTool != Tools.path && m_CurrentTool != Tools.polygon) {
+				m_IndicatorBinding.Update("");
+				return;
+			}
+			if (!m_Camera.ScreenToWorld(sx, sy, out Vector3 world)) {
+				m_IndicatorBinding.Update("");
+				return;
+			}
+			if (TrySnapHit(world, sx, sy, out SnapHit hit) && m_Camera.WorldToSVG(hit.Point, out Vector2 svg)) {
+				string kind = hit.VertexIndex >= 0 ? "vertex" : "edge";
+				m_IndicatorBinding.Update($"{F(svg.x)},{F(svg.y)},{kind}");
+			} else {
+				m_IndicatorBinding.Update("");
+			}
 		}
 
 		private void HandleDrawEnd(float sx, float sy) {
@@ -504,26 +600,25 @@ namespace Skyplan.Systems {
 			m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
 		}
 
-		private static bool LoadDisplaySettings() {
+		private static bool LoadDisplaySettings(string key, bool defaultValue = false) {
 			try {
 				string path = Paths.DisplaySettingsPath;
-				if (!File.Exists(path)) return false;
+				if (!File.Exists(path)) return defaultValue;
 				var json = JObject.Parse(File.ReadAllText(path));
-				return json["showDescriptions"]?.Value<bool>() ?? false;
+				return json[key]?.Value<bool>() ?? defaultValue;
 			} catch (Exception ex) {
 				Mod.log.Warn($"[Skyplan] Failed to load display settings: {ex.Message}");
-				return false;
+				return defaultValue;
 			}
 		}
 
-		private static void SaveDisplaySettings(bool showDescriptions) {
+		private static void SaveSettings(string key, bool value) {
 			try {
 				string path = Paths.DisplaySettingsPath;
 				Directory.CreateDirectory(Path.GetDirectoryName(path));
-				File.WriteAllText(path, JsonConvert.SerializeObject(
-					new { showDescriptions },
-					Formatting.Indented
-				));
+				JObject json = File.Exists(path) ? JObject.Parse(File.ReadAllText(path)) : [];
+				json[key] = value;
+				File.WriteAllText(path, json.ToString(Formatting.Indented));
 			} catch (Exception ex) {
 				Mod.log.Warn($"[Skyplan] Failed to save display settings: {ex.Message}");
 			}

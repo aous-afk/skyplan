@@ -176,7 +176,7 @@
   color: #bbb;
 
   &.svg_active {
-    color: #9c6d6d !important;
+    color: #3e80d7 !important;
   }
 }
 
@@ -225,20 +225,10 @@
     opacity: 1;
   }
 
-  &.btn_erase:hover .tooltip {
-    color: #ffaa55;
-  }
-
   &.btn_active {
-    color: #9c6d6d;
+    color: #3e80d7;
     background: rgba(255,255,255,0.2);
     border: 2px solid rgba(255,255,255,0.35);
-  }
-
-  &.btn_erase.btn_active {
-    background: #3a1a00;
-    color: #ffaa55;
-    border: 2px solid #ff8800;
   }
 
   &.btn_clear {

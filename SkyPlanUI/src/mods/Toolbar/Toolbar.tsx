@@ -2,7 +2,7 @@ import React, {useEffect, useRef, useState} from "react";
 import {trigger} from 'cs2/api';
 import {TOOLS, Tag} from '../types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
-import {faXmark, faUndo, faRedo} from '@fortawesome/free-solid-svg-icons'
+import {faXmark, faUndo, faRedo, faMagnet} from '@fortawesome/free-solid-svg-icons'
 import styles from './Toolbar.module.scss';
 import {useSkyplan} from '../SkyplanContext';
 import {useDrawingContext} from "mods/DrawingContext";
@@ -28,6 +28,8 @@ const Toolbar: React.FC = () => {
 	  onLayerVisibleToggle,
 	  layerLabels,
 	  onLayerLabelsToggle,
+	  snapEnabled,
+	  onSnapEnabledToggle,
 	} = useDrawingContext();
 
 	const [pendingTextId, setPendingTextId] = useState<string | null>(null);
@@ -142,7 +144,7 @@ const Toolbar: React.FC = () => {
 						const active = activeTool === t.id;
 						return <button key={t.id}
 							onClick={() => onToolChange(t.id)}
-							className={`${styles.btn_base} ${active ? styles.btn_active : ''} ${t.id === 'erase' ? styles.btn_erase : ''}`}
+							className={`${styles.btn_base} ${active ? styles.btn_active : ''}`}
 							style={{
 								border: active && activeLayer ? `2px solid ${activeLayer.style.stroke}` : '2px solid transparent',
 							}}
@@ -151,6 +153,13 @@ const Toolbar: React.FC = () => {
 							<span className={styles.tooltip}>{t.label}</span>
 						</button>;
 					})}
+					<button onClick={onSnapEnabledToggle}
+						className={`${styles.btn_base} ${snapEnabled ? styles.btn_active : ''}`}
+						style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10 }}
+					>
+						<FontAwesomeIcon className={`${styles.svg} ${snapEnabled ? styles.svg_active : ''}`} icon={faMagnet} />
+						<span className={styles.tooltip}>Snap {snapEnabled ? 'on' : 'off'}</span>
+					</button>
 				</div>
 
 				<div className={styles.layers_panel}>
