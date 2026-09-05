@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Skyplan.Models;
 using Skyplan.Models.Results;
@@ -9,7 +10,7 @@ namespace Skyplan.Cross {
 	/// height (Y) would make the snap radius inconsistent on slopes.
 	/// </summary>
 	public static class SnapQuery {
-		public static bool TrySnap(IReadOnlyList<Shape> shapes, Shape skip, Vector3 world, float toleranceWorld, out SnapHit snapped) {
+		public static bool TrySnap(IReadOnlyList<Shape> shapes, Shape skip, Vector3 world, float toleranceWorld, out SnapHit snapped, Func<Shape, bool> isVisible = null) {
 			float tolSq = toleranceWorld * toleranceWorld;
 
 			snapped.Point = world;
@@ -20,7 +21,7 @@ namespace Skyplan.Cross {
 			float bestSq = tolSq;
 			bool found = false;
 			foreach (Shape shape in shapes) {
-				if (shape == skip) continue;
+				if (shape == skip || (isVisible != null && !isVisible(shape))) continue;
 				IReadOnlyList<Vector3> verts = shape.GetSnapVertices();
 				for (int i = 0; i < verts.Count; i++) {
 					float d = SqXZDistance(verts[i], world);
@@ -38,7 +39,7 @@ namespace Skyplan.Cross {
 			// Pass 2: edges - only runs when no vertex was inside tolerance.
 			bestSq = tolSq;
 			foreach (Shape shape in shapes) {
-				if (shape == skip) continue;
+				if (shape == skip || (isVisible != null && !isVisible(shape))) continue;
 				foreach ((Vector3 a, Vector3 b) in shape.GetSnapSegments()) {
 					Vector3 candidate = ClosestPointOnSegment(a, b, world);
 					float d = SqXZDistance(candidate, world);

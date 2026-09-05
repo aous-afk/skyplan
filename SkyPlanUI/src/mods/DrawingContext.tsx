@@ -1,6 +1,6 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {useValue, trigger} from 'cs2/api';
-import {shapes$, preview$, highlight$, showDescriptions$, indicator$, snapEnabled$} from '../bindings';
+import {shapes$, preview$, highlight$, showDescriptions$, indicator$, snapEnabled$, layerVisible$} from '../bindings';
 import {ShapeData} from './types';
 
 export interface SnapIndicator {
@@ -45,6 +45,7 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const showDescriptions = useValue(showDescriptions$);
 	const indicatorRaw = useValue(indicator$);
 	const snapEnabled = useValue(snapEnabled$);
+	const layerVisibleRaw = useValue(layerVisible$);
 
 	const shapes = useMemo<ShapeData[]>(() => {
 		try { return JSON.parse(shapesJson) ?? []; }
@@ -64,10 +65,14 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		return { x, y, kind };
 	}, [indicatorRaw]);
 
+	const layerVisible = useMemo<Record<string, boolean>>(() => {
+		try { return JSON.parse(layerVisibleRaw) ?? {}; }
+		catch { return {}; }
+	}, [layerVisibleRaw]);
+
 	const [svgSize, setSvgSize] = useState({ w: 1920, h: 1080 });
 	const [globalOpacity, setGlobalOpacity] = useState(1);
 	const [layerOpacities, setLayerOpacities] = useState<Record<string, number>>({});
-	const [layerVisible, setLayerVisible] = useState<Record<string, boolean>>({});
 	const [layerLabels, setLayerLabels] = useState<Record<string, boolean>>({});
 	const [hoverShapeId, setHoverShapeId] = useState<string | null>(null);
 
@@ -85,8 +90,9 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	}, []);
 
 	const onLayerVisibleToggle = useCallback((layerId: string) => {
-		setLayerVisible(prev => ({ ...prev, [layerId]: !(prev[layerId] ?? true) }));
-	}, []);
+		const next = !(layerVisible[layerId] ?? true);
+		trigger('skyplan', 'setLayerVisible', `${layerId}|${next}`);
+	}, [layerVisible]);
 
 	const onLayerLabelsToggle = useCallback((layerId: string) => {
 		setLayerLabels(prev => ({ ...prev, [layerId]: !(prev[layerId] ?? false) }));

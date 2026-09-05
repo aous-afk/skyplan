@@ -11,3 +11,4 @@ export const showDescriptions$ = bindValue<boolean>('skyplan', 'showDescriptions
 export const catchment$ = bindValue<string>('skyplan', 'catchment', '');
 export const indicator$ = bindValue<string>('skyplan', 'indicator', '');
 export const snapEnabled$ = bindValue<boolean>('skyplan', 'snapEnabled', true);
+export const layerVisible$ = bindValue<string>('skyplan', 'layerVisible', '{}');

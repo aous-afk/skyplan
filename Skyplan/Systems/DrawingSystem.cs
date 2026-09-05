@@ -56,6 +56,8 @@ namespace Skyplan.Systems {
 		private ValueBinding<bool> m_ShowDescriptionsBinding;
 		private ValueBinding<string> m_IndicatorBinding;
 		private ValueBinding<bool> m_SnapEnabledBinding;
+		private ValueBinding<string> m_LayerVisibleBinding;
+		private readonly Dictionary<string, bool> m_LayerVisible = [];
 
 		protected override void OnGamePreload(Colossal.Serialization.Entities.Purpose purpose, GameMode mode) {
 			try {
@@ -80,6 +82,7 @@ namespace Skyplan.Systems {
 			m_IndicatorBinding = new ValueBinding<string>("skyplan", "indicator", "");
 			m_SnapEnabled = LoadDisplaySettings("snapEnabled", true);
 			m_SnapEnabledBinding = new ValueBinding<bool>("skyplan", "snapEnabled", m_SnapEnabled);
+			m_LayerVisibleBinding = new ValueBinding<string>("skyplan", "layerVisible", "{}");
 
 			AddBinding(m_PanelVisibleBinding);
 			AddBinding(m_ShapesBinding);
@@ -89,12 +92,22 @@ namespace Skyplan.Systems {
 			AddBinding(m_ShowDescriptionsBinding);
 			AddBinding(m_IndicatorBinding);
 			AddBinding(m_SnapEnabledBinding);
+			AddBinding(m_LayerVisibleBinding);
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setSnapEnabled", val => {
 				m_SnapEnabled = val == "true";
 				m_SnapEnabledBinding.Update(m_SnapEnabled);
 				SaveSettings("snapEnabled", m_SnapEnabled);
 				if (!m_SnapEnabled) m_IndicatorBinding.Update("");
+			}));
+
+			AddBinding(new TriggerBinding<string>("skyplan", "setLayerVisible", payload => {
+				int sep = payload.IndexOf('|');
+				if (sep < 0) return;
+				string layerId = payload[..sep];
+				bool visible = payload[(sep + 1)..] == "true";
+				m_LayerVisible[layerId] = visible;
+				m_LayerVisibleBinding.Update(JsonConvert.SerializeObject(m_LayerVisible));
 			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setShowDescriptions", val => {
@@ -330,12 +343,18 @@ namespace Skyplan.Systems {
 			return Mathf.Sqrt((dx * dx) + (dz * dz)) * SnapPixelTolerance;
 		}
 
+		// Absent = visible, matching the JS-side default (prev[layerId] ?? true).
+		private bool IsLayerVisible(Shape shape) {
+			string layerId = shape.layer?.Id;
+			return layerId == null || !m_LayerVisible.TryGetValue(layerId, out bool visible) || visible;
+		}
+
 		private bool TrySnapHit(Vector3 world, float sx, float sy, out SnapHit hit) {
 			hit = default;
 			if (!m_SnapEnabled) return false;
 			float tol = SnapToleranceWorld(sx, sy);
 			if (tol <= 0f) return false;
-			return SnapQuery.TrySnap(m_Shapes, m_ActiveShape, world, tol, out hit);
+			return SnapQuery.TrySnap(m_Shapes, m_ActiveShape, world, tol, out hit, IsLayerVisible);
 		}
 
 		private bool ApplySnap(ref Vector3 world, float sx, float sy) {
