@@ -96,7 +96,7 @@ const DrawingCanvas: React.FC = () => {
 
 	const drawingRef = useRef(false);
 	const lastInputRef = useRef<string | null>(null);
-	const toolRef = useRef<ToolId>('path');
+	const toolRef = useRef<ToolId | null>('path');
 	const viewModeRef = useRef(true);
 	const activeLayerRef = useRef<LayerDef | null>(null);
 

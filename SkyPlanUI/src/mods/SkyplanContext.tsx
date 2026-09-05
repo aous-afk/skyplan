@@ -5,7 +5,7 @@ import {ToolId, LayerDef, LabelStyle} from './types';
 
 interface SkyplanCtx {
 	visible: boolean;
-	activeTool: ToolId;
+	activeTool: ToolId | null;
 	activeLayer: LayerDef | null;
 	visibleLayers: LayerDef[];
 	allLayers: LayerDef[];
@@ -14,8 +14,8 @@ interface SkyplanCtx {
 	toolbarPos: { left: number; top: number } | null;
 	onToolbarPosChange: (pos: { left: number; top: number }) => void;
 	onViewModeToggle: () => void;
-	onToolChange: (t: ToolId) => void;
-	onLayerChange: (l: LayerDef) => void;
+	onToolChange: (t: ToolId | null) => void;
+	onLayerChange: (l: LayerDef | null) => void;
 	onUndo: () => void;
 	onRedo: () => void;
 	onClear: () => void;
@@ -41,12 +41,12 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		catch { return { layers: [] }; }
 	}, [layersConfigJson]);
 
-	const [activeTool, setActiveTool] = useState<ToolId>('path');
+	const [activeTool, setActiveTool] = useState<ToolId | null>('path');
 	const [activeLayer, setActiveLayer] = useState<LayerDef | null>(null);
 	const [viewMode, setViewMode] = useState(false);
 	const [toolbarPos, setToolbarPos] = useState<{ left: number; top: number } | null>(null);
 
-	const visibleLayers = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
+	const visibleLayers = activeTool ? layerConfig.layers.filter(l => l.allowedTools.includes(activeTool)) : [];
 
 
 	const prevVisibleRef = useRef(false);
@@ -57,7 +57,7 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 			setActiveLayer(null);
 			return;
 		}
-		if (!visible) return;
+		if (!visible || !activeTool) return;
 		const visibleForTool = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
 		if (visibleForTool.length > 0 && !visibleForTool.find(l => l.id === activeLayer?.id))
 			setActiveLayer(visibleForTool[0]);
@@ -72,13 +72,14 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		trigger('skyplan', 'setLayer', JSON.stringify(dto));
 	}, [visible, activeLayer]);
 
-	const onToolChange = useCallback((t: ToolId) => {
+	const onToolChange = useCallback((t: ToolId | null) => {
 		setActiveTool(t);
-		trigger('skyplan', 'setTool', t);
+		if (t) trigger('skyplan', 'setTool', t);
 	}, []);
 
-	const onLayerChange = useCallback((l: LayerDef) => {
+	const onLayerChange = useCallback((l: LayerDef | null) => {
 		setActiveLayer(l);
+		if (!l) return;
 		const dto = {
 			...l,
 			style: Object.fromEntries(Object.entries(l.style).map(([k, v]) => [k, String(v)])),

@@ -96,6 +96,30 @@ const Toolbar: React.FC = () => {
 		};
 	}, []);
 
+	// React's synthetic onMouseDown/onContextMenu never fire for the right mouse button in this
+	// environment (Coherent's React integration filters non-primary-button events before they
+	// reach component handlers) - confirmed via raw document.addEventListener seeing the event
+	// fine at both capture and bubble phase while React-attached handlers on the same button never
+	// ran. Same reason DrawingCanvas.tsx never uses React's mouse props either - raw listener here
+	// instead, matching that proven pattern.
+	useEffect(() => {
+		const handler = (e: MouseEvent) => {
+			if (e.button !== 2) return;
+			const target = e.target as Element;
+			if (target.closest('[data-tool-btn]')) {
+				e.preventDefault();
+				onToolChange(null);
+				return;
+			}
+			if (target.closest('[data-layer-btn]')) {
+				e.preventDefault();
+				onLayerChange(null);
+			}
+		};
+		document.addEventListener('mousedown', handler, true);
+		return () => document.removeEventListener('mousedown', handler, true);
+	}, [onToolChange, onLayerChange]);
+
 	return (
 		<div ref={toolbarEl} className={styles.toolbar} style={{
 			position: 'absolute',
@@ -143,6 +167,7 @@ const Toolbar: React.FC = () => {
 					{TOOLS.map(t => {
 						const active = activeTool === t.id;
 						return <button key={t.id}
+							data-tool-btn
 							onClick={() => onToolChange(t.id)}
 							className={`${styles.btn_base} ${active ? styles.btn_active : ''}`}
 							style={{
@@ -185,6 +210,7 @@ const Toolbar: React.FC = () => {
 								const active = activeLayer?.id === l.id;
 								return (
 									<button key={l.id}
+										data-layer-btn
 										onClick={() => onLayerChange(l)}
 										className={`${styles.layer_btn} ${active ? styles.layer_btn_active : ''}`}
 										style={{
