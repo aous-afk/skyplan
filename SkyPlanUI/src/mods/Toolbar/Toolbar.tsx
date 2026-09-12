@@ -10,8 +10,8 @@ import ShapeManager from "mods/ShapeManager/ShapeManager";
 
 const Toolbar: React.FC = () => {
 	const {
-		activeTool, activeLayer, visibleLayers, viewMode,
-		onViewModeToggle, onToolChange, onLayerChange,
+		activeTool, activeLayers, primaryLayer, visibleLayers, viewMode,
+		onViewModeToggle, onToolChange, onLayerAdd, onLayerRemove,
 		onUndo, onRedo, onClear, onClearAll,
 	} = useSkyplan();
 
@@ -58,17 +58,23 @@ const Toolbar: React.FC = () => {
 			if (target.closest('[data-tool-btn]')) {
 				e.preventDefault();
 				onToolChange(null);
-				onLayerChange(null);
+				// Switching tools invalidates the queued layers (they may not even apply to the new
+				// tool) - fully clear the whole queue, not just decrement one.
+				for (const entry of activeLayers) {
+					for (let i = 0; i < entry.count; i++) onLayerRemove(entry.layer);
+				}
 				return;
 			}
-			if (target.closest('[data-layer-btn]')) {
+			const layerBtn = target.closest('[data-layer-btn]') as HTMLElement | null;
+			if (layerBtn) {
 				e.preventDefault();
-				onLayerChange(null);
+				const layer = visibleLayers.find(l => l.id === layerBtn.dataset.layerId);
+				if (layer) onLayerRemove(layer);
 			}
 		};
 		document.addEventListener('mousedown', handler, true);
 		return () => document.removeEventListener('mousedown', handler, true);
-	}, [onToolChange, onLayerChange]);
+	}, [onToolChange, onLayerRemove, activeLayers, visibleLayers]);
 
 	return (
 		<>
@@ -108,7 +114,7 @@ const Toolbar: React.FC = () => {
 							onClick={() => onToolChange(t.id)}
 							className={`${styles.btn_base} ${active ? styles.btn_active : ''}`}
 							style={{
-								border: active && activeLayer ? `2px solid ${activeLayer.style.stroke}` : '2px solid transparent',
+								border: active && primaryLayer ? `2px solid ${primaryLayer.style.stroke}` : '2px solid transparent',
 							}}
 						>
 							<FontAwesomeIcon className={`${styles.svg} ${active ? styles.svg_active : ''}`} icon={t.icon} />
@@ -144,17 +150,20 @@ const Toolbar: React.FC = () => {
 					) : (
 						<div className={styles.layers_grid}>
 							{visibleLayers.map(l => {
-								const active = activeLayer?.id === l.id;
+								const count = activeLayers.find(e => e.layer.id === l.id)?.count ?? 0;
+								const active = count > 0;
 								return (
 									<button key={l.id}
 										data-layer-btn
-										onClick={() => onLayerChange(l)}
+										data-layer-id={l.id}
+										onClick={() => onLayerAdd(l)}
 										className={`${styles.layer_btn} ${active ? styles.layer_btn_active : ''}`}
 										style={{
 											border: active ? `2px solid ${l.style.stroke}` : '2px solid transparent',
 										}}
 									>
 										{l.label}
+										{count > 1 && <span className={styles.layer_btn_count}>{count}</span>}
 									</button>
 								);
 							})}

@@ -182,6 +182,68 @@
   margin-left: 8px;
 }
 
+.parallel_section {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(74, 144, 217, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.parallel_title {
+  font-size: var(--skyplan-font-size-xs);
+  font-weight: 700;
+  color: rgba(74, 144, 217, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.parallel_layer_row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.parallel_layer_label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: var(--skyplan-font-size-sm);
+  color: rgba(255, 255, 255, 0.8);
+  flex: 1;
+}
+
+.parallel_count_stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--skyplan-font-size-sm);
+  color: #fff;
+
+  button {
+    width: 18px;
+    height: 18px;
+    line-height: 1;
+    background: rgba(74, 144, 217, 0.2);
+    border: 1px solid rgba(74, 144, 217, 0.4);
+    border-radius: 3px;
+    color: #fff;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(74, 144, 217, 0.4);
+    }
+  }
+
+  span {
+    min-width: 14px;
+    text-align: center;
+  }
+}
+
 .shape_textarea {
   width: 100%;
   background: rgba(10, 30, 60, 0.8);

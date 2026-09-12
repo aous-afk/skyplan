@@ -52,6 +52,24 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 	const [editNote, setEditNote] = useState('');
 	const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
+	const [parallelSelections, setParallelSelections] = useState<Record<string, Record<string, number>>>({});
+
+	const toggleParallelLayer = useCallback((shapeId: string, layerId: string) => {
+		setParallelSelections(prev => {
+			const current = { ...(prev[shapeId] ?? {}) };
+			if (layerId in current) delete current[layerId];
+			else current[layerId] = 1;
+			return { ...prev, [shapeId]: current };
+		});
+	}, []);
+
+	const setParallelCount = useCallback((shapeId: string, layerId: string, count: number) => {
+		setParallelSelections(prev => ({
+			...prev,
+			[shapeId]: { ...(prev[shapeId] ?? {}), [layerId]: Math.max(1, count) },
+		}));
+	}, []);
+
 	const toggleCollapsed = useCallback((layerId: string) => {
 		setCollapsed(prev => ({ ...prev, [layerId]: !(prev[layerId] ?? true) }));
 	}, []);
@@ -189,6 +207,35 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 														onKeyDown={e => e.stopPropagation()}
 														onBlur={() => commitNote(s.id, editNote)}
 													/>
+													{(s.tag === Tag.path || s.tag === Tag.curve) && (
+														<div className={styles.parallel_section}>
+															<span className={styles.parallel_title}>Parallel lanes</span>
+															{allLayers.filter(l => l.allowedTools.includes('path') || l.allowedTools.includes('curve')).map(l => {
+																const count = parallelSelections[s.id]?.[l.id];
+																const selected = count !== undefined;
+																return (
+																	<div key={l.id} className={styles.parallel_layer_row}>
+																		<label className={styles.parallel_layer_label}>
+																			<CheckBox
+																				focusKey={FOCUS_DISABLED}
+																				checked={selected}
+																				onChange={() => toggleParallelLayer(s.id, l.id)}
+																			/>
+																			<span className={styles.shape_dot} style={{ background: (l.style.stroke ?? l.style.fill ?? '#888') as string }} />
+																			<span>{l.label}</span>
+																		</label>
+																		{selected && (
+																			<div className={styles.parallel_count_stepper}>
+																				<button onClick={() => setParallelCount(s.id, l.id, count - 1)}>-</button>
+																				<span>{count}</span>
+																				<button onClick={() => setParallelCount(s.id, l.id, count + 1)}>+</button>
+																			</div>
+																		)}
+																	</div>
+																);
+															})}
+														</div>
+													)}
 												</div>
 											)}
 										</div>

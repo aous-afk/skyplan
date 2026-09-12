@@ -97,6 +97,16 @@
   }
 }
 
+.layer_btn_count {
+  margin-left: 4px;
+  font-size: var(--skyplan-font-size-2xs);
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+  padding: 0 5px;
+}
+
 // clear actions row at the bottom of the layers panel
 .layer_actions {
   display: flex;

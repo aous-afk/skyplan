@@ -97,7 +97,7 @@ function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string
 }
 
 const DrawingCanvas: React.FC = () => {
-	const { activeTool, activeLayer, viewMode, globalLabelStyle, allLayers, showWhatsNew } = useSkyplan();
+	const { activeTool, activeLayers, viewMode, globalLabelStyle, allLayers, showWhatsNew } = useSkyplan();
 	const layerDefsMap = useMemo(() =>
 		Object.fromEntries(allLayers.map(l => [l.id, l])),
 		[allLayers]
@@ -116,7 +116,9 @@ const DrawingCanvas: React.FC = () => {
 	const lastInputRef = useRef<string | null>(null);
 	const toolRef = useRef<ToolId | null>('path');
 	const viewModeRef = useRef(true);
-	const activeLayerRef = useRef<LayerDef | null>(null);
+	// Boolean gate only - "is any layer currently queued" - never dereferenced for its properties
+	// here, so activeLayers (a list, see SkyplanContext) collapses to just this presence check.
+	const hasActiveLayerRef = useRef(false);
 	// Blocks all drawing/keyboard input while in view mode OR while a blocking panel (e.g.
 	// What's New) is open - same semantics as viewModeRef already had, just OR'd with the panel
 	// state so nothing extra needs to change at each of the many gate sites below.
@@ -126,9 +128,9 @@ const DrawingCanvas: React.FC = () => {
 	useEffect(() => { viewModeRef.current = viewMode; }, [viewMode]);
 	useEffect(() => { blockInputRef.current = viewMode || showWhatsNew; }, [viewMode, showWhatsNew]);
 	useEffect(() => {
-		activeLayerRef.current = activeLayer;
-		if (!activeLayer) trigger('skyplan', 'clearIndicator', '');
-	}, [activeLayer]);
+		hasActiveLayerRef.current = activeLayers.length > 0;
+		if (activeLayers.length === 0) trigger('skyplan', 'clearIndicator', '');
+	}, [activeLayers]);
 
 	useEffect(() => {
 		const onMove = (e: MouseEvent) => {
@@ -156,7 +158,7 @@ const DrawingCanvas: React.FC = () => {
 		function onDown(cx: number, cy: number, type: string): boolean {
 			if (lastInputRef.current === 'pointer' && type === 'mouse') return false;
 			if (viewModeRef.current) return false;
-			if (toolRef.current !== 'erase' && !activeLayerRef.current) return false;
+			if (toolRef.current !== 'erase' && !hasActiveLayerRef.current) return false;
 			lastInputRef.current = type;
 			if (toolRef.current === 'polygon' || toolRef.current === 'curve') {
 				if (!drawingRef.current) {
@@ -181,7 +183,7 @@ const DrawingCanvas: React.FC = () => {
 				trigger('skyplan', 'eraseHover', `${cx},${cy}`);
 				return true;
 			}
-			if (!drawingRef.current && activeLayerRef.current && (toolRef.current === 'path' || toolRef.current === 'polygon' || toolRef.current === 'curve')) {
+			if (!drawingRef.current && hasActiveLayerRef.current && (toolRef.current === 'path' || toolRef.current === 'polygon' || toolRef.current === 'curve')) {
 				trigger('skyplan', 'drawHover', `${cx},${cy}`);
 				return true;
 			}

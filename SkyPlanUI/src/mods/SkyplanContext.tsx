@@ -3,10 +3,16 @@ import {useValue, trigger} from 'cs2/api';
 import {panelVisible$, layersConfig$} from '../bindings';
 import {ToolId, LayerDef, LabelStyle} from './types';
 
+export interface LayerSelection {
+	layer: LayerDef;
+	count: number;
+}
+
 interface SkyplanCtx {
 	visible: boolean;
 	activeTool: ToolId | null;
-	activeLayer: LayerDef | null;
+	activeLayers: LayerSelection[];
+	primaryLayer: LayerDef | null;
 	visibleLayers: LayerDef[];
 	allLayers: LayerDef[];
 	globalLabelStyle: LabelStyle;
@@ -16,7 +22,8 @@ interface SkyplanCtx {
 	onOpenWhatsNew: () => void;
 	onCloseWhatsNew: () => void;
 	onToolChange: (t: ToolId | null) => void;
-	onLayerChange: (l: LayerDef | null) => void;
+	onLayerAdd: (l: LayerDef) => void;
+	onLayerRemove: (l: LayerDef) => void;
 	onUndo: () => void;
 	onRedo: () => void;
 	onClear: () => void;
@@ -43,9 +50,11 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	}, [layersConfigJson]);
 
 	const [activeTool, setActiveTool] = useState<ToolId | null>('path');
-	const [activeLayer, setActiveLayer] = useState<LayerDef | null>(null);
+	const [activeLayers, setActiveLayers] = useState<LayerSelection[]>([]);
 	const [viewMode, setViewMode] = useState(false);
 	const [showWhatsNew, setShowWhatsNew] = useState(false);
+
+	const primaryLayer = activeLayers[0]?.layer ?? null;
 
 	const visibleLayers = activeTool ? layerConfig.layers.filter(l => l.allowedTools.includes(activeTool)) : [];
 
@@ -55,43 +64,55 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		const justOpened = visible && !prevVisibleRef.current;
 		prevVisibleRef.current = visible;
 		if (justOpened) {
-			setActiveLayer(null);
+			setActiveLayers([]);
 			return;
 		}
 		if (!visible || !activeTool) return;
 		const visibleForTool = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
-		if (visibleForTool.length > 0 && !visibleForTool.find(l => l.id === activeLayer?.id))
-			setActiveLayer(visibleForTool[0]);
+		if (visibleForTool.length > 0 && !visibleForTool.find(l => l.id === primaryLayer?.id))
+			setActiveLayers([{ layer: visibleForTool[0], count: 1 }]);
 	}, [activeTool, layerConfig, visible]);
 
 	useEffect(() => {
-		if (!visible || !activeLayer) return;
+		if (!visible || !primaryLayer) return;
 		const dto = {
-			...activeLayer,
-			style: Object.fromEntries(Object.entries(activeLayer.style).map(([k, v]) => [k, String(v)])),
+			...primaryLayer,
+			style: Object.fromEntries(Object.entries(primaryLayer.style).map(([k, v]) => [k, String(v)])),
 		};
 		trigger('skyplan', 'setLayer', JSON.stringify(dto));
-	}, [visible, activeLayer]);
+	}, [visible, primaryLayer]);
 
 	const onToolChange = useCallback((t: ToolId | null) => {
 		setActiveTool(t);
 		if (t) trigger('skyplan', 'setTool', t);
 	}, []);
 
-	const onLayerChange = useCallback((l: LayerDef | null) => {
-		setActiveLayer(l);
-		if (!l) return;
-		const dto = {
-			...l,
-			style: Object.fromEntries(Object.entries(l.style).map(([k, v]) => [k, String(v)])),
-		};
-		trigger('skyplan', 'setLayer', JSON.stringify(dto));
+	const onLayerAdd = useCallback((l: LayerDef) => {
+		setActiveLayers(prev => {
+			const idx = prev.findIndex(e => e.layer.id === l.id);
+			if (idx === -1) return [...prev, { layer: l, count: 1 }];
+			const next = [...prev];
+			next[idx] = { ...next[idx], count: next[idx].count + 1 };
+			return next;
+		});
+	}, []);
+
+	const onLayerRemove = useCallback((l: LayerDef) => {
+		setActiveLayers(prev => {
+			const idx = prev.findIndex(e => e.layer.id === l.id);
+			if (idx === -1) return prev;
+			const nextCount = prev[idx].count - 1;
+			if (nextCount <= 0) return prev.filter((_, i) => i !== idx);
+			const next = [...prev];
+			next[idx] = { ...next[idx], count: nextCount };
+			return next;
+		});
 	}, []);
 
 	const onClear = useCallback(() => {
-		if (!activeLayer) return;
-		trigger('skyplan', 'clearLayer', activeLayer.id);
-	}, [activeLayer]);
+		if (!primaryLayer) return;
+		trigger('skyplan', 'clearLayer', primaryLayer.id);
+	}, [primaryLayer]);
 
 	const onClearAll = useCallback(() => trigger('skyplan', 'clearAll', ''), []);
 	const onClose = useCallback(() => trigger('skyplan', 'panelClosed', ''), []);
@@ -104,7 +125,8 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const value: SkyplanCtx = {
 		visible,
 		activeTool,
-		activeLayer,
+		activeLayers,
+		primaryLayer,
 		visibleLayers,
 		allLayers: layerConfig.layers,
 		globalLabelStyle: layerConfig.labelStyle ?? {},
@@ -114,7 +136,8 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		onOpenWhatsNew,
 		onCloseWhatsNew,
 		onToolChange,
-		onLayerChange,
+		onLayerAdd,
+		onLayerRemove,
 		onUndo,
 		onRedo,
 		onClear,
