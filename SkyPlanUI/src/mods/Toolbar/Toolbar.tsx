@@ -11,9 +11,13 @@ import ShapeManager from "mods/ShapeManager/ShapeManager";
 const Toolbar: React.FC = () => {
 	const {
 		activeTool, activeLayers, primaryLayer, visibleLayers, viewMode,
-		onViewModeToggle, onToolChange, onLayerAdd, onLayerRemove,
+		onViewModeToggle, onToolChange, onLayerAdd, onLayerRemove, onLayerSelect,
 		onUndo, onRedo, onClear, onClearAll,
 	} = useSkyplan();
+
+	// Only tools with allowMultiSelect (TOOLS in types.ts) queue multiple layers - everything else
+	// (polygon, text, erase) stays single-select: clicking a layer replaces the queue outright.
+	const multiSelectAllowed = TOOLS.find(t => t.id === activeTool)?.allowMultiSelect ?? false;
 
 	const {
 	  shapes,
@@ -156,8 +160,7 @@ const Toolbar: React.FC = () => {
 									<button key={l.id}
 										data-layer-btn
 										data-layer-id={l.id}
-					  // needs to be filter the layers that only allows multi select
-										onClick={() => onLayerAdd(l)}
+										onClick={() => multiSelectAllowed ? onLayerAdd(l) : onLayerSelect(l)}
 										className={`${styles.layer_btn} ${active ? styles.layer_btn_active : ''}`}
 										style={{
 											border: active ? `2px solid ${l.style.stroke}` : '2px solid transparent',

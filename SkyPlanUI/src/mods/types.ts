@@ -4,33 +4,43 @@ export const TOOLS = [
   { id: 'path',
 	label: 'Line',
 	icon: faRoad,
-	activeStyle: {}
+	activeStyle: {},
+	allowMultiSelect: true
   },
 
   { id: 'polygon',
 	label: 'Polygon',
 	icon: faDrawPolygon,
-	activeStyle: {} },
+	activeStyle: {},
+	allowMultiSelect: false
+  },
 
   { id: 'curve',
 	label: 'Curve',
 	icon: faBezierCurve,
-	activeStyle: {} },
+	activeStyle: {},
+	allowMultiSelect: true
+  },
 
   { id: 'point',
 	label: 'Point',
 	icon: faLocationDot,
-	activeStyle: {} },
+	activeStyle: {},
+	allowMultiSelect: true
+  },
 
   { id: 'text',
 	label: 'Annotate',
 	icon: faFont,
-	activeStyle: {} },
+	activeStyle: {},
+	allowMultiSelect: false
+  },
 
   { id: 'erase',
 	label: 'Erase',
 	icon: faEraser,
-	activeStyle: { background: '#3a1a00', color: '#ffaa55' }
+	activeStyle: { background: '#3a1a00', color: '#ffaa55' },
+	allowMultiSelect: false
   },
 
 ] as const;

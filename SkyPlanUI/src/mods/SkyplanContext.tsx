@@ -24,6 +24,7 @@ interface SkyplanCtx {
 	onToolChange: (t: ToolId | null) => void;
 	onLayerAdd: (l: LayerDef) => void;
 	onLayerRemove: (l: LayerDef) => void;
+	onLayerSelect: (l: LayerDef) => void;
 	onUndo: () => void;
 	onRedo: () => void;
 	onClear: () => void;
@@ -108,6 +109,12 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		});
 	}, []);
 
+	// For tools without allowMultiSelect (see types.ts's TOOLS) - clicking a layer replaces the whole
+	// queue with just this one, single-select-style, instead of adding/incrementing.
+	const onLayerSelect = useCallback((l: LayerDef) => {
+		setActiveLayers([{ layer: l, count: 1 }]);
+	}, []);
+
 	const onLayerRemove = useCallback((l: LayerDef) => {
 		setActiveLayers(prev => {
 			const idx = prev.findIndex(e => e.layer.id === l.id);
@@ -149,6 +156,7 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		onToolChange,
 		onLayerAdd,
 		onLayerRemove,
+		onLayerSelect,
 		onUndo,
 		onRedo,
 		onClear,
