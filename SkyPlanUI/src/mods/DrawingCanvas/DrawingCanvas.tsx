@@ -88,10 +88,13 @@ function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string
 
 	switch (s.tag) {
 		case Tag.path: {
+			// Multi-lane shapes render nothing here - every lane, including this shape's own layer,
+			// is its own independent <path> in parallelClonesByLayer instead (see DrawingCanvas -
+			// GameFace leaks stroke-dasharray between <use> clones of shared geometry, so lanes are
+			// never <use>-cloned, each gets its own real <path> with the same `d`).
+			if (s.parallelLanes && s.parallelLanes.length > 0) return null;
 			const d = buildPath(s.pts);
 			if (!d) return null;
-			// id is required here (not just key) - parallel-lane <use> clones need a real DOM id
-			// to reference via href="#...". <use> must never sit inside <defs> (never renders).
 			return <path key={s.id} id={s.id} className={cn} d={d} style={style} />;
 		}
 		case Tag.polygon: {
@@ -382,16 +385,27 @@ const DrawingCanvas: React.FC = () => {
 
 	}, [shapes]);
 
-	// Parallel-lane <use> clones, keyed by the TARGET layer they're styled as (not the source
-	// shape's own layer) - a lane targeting a layer with zero real shapes drawn still needs its own
-	// group below, so the render loop iterates the union of both maps' keys, not just this one's.
+	// Parallel-lane clones, keyed by the TARGET layer they're styled as (not the source shape's own
+	// layer) - a lane targeting a layer with zero real shapes drawn still needs its own group below,
+	// so the render loop iterates the union of both maps' keys, not just this one's.
+	//
+	// Independent real <path> per lane, not a shared <use xlink:href> - confirmed 2026-09-13 that
+	// GameFace leaks stroke-dasharray between sibling <use> instances of the same referenced
+	// geometry regardless of which element in the ancestor chain carries the class (tried: class on
+	// the <use> itself, on a <g> wrapping just that <use>, on the shared per-layer <g>, in every
+	// combination - dasharray from whichever lane paints first always won). Looks like a paint-state
+	// caching bug in the rasterizer keyed off the shared geometry, upstream of CSS resolution
+	// entirely - no class placement can fix it. A plain independent <path> has no shared source to
+	// leak from, at the cost of recomputing the same `d` string per lane instead of cloning it once.
 	const parallelClonesByLayer = useMemo(() => {
-		const map = new Map<string, { shapeId: string; dx: number; dy: number }[]>();
+		const map = new Map<string, { shapeId: string; d: string; dx: number; dy: number }[]>();
 		for (const s of shapes) {
-			if (!s.parallelLanes) continue;
+			if (!s.parallelLanes || s.parallelLanes.length === 0) continue;
+			const d = buildPath(s.pts);
+			if (!d) continue;
 			for (const lane of s.parallelLanes) {
 				if (!map.has(lane.layerId)) map.set(lane.layerId, []);
-				map.get(lane.layerId)!.push({ shapeId: s.id, dx: lane.dx, dy: lane.dy });
+				map.get(lane.layerId)!.push({ shapeId: s.id, d, dx: lane.dx, dy: lane.dy });
 			}
 		}
 		return map;
@@ -424,14 +438,17 @@ const DrawingCanvas: React.FC = () => {
 				const layerShapes = shapesByLayer.get(layerId) ?? [];
 				const ls = resolveLabelStyle(layerDefsMap[layerId], globalLabelStyle);
 				return (
-					<g key={layerId} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
+					<g key={layerId} className={`sp-${layerId}`} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
 						{layerShapes.map(s => renderShape(s, layerDefsMap[layerId]?.icon, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
+
+						{/* class comes from the wrapping <g> above, not restated per-path */}
 						{parallelClonesByLayer.get(layerId)?.map((clone, i) => (
-							// xlinkHref (-> xlink:href), not href: GameFace only supports the SVG1.1
-							// namespaced form on <use> - confirmed 2026-09-13, plain href="#id" rendered
-							// in the DOM correctly but the reference silently didn't resolve.
-							<use key={`${clone.shapeId}-lane-${i}`} xlinkHref={`#${clone.shapeId}`} className={`sp-${layerId}`} transform={`translate(${clone.dx},${clone.dy})`} />
+							<path key={`${clone.shapeId}-lane-${i}`} d={clone.d}
+								transform={`translate(${clone.dx},${clone.dy})`}
+								style={hasHighlight ? { opacity: clone.shapeId === highlightId ? '1' : '0.3' } : undefined}
+							/>
 						))}
+
 						{layerLabels[layerId] && layerShapes.map(s => {
 							if (s.tag === Tag.text) return null;
 							if (!s.label) return null;
@@ -449,18 +466,30 @@ const DrawingCanvas: React.FC = () => {
 								</text>
 							);
 						})}
+
 						{showDescriptions
 							&& layerShapes.map(s => renderText(s, ls))}
 					</g>
 				);
 			})}
 			{preview && renderShape(preview, layerDefsMap[preview.layerId]?.icon)}
-			{preview?.parallelLanes?.map((lane, i) => (
+			{preview && Array.from(
+				preview.parallelLanes?.reduce((map, lane) => {
+					if (!map.has(lane.layerId)) map.set(lane.layerId, []);
+					map.get(lane.layerId)!.push(lane);
+					return map;
+				}, new Map<string, { layerId: string; dx: number; dy: number }[]>()) ?? []
+			).map(([layerId, lanes]) => (
 				// Quick pass: rendered outside any per-layer group (unlike the committed-shape
 				// clones), so it doesn't respect other layers' opacity/visibility toggles during
 				// the transient mid-draw preview - acceptable for a rubber-band that only exists
 				// for a second or two.
-				<use key={`preview-lane-${i}`} xlinkHref={`#${preview.id}`} className={`sp-${lane.layerId}`} transform={`translate(${lane.dx},${lane.dy})`} />
+				<g key={`preview-${layerId}`} className={`sp-${layerId}`}>
+					{lanes.map((lane, i) => {
+						const d = buildPath(preview!.pts);
+						return d && <path key={i} d={d} transform={`translate(${lane.dx},${lane.dy})`} />;
+					})}
+				</g>
 			))}
 			<circle
 				cx={shownIndicator.x} cy={shownIndicator.y}

@@ -611,8 +611,16 @@ namespace Skyplan.Systems {
 			// line's perpendicular offset is a uniform vector everywhere along it, so a single delta
 			// is exact (not an approximation). Each lane keeps its own LayerId so the client can
 			// place its <use> clone inside that layer's own group, not necessarily this shape's.
+			//
+			// Lane 0 is always the shape's own layer at (0,0): the client renders shape.pts as an
+			// UNSTYLED template and represents every lane - including this one - as a styled <use>.
+			// A <use> clone carries the referenced element's own specified attributes (its class
+			// included), which always beats an inherited value from the <use> itself in the CSS
+			// cascade - so a real styled path can never double as lane 0's source without its own
+			// class bleeding into every other lane's clone. Confirmed 2026-09-13.
 			if (shape.Type == Tools.path && shape.pts.Count == 2 && shape.ParallelLanes.Count > 0
 					&& m_Camera.WorldToSVG(shape.pts[0], out Vector2 anchorScreen)) {
+				shapeDto.ParallelLanes.Add(new ParallelLaneDto { LayerId = shape.layer?.Id, Dx = 0, Dy = 0 });
 				foreach ((string laneLayerId, Vector3 offset) in shape.GetParallelLaneOffsets()) {
 					if (!m_Camera.WorldToSVG(shape.pts[0] + offset, out Vector2 offsetScreen)) continue;
 					shapeDto.ParallelLanes.Add(new ParallelLaneDto {
