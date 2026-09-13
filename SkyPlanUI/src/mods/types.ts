@@ -48,9 +48,11 @@ export interface ShapeData {
 	inFrame: boolean;
 	label?: string;
 	description?: string;
-	// Lines only - one <use transform="translate(dx,dy)"> per entry, placed inside that entry's
-	// own layer group (not necessarily this shape's own layer)
+	// Lines only - one independent <path> per entry, placed inside that entry's own layer group
+	// (not necessarily this shape's own layer) and translated by dx/dy
 	parallelLanes?: { layerId: string; dx: number; dy: number }[];
+	// World-unit (metre) spacing between adjacent lanes - only meaningful alongside parallelLanes
+	parallelSpacing?: number;
 }
 
 export interface LabelStyle {

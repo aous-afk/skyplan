@@ -1,9 +1,15 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {trigger} from 'cs2/api';
+import {getModule} from 'cs2/modding';
 import {ToolId, ShapeData, Tag, LayerDef, LayerIcon, LabelStyle} from '../types';
 import {buildPath, buildPolygon, buildCurve, centroid} from 'mods/utils/buildSvg';
 import {useSkyplan} from '../SkyplanContext';
 import {useDrawingContext} from 'mods/DrawingContext';
+
+const FloatingMouseTooltip = getModule(
+	'game-ui/common/tooltip/floating-mouse-tooltip/floating-mouse-tooltip.tsx',
+	'FloatingMouseTooltip'
+) as any;
 
 function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null, layerDefsMap: Record<string, LayerDef>): string {
 	const seen = new Set<string>();
@@ -154,6 +160,16 @@ const DrawingCanvas: React.FC = () => {
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
+	// Mirrors Skyplan/Systems/DrawingSystem.cs's DefaultParallelSpacing - only needed as a hover-time
+	// display fallback before a preview exists (drawing hasn't started, so there's no server-computed
+	// preview.parallelSpacing yet). Update this alongside that constant until spacing becomes
+	// server-driven/configurable.
+	const FALLBACK_PARALLEL_SPACING_M = 8;
+	// Same "more than one lane queued" check SkyplanContext's setParallelLayers effect uses - true as
+	// soon as the corridor is queued in the toolbar, before drawing has even started.
+	const hasQueuedCorridor = activeTool === 'path'
+		&& activeLayers.reduce((sum, e) => sum + e.count, 0) > 1;
+
 	// cohtml doesn't repaint the region a removed node used to occupy - keep the indicator
 	// circle always mounted and toggle opacity instead of conditionally rendering it.
 	const lastIndicatorRef = useRef({ x: 0, y: 0, kind: 'vertex' as 'vertex' | 'edge' });
@@ -182,7 +198,7 @@ const DrawingCanvas: React.FC = () => {
 
 	useEffect(() => {
 		const onMove = (e: MouseEvent) => {
-			if (toolRef.current === 'text' && !viewModeRef.current) {
+			if (!viewModeRef.current) {
 				setCursorPos({ x: e.clientX, y: e.clientY });
 			}
 			else {
@@ -419,10 +435,11 @@ const DrawingCanvas: React.FC = () => {
 	const hasHighlight = highlightId !== null;
 	const layerCSS = buildLayerCSS(shapes, preview, layerDefsMap);
 
-	const showCursor = !!cursorPos && activeTool === 'text' && !viewMode;
+	const showCursor = !!cursorPos && !viewMode;
 	if (shapes.length === 0 && !preview && !showCursor && !indicator) return null;
 
 	return (
+		<>
 		<svg
 			key={shapes.length}
 			style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'hidden', opacity: globalOpacity }}
@@ -508,6 +525,15 @@ const DrawingCanvas: React.FC = () => {
 				/>
 			)}
 		</svg>
+		{hasQueuedCorridor && cursorPos && !viewMode && (
+			<FloatingMouseTooltip
+				position={cursorPos}
+				screenSpacePosition
+				forceVisible
+				tooltip={<span>{preview?.parallelSpacing ?? FALLBACK_PARALLEL_SPACING_M}m spacing</span>}
+			/>
+		)}
+		</>
 	);
 };
 

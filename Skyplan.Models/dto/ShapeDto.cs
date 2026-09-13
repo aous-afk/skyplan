@@ -26,6 +26,12 @@ namespace Skyplan.Models.dto {
 		// curves/ineligible shapes.
 		[JsonProperty("parallelLanes")]
 		public List<ParallelLaneDto> ParallelLanes = [];
+		// World-unit (metre) spacing between adjacent lanes - same value for every lane on this
+		// shape. Only meaningful alongside ParallelLanes; the client can't derive this from the
+		// already-computed screen-space Dx/Dy deltas alone (that requires knowing the current
+		// camera zoom scale too), so it's sent verbatim for UI display (e.g. a "Xm" hover tooltip).
+		[JsonProperty("parallelSpacing")]
+		public float ParallelSpacing;
 	}
 
 	public class ParallelLaneDto {
