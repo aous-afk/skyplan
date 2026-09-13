@@ -82,6 +82,17 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		trigger('skyplan', 'setLayer', JSON.stringify(dto));
 	}, [visible, primaryLayer]);
 
+	// Everything beyond the one real shape that'll actually get drawn: the primary (first queued)
+	// layer's own count minus 1 (its first lane IS the real shape), plus every other queued layer's
+	// full count. C# just stores this verbatim and attaches it to the next drawn line
+	useEffect(() => {
+		if (!visible) return;
+		const extraLanes = activeLayers
+			.map((entry, i) => ({ layerId: entry.layer.id, count: i === 0 ? entry.count - 1 : entry.count }))
+			.filter(e => e.count > 0);
+		trigger('skyplan', 'setParallelLayers', JSON.stringify(extraLanes));
+	}, [visible, activeLayers]);
+
 	const onToolChange = useCallback((t: ToolId | null) => {
 		setActiveTool(t);
 		if (t) trigger('skyplan', 'setTool', t);

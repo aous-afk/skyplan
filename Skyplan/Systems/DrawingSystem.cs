@@ -48,6 +48,8 @@ namespace Skyplan.Systems {
 		};
 		internal int m_NextId;
 		private string m_EraseTarget;
+		private List<ParallelLane> m_QueuedParallelLanes = [];
+		private const float DefaultParallelSpacing = 8f;
 
 		private ValueBinding<bool> m_PanelVisibleBinding;
 		private ValueBinding<string> m_ShapesBinding;
@@ -147,6 +149,8 @@ namespace Skyplan.Systems {
 			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setLayer", json => m_CurrentLayer = JsonConvert.DeserializeObject<LayerDefDto>(json)));
+
+			AddBinding(new TriggerBinding<string>("skyplan", "setParallelLayers", json => m_QueuedParallelLanes = JsonConvert.DeserializeObject<List<ParallelLane>>(json) ?? []));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "clearLayer", HandleClearLayer));
 			AddBinding(new TriggerBinding<string>("skyplan", "clearAll", _ => HandleClearAll()));
@@ -468,6 +472,8 @@ namespace Skyplan.Systems {
 
 			HandleDrawMove(sx, sy);
 			if (m_ActiveShape.pts.Count >= 2) {
+				m_ActiveShape.ParallelLanes = [.. m_QueuedParallelLanes];
+				m_ActiveShape.ParallelSpacing = DefaultParallelSpacing;
 				m_ActiveShape.CalcBounds();
 				m_Shapes.Add(m_ActiveShape);
 				PushUndo(new Op { type = OpType.Draw, shape = m_ActiveShape });
@@ -599,6 +605,23 @@ namespace Skyplan.Systems {
 				if (!m_Camera.WorldToSVG(h, out Vector2 hp)) return null;
 				shapeDto.Handles.Add(new ScreenPt { x = hp.x, y = hp.y });
 			}
+			// Lines only - curves compute their own offset geometry client-side.
+			// One extra reprojected world point per lane, converted to a
+			// screen-space translate delta relative to the line's own first anchor - a straight
+			// line's perpendicular offset is a uniform vector everywhere along it, so a single delta
+			// is exact (not an approximation). Each lane keeps its own LayerId so the client can
+			// place its <use> clone inside that layer's own group, not necessarily this shape's.
+			if (shape.Type == Tools.path && shape.pts.Count == 2 && shape.ParallelLanes.Count > 0
+					&& m_Camera.WorldToSVG(shape.pts[0], out Vector2 anchorScreen)) {
+				foreach ((string laneLayerId, Vector3 offset) in shape.GetParallelLaneOffsets()) {
+					if (!m_Camera.WorldToSVG(shape.pts[0] + offset, out Vector2 offsetScreen)) continue;
+					shapeDto.ParallelLanes.Add(new ParallelLaneDto {
+						LayerId = laneLayerId,
+						Dx = offsetScreen.x - anchorScreen.x,
+						Dy = offsetScreen.y - anchorScreen.y
+					});
+				}
+			}
 			return shapeDto;
 		}
 
@@ -662,6 +685,10 @@ namespace Skyplan.Systems {
 				Type = m_ActiveShape.Type,
 				layer = m_ActiveShape.layer,
 				pts = m_ActiveShape.pts,
+				// Mirror the queued parallel lanes onto the preview too, so the rubber-band shows
+				// the full corridor before the line is even committed.
+				ParallelLanes = [.. m_QueuedParallelLanes],
+				ParallelSpacing = DefaultParallelSpacing,
 			};
 			m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
 		}

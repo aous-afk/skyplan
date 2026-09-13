@@ -8,15 +8,21 @@ import {useDrawingContext} from 'mods/DrawingContext';
 function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null, layerDefsMap: Record<string, LayerDef>): string {
 	const seen = new Set<string>();
 	const rules: string[] = [];
+	const ensure = (layerId: string) => {
+		if (seen.has(layerId)) return;
+		const style = layerDefsMap[layerId]?.style;
+		if (!style) return;
+		seen.add(layerId);
+		const decls = Object.entries(style).map(([k, v]) => `${k}:${v}`).join(';');
+		rules.push(`.sp-${layerId}{${decls}}`);
+	};
 	const all = preview ? [...shapes, preview] : shapes;
 	for (const s of all) {
-		const style = layerDefsMap[s.layerId]?.style;
-		if (!style || seen.has(s.layerId)) continue;
-		seen.add(s.layerId);
-		const decls = Object.entries(style)
-			.map(([k, v]) => `${k}:${v}`)
-			.join(';');
-		rules.push(`.sp-${s.layerId}{${decls}}`);
+		ensure(s.layerId);
+		// A parallel-lane <use> may target a layer with zero real shapes of its own (e.g. "Subway"
+		// queued but nothing drawn as Subway yet) - it still needs a .sp-{layerId} rule to render
+		// styled at all.
+		s.parallelLanes?.forEach(lane => ensure(lane.layerId));
 	}
 	return rules.join('');
 }
@@ -47,7 +53,9 @@ function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string
 		case Tag.path: {
 			const d = buildPath(s.pts);
 			if (!d) return null;
-			return <path key={s.id} className={cn} d={d} style={style} />;
+			// id is required here (not just key) - parallel-lane <use> clones need a real DOM id
+			// to reference via href="#...". <use> must never sit inside <defs> (never renders).
+			return <path key={s.id} id={s.id} className={cn} d={d} style={style} />;
 		}
 		case Tag.polygon: {
 			if (s.pts.length < 3) {
@@ -337,6 +345,26 @@ const DrawingCanvas: React.FC = () => {
 
 	}, [shapes]);
 
+	// Parallel-lane <use> clones, keyed by the TARGET layer they're styled as (not the source
+	// shape's own layer) - a lane targeting a layer with zero real shapes drawn still needs its own
+	// group below, so the render loop iterates the union of both maps' keys, not just this one's.
+	const parallelClonesByLayer = useMemo(() => {
+	  const map = new Map<string, { shapeId: string; dx: number; dy: number }[]>();
+	  for (const s of shapes) {
+		if (!s.parallelLanes) continue;
+		for (const lane of s.parallelLanes) {
+		  if (!map.has(lane.layerId)) map.set(lane.layerId, []);
+		  map.get(lane.layerId)!.push({ shapeId: s.id, dx: lane.dx, dy: lane.dy });
+		}
+	  }
+	  return map;
+	}, [shapes]);
+
+	const allGroupLayerIds = useMemo(
+	  () => Array.from(new Set([...shapesByLayer.keys(), ...parallelClonesByLayer.keys()])),
+	  [shapesByLayer, parallelClonesByLayer]
+	);
+
 	const hasHighlight = highlightId !== null;
 	const layerCSS = buildLayerCSS(shapes, preview, layerDefsMap);
 
@@ -355,13 +383,20 @@ const DrawingCanvas: React.FC = () => {
 			</defs>
 
 
-			{Array.from(shapesByLayer.entries()).map(([layerId, layerShapes]) => {
+			{allGroupLayerIds.map(layerId => {
+				const layerShapes = shapesByLayer.get(layerId) ?? [];
 				const ls = resolveLabelStyle(layerDefsMap[layerId], globalLabelStyle);
 				const descFontSize = Math.max(8, ls.fontSize - 2);
 				const descOpacity = ls.opacity * 0.7;
 				return (
 				  <g key={layerId} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
 					{layerShapes.map(s => renderShape(s, layerDefsMap[layerId]?.icon, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
+					{parallelClonesByLayer.get(layerId)?.map((clone, i) => (
+						// xlinkHref (-> xlink:href), not href: GameFace only supports the SVG1.1
+						// namespaced form on <use> - confirmed 2026-09-13, plain href="#id" rendered
+						// in the DOM correctly but the reference silently didn't resolve.
+						<use key={`${clone.shapeId}-lane-${i}`} xlinkHref={`#${clone.shapeId}`} className={`sp-${layerId}`} transform={`translate(${clone.dx},${clone.dy})`} />
+					))}
 					{layerLabels[layerId] && layerShapes.map(s => {
 						if (s.tag === Tag.text) return null;
 						if (!s.label) return null;
@@ -414,6 +449,13 @@ const DrawingCanvas: React.FC = () => {
 				);
 			})}
 			{preview && renderShape(preview, layerDefsMap[preview.layerId]?.icon)}
+			{preview?.parallelLanes?.map((lane, i) => (
+				// Quick pass: rendered outside any per-layer group (unlike the committed-shape
+				// clones), so it doesn't respect other layers' opacity/visibility toggles during
+				// the transient mid-draw preview - acceptable for a rubber-band that only exists
+				// for a second or two.
+				<use key={`preview-lane-${i}`} xlinkHref={`#${preview.id}`} className={`sp-${lane.layerId}`} transform={`translate(${lane.dx},${lane.dy})`} />
+			))}
 			<circle
 				cx={shownIndicator.x} cy={shownIndicator.y}
 				r={shownIndicator.kind === 'vertex' ? 6 : 5}

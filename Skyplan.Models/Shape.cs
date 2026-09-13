@@ -25,6 +25,17 @@ namespace Skyplan.Models{
 		public string? Description;
 		[JsonProperty("planId")]
 		public int PlanId;
+		[JsonProperty("parallelLanes")]
+		public List<ParallelLane> ParallelLanes = [];
+		[JsonProperty("parallelSpacing")]
+		public float ParallelSpacing;
 		public Bounds Extents;
+	}
+
+	public class ParallelLane {
+		[JsonProperty("layerId")]
+		public string LayerId;
+		[JsonProperty("count")]
+		public int Count;
 	}
 }
