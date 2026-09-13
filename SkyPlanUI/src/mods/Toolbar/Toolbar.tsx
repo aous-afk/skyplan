@@ -156,6 +156,7 @@ const Toolbar: React.FC = () => {
 									<button key={l.id}
 										data-layer-btn
 										data-layer-id={l.id}
+					  // needs to be filter the layers that only allows multi select
 										onClick={() => onLayerAdd(l)}
 										className={`${styles.layer_btn} ${active ? styles.layer_btn_active : ''}`}
 										style={{

@@ -29,20 +29,57 @@ function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null, layerDefs
 
 function resolveLabelStyle(layerDef: LayerDef | undefined, global: LabelStyle): Required<LabelStyle> {
 	return {
-		color:      layerDef?.labelStyle?.color      ?? global.color      ?? '#ffffff',
-		fontSize:   layerDef?.labelStyle?.fontSize   ?? global.fontSize   ?? 12,
+		color: layerDef?.labelStyle?.color ?? global.color ?? '#ffffff',
+		fontSize: layerDef?.labelStyle?.fontSize ?? global.fontSize ?? 12,
 		fontWeight: layerDef?.labelStyle?.fontWeight ?? global.fontWeight ?? 'normal',
-		opacity:    layerDef?.labelStyle?.opacity    ?? global.opacity    ?? 1,
+		opacity: layerDef?.labelStyle?.opacity ?? global.opacity ?? 1,
 	};
 }
 
 function labelPosition(s: ShapeData): { x: number; y: number } | null {
 	if (!s.pts.length) return null;
 	if (s.tag === Tag.polygon) return centroid(s.pts);
-	if (s.tag === Tag.path)    return centroid(s.pts);
-	if (s.tag === Tag.curve)   return centroid(s.pts);
-	if (s.tag === Tag.circle)  return { x: s.pts[0].x, y: s.pts[0].y - 12 };
+	if (s.tag === Tag.path) return centroid(s.pts);
+	if (s.tag === Tag.curve) return centroid(s.pts);
+	if (s.tag === Tag.circle) return { x: s.pts[0].x, y: s.pts[0].y - 12 };
 	return null;
+}
+
+function renderText(s: ShapeData, ls: LabelStyle | undefined): React.ReactElement | null {
+	if (!s.description) return null;
+	if (!ls) return null;
+
+	const descFontSize = Math.max(8, ls.fontSize ?? 10 - 2);
+	const descOpacity = ls.opacity ?? 1 * 0.7;
+	// the text needs to be textPath href="#lineAC"
+	if (s.tag === Tag.text) {
+		if (!s.pts[0]) return null;
+		return (
+			<text key={`desc-${s.id}`}
+				x={s.pts[0].x} y={s.pts[0].y + 18}
+				textAnchor="middle" dominantBaseline="middle"
+				fontSize={descFontSize} fill={ls.color}
+				opacity={descOpacity}
+				style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
+			>
+				{s.description}
+			</text>
+		);
+	}
+	const pos = labelPosition(s);
+	if (!pos) return null;
+	const descY = s.tag === Tag.circle ? s.pts[0].y + 20 : pos.y + 16;
+	return (
+		<text key={`desc-${s.id}`}
+			x={pos.x} y={descY}
+			textAnchor="middle" dominantBaseline="middle"
+			fontSize={descFontSize} fill={ls.color}
+			opacity={descOpacity}
+			style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
+		>
+			{s.description}
+		</text>
+	);
 }
 
 function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string): React.ReactElement | null {
@@ -110,7 +147,7 @@ const DrawingCanvas: React.FC = () => {
 		Object.fromEntries(allLayers.map(l => [l.id, l])),
 		[allLayers]
 	);
-	const {shapes, preview, highlightId, indicator, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions} = useDrawingContext();
+	const { shapes, preview, highlightId, indicator, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions } = useDrawingContext();
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -335,13 +372,13 @@ const DrawingCanvas: React.FC = () => {
 		};
 	}, []);
 
-	const shapesByLayer = useMemo( ()=> {
-	  const map = new Map<string, ShapeData[]>();
-	  for (const s of shapes) {
-		if (!map.has(s.layerId)) map.set(s.layerId, []);
-		map.get(s.layerId)!.push(s);
-	  }
-	  return map;
+	const shapesByLayer = useMemo(() => {
+		const map = new Map<string, ShapeData[]>();
+		for (const s of shapes) {
+			if (!map.has(s.layerId)) map.set(s.layerId, []);
+			map.get(s.layerId)!.push(s);
+		}
+		return map;
 
 	}, [shapes]);
 
@@ -349,20 +386,20 @@ const DrawingCanvas: React.FC = () => {
 	// shape's own layer) - a lane targeting a layer with zero real shapes drawn still needs its own
 	// group below, so the render loop iterates the union of both maps' keys, not just this one's.
 	const parallelClonesByLayer = useMemo(() => {
-	  const map = new Map<string, { shapeId: string; dx: number; dy: number }[]>();
-	  for (const s of shapes) {
-		if (!s.parallelLanes) continue;
-		for (const lane of s.parallelLanes) {
-		  if (!map.has(lane.layerId)) map.set(lane.layerId, []);
-		  map.get(lane.layerId)!.push({ shapeId: s.id, dx: lane.dx, dy: lane.dy });
+		const map = new Map<string, { shapeId: string; dx: number; dy: number }[]>();
+		for (const s of shapes) {
+			if (!s.parallelLanes) continue;
+			for (const lane of s.parallelLanes) {
+				if (!map.has(lane.layerId)) map.set(lane.layerId, []);
+				map.get(lane.layerId)!.push({ shapeId: s.id, dx: lane.dx, dy: lane.dy });
+			}
 		}
-	  }
-	  return map;
+		return map;
 	}, [shapes]);
 
 	const allGroupLayerIds = useMemo(
-	  () => Array.from(new Set([...shapesByLayer.keys(), ...parallelClonesByLayer.keys()])),
-	  [shapesByLayer, parallelClonesByLayer]
+		() => Array.from(new Set([...shapesByLayer.keys(), ...parallelClonesByLayer.keys()])),
+		[shapesByLayer, parallelClonesByLayer]
 	);
 
 	const hasHighlight = highlightId !== null;
@@ -386,66 +423,35 @@ const DrawingCanvas: React.FC = () => {
 			{allGroupLayerIds.map(layerId => {
 				const layerShapes = shapesByLayer.get(layerId) ?? [];
 				const ls = resolveLabelStyle(layerDefsMap[layerId], globalLabelStyle);
-				const descFontSize = Math.max(8, ls.fontSize - 2);
-				const descOpacity = ls.opacity * 0.7;
 				return (
-				  <g key={layerId} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
-					{layerShapes.map(s => renderShape(s, layerDefsMap[layerId]?.icon, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
-					{parallelClonesByLayer.get(layerId)?.map((clone, i) => (
-						// xlinkHref (-> xlink:href), not href: GameFace only supports the SVG1.1
-						// namespaced form on <use> - confirmed 2026-09-13, plain href="#id" rendered
-						// in the DOM correctly but the reference silently didn't resolve.
-						<use key={`${clone.shapeId}-lane-${i}`} xlinkHref={`#${clone.shapeId}`} className={`sp-${layerId}`} transform={`translate(${clone.dx},${clone.dy})`} />
-					))}
-					{layerLabels[layerId] && layerShapes.map(s => {
-						if (s.tag === Tag.text) return null;
-						if (!s.label) return null;
-						const pos = labelPosition(s);
-						if (!pos) return null;
-						return (
-						  <text key={`lbl-${s.id}`}
-							x={pos.x} y={pos.y}
-							textAnchor="middle" dominantBaseline="middle"
-							fontSize={ls.fontSize} fill={ls.color}
-							fontWeight={ls.fontWeight} opacity={ls.opacity}
-							style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 3 }}
-						  >
-							{s.label}
-						  </text>
-						);
-					})}
-					{showDescriptions && layerShapes.map(s => {
-						if (!s.description) return null;
-						if (s.tag === Tag.text) {
-							if (!s.pts[0]) return null;
+					<g key={layerId} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
+						{layerShapes.map(s => renderShape(s, layerDefsMap[layerId]?.icon, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
+						{parallelClonesByLayer.get(layerId)?.map((clone, i) => (
+							// xlinkHref (-> xlink:href), not href: GameFace only supports the SVG1.1
+							// namespaced form on <use> - confirmed 2026-09-13, plain href="#id" rendered
+							// in the DOM correctly but the reference silently didn't resolve.
+							<use key={`${clone.shapeId}-lane-${i}`} xlinkHref={`#${clone.shapeId}`} className={`sp-${layerId}`} transform={`translate(${clone.dx},${clone.dy})`} />
+						))}
+						{layerLabels[layerId] && layerShapes.map(s => {
+							if (s.tag === Tag.text) return null;
+							if (!s.label) return null;
+							const pos = labelPosition(s);
+							if (!pos) return null;
 							return (
-							  <text key={`desc-${s.id}`}
-								x={s.pts[0].x} y={s.pts[0].y + 18}
-								textAnchor="middle" dominantBaseline="middle"
-								fontSize={descFontSize} fill={ls.color}
-								opacity={descOpacity}
-								style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
-							  >
-								{s.description}
-							  </text>
+								<text key={`lbl-${s.id}`}
+									x={pos.x} y={pos.y}
+									textAnchor="middle" dominantBaseline="middle"
+									fontSize={ls.fontSize} fill={ls.color}
+									fontWeight={ls.fontWeight} opacity={ls.opacity}
+									style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 3 }}
+								>
+									{s.label}
+								</text>
 							);
-						}
-						const pos = labelPosition(s);
-						if (!pos) return null;
-						const descY = s.tag === Tag.circle ? s.pts[0].y + 20 : pos.y + 16;
-						return (
-						  <text key={`desc-${s.id}`}
-							x={pos.x} y={descY}
-							textAnchor="middle" dominantBaseline="middle"
-							fontSize={descFontSize} fill={ls.color}
-							opacity={descOpacity}
-							style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
-						  >
-							{s.description}
-						  </text>
-						);
-					})}
-				  </g>
+						})}
+						{showDescriptions
+							&& layerShapes.map(s => renderText(s, ls))}
+					</g>
 				);
 			})}
 			{preview && renderShape(preview, layerDefsMap[preview.layerId]?.icon)}
