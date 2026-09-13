@@ -2,7 +2,7 @@ import React, {useMemo, useState, useCallback} from 'react';
 import {trigger} from 'cs2/api';
 import {FOCUS_DISABLED} from 'cs2/input';
 import {getModule} from 'cs2/modding';
-import {faChevronDown, faChevronRight, faDrawPolygon, faEye, faEyeSlash, faFont, faLocationDot, faRoad} from '@fortawesome/free-solid-svg-icons';
+import {faChevronDown, faChevronRight, faDrawPolygon, faEye, faEyeSlash, faFont, faLink, faLocationDot, faRoad} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {ShapeData, Tag} from 'mods/types';
 import {useDrawingContext} from 'mods/DrawingContext';
@@ -22,6 +22,15 @@ function tagIcon(tag: Tag) {
 		default:          return faRoad;
 	}
 }
+
+// A parallel-lane clone isn't its own ShapeData - it's an entry on the source shape's own
+// parallelLanes list, targeting a different layer's group. It shares the source shape's geometry (so
+// hover-highlight still targets sourceShape.id) but has its OWN independent label/description (the
+// `lane` object), edited via setLaneLabel/setLaneNote rather than setShapeLabel/setShapeNote.
+type Lane = NonNullable<ShapeData['parallelLanes']>[number];
+type ShapeRow =
+	| { kind: 'real'; shape: ShapeData }
+	| { kind: 'clone'; sourceShape: ShapeData; lane: Lane };
 
 interface ShapeManagerProps {
 	shapes: ShapeData[];
@@ -47,7 +56,9 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 		Object.fromEntries(allLayers.map(l => [l.id, l])),
 		[allLayers]
 	);
-	const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
+	// Keyed by rowKey (see below), not shape id - a clone row edits independently of its source
+	// shape's own row and of any other clone on the same source, even though they share geometry.
+	const [editingRowKey, setEditingRowKey] = useState<string | null>(null);
 	const [editName, setEditName] = useState('');
 	const [editNote, setEditNote] = useState('');
 	const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -57,36 +68,43 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 	}, []);
 
 	const shapeGroups = useMemo(() => {
-		const map = new Map<string, { layerId: string; label: string; color: string; shapes: ShapeData[] }>();
+		const map = new Map<string, { layerId: string; label: string; color: string; rows: ShapeRow[] }>();
+		const ensure = (layerId: string) => {
+			let group = map.get(layerId);
+			if (group) return group;
+			const layerDef = layerDefsMap[layerId];
+			if (!layerDef) return null;
+			group = { layerId, label: layerDef.label, color: (layerDef.style.stroke ?? layerDef.style.fill ?? '#888') as string, rows: [] };
+			map.set(layerId, group);
+			return group;
+		};
 		for (const s of shapes) {
-			const layerDef = layerDefsMap[s.layerId];
-			if (!layerDef) continue;
-			if (!map.has(s.layerId)) {
-				const style = layerDef.style;
-				map.set(s.layerId, {
-					layerId: s.layerId,
-					label: layerDef.label,
-					color: (style.stroke ?? style.fill ?? '#888') as string,
-					shapes: [],
-				});
-			}
-			map.get(s.layerId)!.shapes.push(s);
+			ensure(s.layerId)?.rows.push({ kind: 'real', shape: s });
+			// A clone may target a layer with zero real shapes of its own (e.g. queued but nothing
+			// drawn as that layer yet) - still needs its own row/group entry.
+			s.parallelLanes?.forEach(lane => {
+				ensure(lane.layerId)?.rows.push({ kind: 'clone', sourceShape: s, lane });
+			});
 		}
 		return Array.from(map.values());
 	}, [shapes, layerDefsMap]);
 
-	const startEdit = useCallback((s: ShapeData) => {
-		setEditingShapeId(s.id);
-		setEditName(s.label ?? '');
-		setEditNote(s.description ?? '');
+	const rowKey = (row: ShapeRow) => row.kind === 'real' ? row.shape.id : `${row.sourceShape.id}-clone-${row.lane.layerId}`;
+
+	const startEdit = useCallback((row: ShapeRow) => {
+		setEditingRowKey(rowKey(row));
+		setEditName((row.kind === 'real' ? row.shape.label : row.lane.label) ?? '');
+		setEditNote((row.kind === 'real' ? row.shape.description : row.lane.description) ?? '');
 	}, []);
 
-	const saveName = useCallback((shapeId: string, value: string) => {
-		trigger('skyplan', 'setShapeLabel', `${shapeId}|${value}`);
+	const saveName = useCallback((row: ShapeRow, value: string) => {
+		if (row.kind === 'real') trigger('skyplan', 'setShapeLabel', `${row.shape.id}|${value}`);
+		else trigger('skyplan', 'setLaneLabel', `${row.sourceShape.id}|${row.lane.layerId}|${value}`);
 	}, []);
 
-	const commitNote = useCallback((shapeId: string, value: string) => {
-		trigger('skyplan', 'setShapeNote', `${shapeId}|${value}`);
+	const commitNote = useCallback((row: ShapeRow, value: string) => {
+		if (row.kind === 'real') trigger('skyplan', 'setShapeNote', `${row.shape.id}|${value}`);
+		else trigger('skyplan', 'setLaneNote', `${row.sourceShape.id}|${row.lane.layerId}|${value}`);
 	}, []);
 
 	return (
@@ -120,7 +138,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 								</button>
 								<span className={styles.shape_dot} style={{ background: group.color }} />
 								<span className={styles.shape_group_label}>{group.label}</span>
-								<span className={styles.shape_count}>{group.shapes.length}</span>
+								<span className={styles.shape_count}>{group.rows.length}</span>
 								<button
 									className={styles.labels_toggle}
 									onClick={() => onLayerLabelsToggle(group.layerId)}
@@ -150,19 +168,25 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 							</div>
 
 							<div className={styles.shape_row_list}>
-								{group.shapes.map((s, i) => {
-									const isEditing = editingShapeId === s.id;
+								{group.rows.map((row, i) => {
+									const s = row.kind === 'real' ? row.shape : row.sourceShape;
+									const key = rowKey(row);
+									const isEditing = editingRowKey === key;
+									const ownLabel = row.kind === 'real' ? row.shape.label : row.lane.label;
 									const fallback = `${s.tag === Tag.text ? 'Text' : s.tag === Tag.circle ? 'Point' : s.tag === Tag.polygon ? 'Area' : 'Line'} ${i + 1}`;
 									return (
-										<div key={s.id} className={styles.shape_row}>
+										<div key={key} className={styles.shape_row}>
 											<div
 												className={styles.shape_row_header}
-												onClick={() => isEditing ? setEditingShapeId(null) : startEdit(s)}
+												onClick={() => isEditing ? setEditingRowKey(null) : startEdit(row)}
 												onMouseEnter={() => onHoverShape(s.id)}
 												onMouseLeave={() => onHoverShape(null)}
 											>
 												<FontAwesomeIcon icon={tagIcon(s.tag)} className={styles.shape_row_icon} />
-												<span className={styles.shape_row_name} style={{ color: 'rgba(255,255,255,0.8)' }}>{s.label || fallback}</span>
+												<span className={styles.shape_row_name} style={{ color: 'rgba(255,255,255,0.8)' }}>{ownLabel || fallback}</span>
+												{row.kind === 'clone' && (
+													<FontAwesomeIcon icon={faLink} className={styles.shape_row_clone_icon} title="Same line as another layer" />
+												)}
 											</div>
 											{isEditing && (
 												<div className={styles.shape_row_edit}>
@@ -174,10 +198,10 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 														onChange={e => setEditName(e.currentTarget.value)}
 														onKeyDown={e => {
 															e.stopPropagation();
-															if (e.key === 'Enter') { saveName(s.id, editName); setEditingShapeId(null); }
-															if (e.key === 'Escape') setEditingShapeId(null);
+															if (e.key === 'Enter') { saveName(row, editName); setEditingRowKey(null); }
+															if (e.key === 'Escape') setEditingRowKey(null);
 														}}
-														onBlur={() => saveName(s.id, editName)}
+														onBlur={() => saveName(row, editName)}
 													/>
 													<textarea
 														className={styles.shape_textarea}
@@ -187,7 +211,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 														rows={3}
 														onChange={e => setEditNote(e.currentTarget.value)}
 														onKeyDown={e => e.stopPropagation()}
-														onBlur={() => commitNote(s.id, editNote)}
+														onBlur={() => commitNote(row, editNote)}
 													/>
 												</div>
 											)}

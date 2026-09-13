@@ -181,6 +181,8 @@ namespace Skyplan.Systems {
 			AddBinding(new TriggerBinding<string>("skyplan", "setShapeLabel", HandleSetShapeLabel));
 			AddBinding(new TriggerBinding<string>("skyplan", "setShapeNote", HandleSetShapeNote));
 			AddBinding(new TriggerBinding<string>("skyplan", "commitText", HandleCommitText));
+			AddBinding(new TriggerBinding<string>("skyplan", "setLaneLabel", HandleSetLaneLabel));
+			AddBinding(new TriggerBinding<string>("skyplan", "setLaneNote", HandleSetLaneNote));
 		}
 
 		protected override void OnUpdate() {
@@ -219,6 +221,29 @@ namespace Skyplan.Systems {
 			Shape shape = m_Shapes.Find(s => s.id == id);
 			if (shape == null) return;
 			shape.Description = string.IsNullOrEmpty(note) ? null : note;
+			if (m_Camera.IsReady) UpdateShapesJson();
+		}
+
+		// shapeId|layerId|value - scoped to one ParallelLane, not the whole shape (setShapeLabel/
+		// setShapeNote above are id|value, shape-scoped). Split(3) so a value containing '|' still
+		// lands whole in the last part, same tolerance the shape-scoped handlers already have.
+		private void HandleSetLaneLabel(string payload) {
+			string[] parts = payload.Split('|', 3);
+			if (parts.Length < 3) return;
+			Shape shape = m_Shapes.Find(s => s.id == parts[0]);
+			ParallelLane lane = shape?.ParallelLanes.Find(l => l.LayerId == parts[1]);
+			if (lane == null) return;
+			lane.Label = string.IsNullOrEmpty(parts[2]) ? null : parts[2];
+			if (m_Camera.IsReady) UpdateShapesJson();
+		}
+
+		private void HandleSetLaneNote(string payload) {
+			string[] parts = payload.Split('|', 3);
+			if (parts.Length < 3) return;
+			Shape shape = m_Shapes.Find(s => s.id == parts[0]);
+			ParallelLane lane = shape?.ParallelLanes.Find(l => l.LayerId == parts[1]);
+			if (lane == null) return;
+			lane.Description = string.IsNullOrEmpty(parts[2]) ? null : parts[2];
 			if (m_Camera.IsReady) UpdateShapesJson();
 		}
 
@@ -612,20 +637,24 @@ namespace Skyplan.Systems {
 			// is exact (not an approximation). Each lane keeps its own LayerId so the client can
 			// render its own independent <path> styled for that layer, not necessarily this shape's.
 			//
-			// Lane 0 is always the shape's own layer at (0,0) - every lane, including this one, is an
-			// independent <path> client-side (not a <use> clone - GameFace leaks stroke-dasharray
-			// between sibling <use> instances of shared geometry, confirmed 2026-09-13, see
-			// dev_doc.md), so there's no special-cased "real" rendering for lane 0 anymore.
+			// Only the EXTRA queued layers get an entry here (laneIndex starts at 1 in
+			// GetParallelLaneOffsets) - the shape's own layer renders normally as a real styled path,
+			// same as any other shape. No self-lane-0 entry anymore: that only existed to work around
+			// <use xlink:href> cloning the shape's own styled path as lane 0's source (GameFace leaked
+			// stroke-dasharray between sibling <use> instances of shared geometry - confirmed
+			// 2026-09-13, see dev_doc.md). Since lanes are independent <path> elements now, not <use>
+			// clones, the shape's own real render no longer competes with anything.
 			if (shape.Type == Tools.path && shape.pts.Count == 2 && shape.ParallelLanes.Count > 0
 					&& m_Camera.WorldToSVG(shape.pts[0], out Vector2 anchorScreen)) {
 				shapeDto.ParallelSpacing = shape.ParallelSpacing;
-				shapeDto.ParallelLanes.Add(new ParallelLaneDto { LayerId = shape.layer?.Id, Dx = 0, Dy = 0 });
-				foreach ((string laneLayerId, Vector3 offset) in shape.GetParallelLaneOffsets()) {
+				foreach ((ParallelLane lane, Vector3 offset) in shape.GetParallelLaneOffsets()) {
 					if (!m_Camera.WorldToSVG(shape.pts[0] + offset, out Vector2 offsetScreen)) continue;
 					shapeDto.ParallelLanes.Add(new ParallelLaneDto {
-						LayerId = laneLayerId,
+						LayerId = lane.LayerId,
 						Dx = offsetScreen.x - anchorScreen.x,
-						Dy = offsetScreen.y - anchorScreen.y
+						Dy = offsetScreen.y - anchorScreen.y,
+						Label = lane.Label,
+						Description = lane.Description,
 					});
 				}
 			}

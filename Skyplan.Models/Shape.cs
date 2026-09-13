@@ -37,5 +37,13 @@ namespace Skyplan.Models{
 		public string LayerId;
 		[JsonProperty("count")]
 		public int Count;
+		// Independent from the parent Shape's own Label/Description - each lane is a visually
+		// distinct line (own layer/style), so it gets its own name/note too, even though it shares
+		// the parent's geometry. Set via setLaneLabel/setLaneNote (DrawingSystem.cs), scoped by
+		// shapeId+layerId, not the shared setShapeLabel/setShapeNote (shapeId only).
+		[JsonProperty("label")]
+		public string? Label;
+		[JsonProperty("description")]
+		public string? Description;
 	}
 }

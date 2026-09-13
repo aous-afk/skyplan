@@ -26,7 +26,9 @@ export const TOOLS = [
 	label: 'Point',
 	icon: faLocationDot,
 	activeStyle: {},
-	allowMultiSelect: true
+	// Revisit later - server-side placement existed briefly (offset extra layers along +X) but
+	// looked wrong visually and was reverted; disabled here until a real design lands.
+	allowMultiSelect: false
   },
 
   { id: 'text',
@@ -59,8 +61,9 @@ export interface ShapeData {
 	label?: string;
 	description?: string;
 	// Lines only - one independent <path> per entry, placed inside that entry's own layer group
-	// (not necessarily this shape's own layer) and translated by dx/dy
-	parallelLanes?: { layerId: string; dx: number; dy: number }[];
+	// (not necessarily this shape's own layer) and translated by dx/dy. label/description are the
+	// lane's own, independent of this shape's own label/description - set via setLaneLabel/setLaneNote.
+	parallelLanes?: { layerId: string; dx: number; dy: number; label?: string; description?: string }[];
 	// World-unit (metre) spacing between adjacent lanes - only meaningful alongside parallelLanes
 	parallelSpacing?: number;
 }

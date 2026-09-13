@@ -8,7 +8,9 @@ namespace Skyplan.Cross {
 		// math, world-space here, in lane order (matching how DrawingSystem flattens
 		// Shape.ParallelLanes: the primary's own extra copies first, then each further queued
 		// layer's lanes). Lines (Tools.path, exactly 2 points) only.
-		public static IEnumerable<(string LayerId, Vector3 Offset)> GetParallelLaneOffsets(this Shape s) {
+		// Yields the full ParallelLane (not just its LayerId) so callers that need per-lane metadata
+		// (Label/Description - see DrawingSystem.CreateDto) don't have to re-look it up by id.
+		public static IEnumerable<(ParallelLane Lane, Vector3 Offset)> GetParallelLaneOffsets(this Shape s) {
 			if (s.Type != Tools.path || s.pts.Count != 2 || s.ParallelLanes.Count == 0) yield break;
 			Vector3 dir = s.pts[1] - s.pts[0];
 			dir.y = 0f;
@@ -17,7 +19,7 @@ namespace Skyplan.Cross {
 			int laneIndex = 1;
 			foreach (ParallelLane lane in s.ParallelLanes) {
 				for (int i = 0; i < lane.Count; i++) {
-					yield return (lane.LayerId, normal * s.ParallelSpacing * laneIndex);
+					yield return (lane, normal * s.ParallelSpacing * laneIndex);
 					laneIndex++;
 				}
 			}

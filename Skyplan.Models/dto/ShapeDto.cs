@@ -41,6 +41,11 @@ namespace Skyplan.Models.dto {
 		public float Dx;
 		[JsonProperty("dy")]
 		public float Dy;
+		// Own name/note, independent of the parent shape's Label/Description - see ParallelLane.
+		[JsonProperty("label")]
+		public string? Label;
+		[JsonProperty("description")]
+		public string? Description;
 	}
 
 	public class ScreenPt {

@@ -118,6 +118,16 @@
   margin-right: 8px;
 }
 
+.shape_row_clone_icon {
+  display: block;
+  width: 8px;
+  height: 8px;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
 .shape_row_name {
   font-size: var(--skyplan-font-size-sm);
   flex: 1;
