@@ -32,11 +32,12 @@ namespace Skyplan.Models{
 		public Bounds Extents;
 	}
 
+	// One entry per lane, in click order - no Count multiplier (removed 2026-09-15, see dev_doc.md:
+	// a {layer,count} queue can't represent Train->Subway->Train's actual click order, only a flat
+	// ordered list can).
 	public class ParallelLane {
 		[JsonProperty("layerId")]
 		public string LayerId;
-		[JsonProperty("count")]
-		public int Count;
 		// Independent from the parent Shape's own Label/Description - each lane is a visually
 		// distinct line (own layer/style), so it gets its own name/note too, even though it shares
 		// the parent's geometry. Set via setLaneLabel/setLaneNote (DrawingSystem.cs), scoped by

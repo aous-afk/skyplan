@@ -18,10 +18,8 @@ namespace Skyplan.Cross {
 			Vector3 normal = new Vector3(-dir.z, 0f, dir.x).normalized;
 			int laneIndex = 1;
 			foreach (ParallelLane lane in s.ParallelLanes) {
-				for (int i = 0; i < lane.Count; i++) {
-					yield return (lane, normal * s.ParallelSpacing * laneIndex);
-					laneIndex++;
-				}
+				yield return (lane, normal * s.ParallelSpacing * laneIndex);
+				laneIndex++;
 			}
 		}
 

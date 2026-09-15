@@ -63,10 +63,11 @@ const Toolbar: React.FC = () => {
 				e.preventDefault();
 				onToolChange(null);
 				// Switching tools invalidates the queued layers (they may not even apply to the new
-				// tool) - fully clear the whole queue, not just decrement one.
-				for (const entry of activeLayers) {
-					for (let i = 0; i < entry.count; i++) onLayerRemove(entry.layer);
-				}
+				// tool) - fully clear the whole queue. One onLayerRemove call per queued entry (not
+				// per unique layer) - each call removes one occurrence, and activeLayers already lists
+				// duplicates explicitly (see SkyplanContext), so this drains it completely regardless
+				// of how many times any one layer was clicked.
+				for (const entry of activeLayers) onLayerRemove(entry);
 				return;
 			}
 			const layerBtn = target.closest('[data-layer-btn]') as HTMLElement | null;
@@ -154,7 +155,7 @@ const Toolbar: React.FC = () => {
 					) : (
 						<div className={styles.layers_grid}>
 							{visibleLayers.map(l => {
-								const count = activeLayers.find(e => e.layer.id === l.id)?.count ?? 0;
+								const count = activeLayers.filter(x => x.id === l.id).length;
 								const active = count > 0;
 								return (
 									<button key={l.id}

@@ -505,18 +505,16 @@ namespace Skyplan.Systems {
 						List<Vector3> sampled = CurveMath.Sample(m_ActiveShape.pts, m_ActiveShape.handles);
 						int laneIndex = 1;
 						foreach (ParallelLane lane in m_QueuedParallelLanes) {
-							for (int i = 0; i < lane.Count; i++) {
-								Shape extraCurve = new() {
-									id = $"s{m_NextId++}",
-									Type = Tools.curve,
-									layer = new LayerDefDto { Id = lane.LayerId },
-									pts = CurveMath.OffsetPolyline(sampled, DefaultParallelSpacing * laneIndex),
-								};
-								extraCurve.CalcBounds();
-								m_Shapes.Add(extraCurve);
-								PushUndo(new Op { type = OpType.Draw, shape = extraCurve });
-								laneIndex++;
-							}
+							Shape extraCurve = new() {
+								id = $"s{m_NextId++}",
+								Type = Tools.curve,
+								layer = new LayerDefDto { Id = lane.LayerId },
+								pts = CurveMath.OffsetPolyline(sampled, DefaultParallelSpacing * laneIndex),
+							};
+							extraCurve.CalcBounds();
+							m_Shapes.Add(extraCurve);
+							PushUndo(new Op { type = OpType.Draw, shape = extraCurve });
+							laneIndex++;
 						}
 					}
 					if (m_Camera.IsReady) {
@@ -702,17 +700,15 @@ namespace Skyplan.Systems {
 				List<Vector3> sampled = CurveMath.Sample(shape.pts, shape.handles);
 				int laneIndex = 1;
 				foreach (ParallelLane lane in shape.ParallelLanes) {
-					for (int i = 0; i < lane.Count; i++) {
-						List<Vector3> offsetPts = CurveMath.OffsetPolyline(sampled, DefaultParallelSpacing * laneIndex);
-						PreviewCurveLaneDto laneDto = new() { LayerId = lane.LayerId };
-						bool ok = true;
-						foreach (Vector3 p in offsetPts) {
-							if (!m_Camera.WorldToSVG(p, out Vector2 sp)) { ok = false; break; }
-							laneDto.Pts.Add(new ScreenPt { x = sp.x, y = sp.y });
-						}
-						if (ok) shapeDto.PreviewCurveLanes.Add(laneDto);
-						laneIndex++;
+					List<Vector3> offsetPts = CurveMath.OffsetPolyline(sampled, DefaultParallelSpacing * laneIndex);
+					PreviewCurveLaneDto laneDto = new() { LayerId = lane.LayerId };
+					bool ok = true;
+					foreach (Vector3 p in offsetPts) {
+						if (!m_Camera.WorldToSVG(p, out Vector2 sp)) { ok = false; break; }
+						laneDto.Pts.Add(new ScreenPt { x = sp.x, y = sp.y });
 					}
+					if (ok) shapeDto.PreviewCurveLanes.Add(laneDto);
+					laneIndex++;
 				}
 			}
 			return shapeDto;

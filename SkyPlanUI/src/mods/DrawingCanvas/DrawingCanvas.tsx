@@ -168,8 +168,7 @@ const DrawingCanvas: React.FC = () => {
 	// same allowMultiSelect flag Toolbar.tsx uses, not a hardcoded tool id - stays correct as more
 	// tools gain real corridor support.
 	const multiSelectAllowed = TOOLS.find(t => t.id === activeTool)?.allowMultiSelect ?? false;
-	const hasQueuedCorridor = multiSelectAllowed
-		&& activeLayers.reduce((sum, e) => sum + e.count, 0) > 1;
+	const hasQueuedCorridor = multiSelectAllowed && activeLayers.length > 1;
 
 	// cohtml doesn't repaint the region a removed node used to occupy - keep the indicator
 	// circle always mounted and toggle opacity instead of conditionally rendering it.
