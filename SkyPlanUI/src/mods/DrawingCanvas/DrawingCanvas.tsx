@@ -1,7 +1,7 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {trigger} from 'cs2/api';
 import {getModule} from 'cs2/modding';
-import {ToolId, ShapeData, Tag, LayerDef, LayerIcon, LabelStyle} from '../types';
+import {TOOLS, ToolId, ShapeData, Tag, LayerDef, LayerIcon, LabelStyle} from '../types';
 import {buildPath, buildPolygon, buildCurve, centroid} from 'mods/utils/buildSvg';
 import {useSkyplan} from '../SkyplanContext';
 import {useDrawingContext} from 'mods/DrawingContext';
@@ -164,8 +164,11 @@ const DrawingCanvas: React.FC = () => {
 	// server-driven/configurable.
 	const FALLBACK_PARALLEL_SPACING_M = 8;
 	// Same "more than one lane queued" check SkyplanContext's setParallelLayers effect uses - true as
-	// soon as the corridor is queued in the toolbar, before drawing has even started.
-	const hasQueuedCorridor = activeTool === 'path'
+	// soon as the corridor is queued in the toolbar, before drawing has even started. Gated by the
+	// same allowMultiSelect flag Toolbar.tsx uses, not a hardcoded tool id - stays correct as more
+	// tools gain real corridor support.
+	const multiSelectAllowed = TOOLS.find(t => t.id === activeTool)?.allowMultiSelect ?? false;
+	const hasQueuedCorridor = multiSelectAllowed
 		&& activeLayers.reduce((sum, e) => sum + e.count, 0) > 1;
 
 	// cohtml doesn't repaint the region a removed node used to occupy - keep the indicator
@@ -539,6 +542,17 @@ const DrawingCanvas: React.FC = () => {
 					})}
 				</g>
 			))}
+			{preview?.previewCurveLanes?.map((lane, i) => {
+				// Already a dense sampled+offset point list (server-side, same math as the real
+				// commit path) - buildPath (straight segments), not buildCurve, matches the data.
+				const d = buildPath(lane.pts);
+				if (!d) return null;
+				return (
+					<g key={`preview-curve-lane-${i}`} className={`sp-${lane.layerId}`}>
+						<path d={d} />
+					</g>
+				);
+			})}
 			<circle
 				cx={shownIndicator.x} cy={shownIndicator.y}
 				r={shownIndicator.kind === 'vertex' ? 6 : 5}

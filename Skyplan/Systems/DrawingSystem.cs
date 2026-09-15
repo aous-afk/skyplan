@@ -359,7 +359,14 @@ namespace Skyplan.Systems {
 				// state gets a plain rubber-band toward the cursor; pending-anchor state gets the
 				// real bend toward the cursor (the control is already locked).
 				List<Vector3> previewPts = new(_points) { world };
-				Shape temp = new() { id = "__preview__", Type = Tools.curve, layer = m_ActiveShape.layer, pts = previewPts, handles = new List<Vector3>(_handles) };
+				Shape temp = new() {
+					id = "__preview__", Type = Tools.curve, layer = m_ActiveShape.layer,
+					pts = previewPts, handles = new List<Vector3>(_handles),
+					// Mirrors the queued parallel lanes onto the preview, same as the line case in
+					// UpdatePreviewJson - shows the full corridor before the curve is even committed.
+					ParallelLanes = [.. m_QueuedParallelLanes],
+					ParallelSpacing = DefaultParallelSpacing,
+				};
 				m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
 				return;
 			}
@@ -484,6 +491,34 @@ namespace Skyplan.Systems {
 					m_ActiveShape.CalcBounds();
 					m_Shapes.Add(m_ActiveShape);
 					PushUndo(new Op { type = OpType.Draw, shape = m_ActiveShape });
+					// Curves can't use the line corridor's cheap dx/dy-offset lanes - a single rigid
+					// translate is only exact for a straight line, not a bend (see CurveMath.
+					// OffsetPolyline). Each extra queued layer instead becomes its own real, ordinary
+					// Tools.curve Shape: sample this curve into a dense polyline, offset every sampled
+					// point along its own local normal, store the result as pts with empty handles (the
+					// curve renderer already falls back to straight segments with no matching handle,
+					// so a dense all-straight polyline renders correctly with zero new rendering code).
+					// No ParallelLanes/ParallelSpacing needed on these - they're ordinary independent
+					// shapes, not lightweight render hints, so hover/erase/export/import/Shape Manager
+					// grouping all already just work.
+					if (m_QueuedParallelLanes.Count > 0) {
+						List<Vector3> sampled = CurveMath.Sample(m_ActiveShape.pts, m_ActiveShape.handles);
+						int laneIndex = 1;
+						foreach (ParallelLane lane in m_QueuedParallelLanes) {
+							for (int i = 0; i < lane.Count; i++) {
+								Shape extraCurve = new() {
+									id = $"s{m_NextId++}",
+									Type = Tools.curve,
+									layer = new LayerDefDto { Id = lane.LayerId },
+									pts = CurveMath.OffsetPolyline(sampled, DefaultParallelSpacing * laneIndex),
+								};
+								extraCurve.CalcBounds();
+								m_Shapes.Add(extraCurve);
+								PushUndo(new Op { type = OpType.Draw, shape = extraCurve });
+								laneIndex++;
+							}
+						}
+					}
 					if (m_Camera.IsReady) {
 						UpdateShapesJson();
 					}
@@ -656,6 +691,28 @@ namespace Skyplan.Systems {
 						Label = lane.Label,
 						Description = lane.Description,
 					});
+				}
+			}
+			// Curve mid-draw preview only (the temp "__preview__" shape - see HandleDrawMove; real
+			// committed curve lanes are ordinary Shapes and never carry ParallelLanes at all). Unlike
+			// a line, a single dx/dy delta can't represent a curve's offset - each lane needs its own
+			// full sampled+offset polyline, same math as the real commit path (CurveMath.Sample +
+			// OffsetPolyline), just also reprojected to screen space here for display.
+			if (shape.Type == Tools.curve && shape.ParallelLanes.Count > 0) {
+				List<Vector3> sampled = CurveMath.Sample(shape.pts, shape.handles);
+				int laneIndex = 1;
+				foreach (ParallelLane lane in shape.ParallelLanes) {
+					for (int i = 0; i < lane.Count; i++) {
+						List<Vector3> offsetPts = CurveMath.OffsetPolyline(sampled, DefaultParallelSpacing * laneIndex);
+						PreviewCurveLaneDto laneDto = new() { LayerId = lane.LayerId };
+						bool ok = true;
+						foreach (Vector3 p in offsetPts) {
+							if (!m_Camera.WorldToSVG(p, out Vector2 sp)) { ok = false; break; }
+							laneDto.Pts.Add(new ScreenPt { x = sp.x, y = sp.y });
+						}
+						if (ok) shapeDto.PreviewCurveLanes.Add(laneDto);
+						laneIndex++;
+					}
 				}
 			}
 			return shapeDto;

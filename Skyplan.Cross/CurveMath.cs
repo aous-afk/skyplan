@@ -48,5 +48,27 @@ namespace Skyplan.Cross {
 			}
 			return result;
 		}
+
+		/// <summary>
+		/// Offsets an already-sampled polyline by a constant distance, perpendicular to the curve's
+		/// own local direction at each point (central difference of its neighbors, forward/backward
+		/// difference at the two endpoints) - not a single rigid translate. A uniform translate is
+		/// only exact for a straight line; a curve's true parallel offset varies direction point by
+		/// point along the bend, so each sampled point needs its own normal. XZ-plane only (same
+		/// convention as the straight-line perpendicular offset in ShapeExtensions.GetParallelLaneOffsets),
+		/// height carried over from the source point unchanged.
+		/// </summary>
+		public static List<Vector3> OffsetPolyline(IReadOnlyList<Vector3> sampled, float distance) {
+			List<Vector3> result = new(sampled.Count);
+			for (int i = 0; i < sampled.Count; i++) {
+				Vector3 prev = sampled[i > 0 ? i - 1 : i];
+				Vector3 next = sampled[i < sampled.Count - 1 ? i + 1 : i];
+				Vector3 dir = next - prev;
+				dir.y = 0f;
+				Vector3 normal = dir.sqrMagnitude < 1e-8f ? Vector3.zero : new Vector3(-dir.z, 0f, dir.x).normalized;
+				result.Add(sampled[i] + (normal * distance));
+			}
+			return result;
+		}
 	}
 }

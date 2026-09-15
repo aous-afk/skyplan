@@ -66,6 +66,10 @@ export interface ShapeData {
 	parallelLanes?: { layerId: string; dx: number; dy: number; label?: string; description?: string }[];
 	// World-unit (metre) spacing between adjacent lanes - only meaningful alongside parallelLanes
 	parallelSpacing?: number;
+	// Curve mid-draw preview only - real committed curve lanes are ordinary independent shapes in
+	// the main `shapes` list, not entries here. A curve lane can't use a single dx/dy delta like a
+	// line lane, so each carries its own already-offset/projected point list.
+	previewCurveLanes?: { layerId: string; pts: { x: number; y: number }[] }[];
 }
 
 export interface LabelStyle {
