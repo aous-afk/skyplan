@@ -5,13 +5,14 @@ import {TOOLS, ToolId, ShapeData, Tag, LayerDef, LayerIcon, LabelStyle} from '..
 import {buildPath, buildPolygon, buildCurve, centroid} from 'mods/utils/buildSvg';
 import {useSkyplan} from '../SkyplanContext';
 import {useDrawingContext} from 'mods/DrawingContext';
+import styles from './DrawingCanvas.module.scss';
 
 const FloatingMouseTooltip = getModule(
 	'game-ui/common/tooltip/floating-mouse-tooltip/floating-mouse-tooltip.tsx',
 	'FloatingMouseTooltip'
 ) as any;
 
-function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null, layerDefsMap: Record<string, LayerDef>): string {
+function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null, layerDefsMap: Record<string, LayerDef>, extraLayerIds: string[] = []): string {
 	const seen = new Set<string>();
 	const rules: string[] = [];
 	const ensure = (layerId: string) => {
@@ -21,6 +22,11 @@ function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null, layerDefs
 		seen.add(layerId);
 		const decls = Object.entries(style).map(([k, v]) => `${k}:${v}`).join(';');
 		rules.push(`.sp-${layerId}{${decls}}`);
+		// Separate from .sp-{layerId} above (which is fill:none for line layers - correct for the
+		// actual line/curve geometry, wrong for a translucent indicator circle) - same swatch color
+		// used as both fill and stroke instead, for the cursor-position preview circles below.
+		const swatch = (style.stroke ?? style.fill) as string | undefined;
+		if (swatch) rules.push(`.sp-cursor-${layerId}{fill:${swatch};fill-opacity:0.25;stroke:${swatch};stroke-width:1.5}`);
 	};
 	const all = preview ? [...shapes, preview] : shapes;
 	for (const s of all) {
@@ -30,6 +36,9 @@ function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null, layerDefs
 		// styled at all.
 		s.parallelLanes?.forEach(lane => ensure(lane.layerId));
 	}
+	// Queued-but-not-yet-drawn layers (the pre-click cursor circles) aren't referenced by any shape
+	// or preview yet, so they'd otherwise get no .sp-cursor-{layerId} rule at all.
+	extraLayerIds.forEach(ensure);
 	return rules.join('');
 }
 
@@ -149,7 +158,7 @@ function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string
 }
 
 const DrawingCanvas: React.FC = () => {
-	const { activeTool, activeLayers, viewMode, globalLabelStyle, allLayers, showWhatsNew } = useSkyplan();
+	const { activeTool, activeLayers, primaryLayer, viewMode, globalLabelStyle, allLayers, showWhatsNew } = useSkyplan();
 	const layerDefsMap = useMemo(() =>
 		Object.fromEntries(allLayers.map(l => [l.id, l])),
 		[allLayers]
@@ -434,10 +443,50 @@ const DrawingCanvas: React.FC = () => {
 	);
 
 	const hasHighlight = highlightId !== null;
-	const layerCSS = buildLayerCSS(shapes, preview, layerDefsMap);
+	const layerCSS = buildLayerCSS(shapes, preview, layerDefsMap, activeLayers.map(l => l.id));
 
 	const showCursor = !!cursorPos && !viewMode;
 	if (shapes.length === 0 && !preview && !showCursor && !indicator) return null;
+
+	// Screen-pixel stagger for the pre-click case only - there's no real line/curve direction yet
+	// (needs two points), so there's no true perpendicular offset to compute; not meter-accurate,
+	// just a visual size reference. Reuses the actual spacing setting (not a disconnected magic
+	// number) so this stays in sync once spacing becomes user-configurable.
+	const CURSOR_CIRCLE_STAGGER_PX = preview?.parallelSpacing ?? FALLBACK_PARALLEL_SPACING_M;
+
+	// One unified list instead of a solo cursor circle plus separate per-lane-type maps - the
+	// primary is entry 0, every queued lane (line or curve) is another entry. Each carries a layerId,
+	// not a baked color, so rendering can go through a <g className="sp-cursor-{layerId}"> wrapper
+	// (see below) instead of inline style.
+	const previewCircles = (() => {
+		if (!showCursor || !cursorPos) return [];
+		if (preview?.parallelLanes?.length) {
+			return [
+				{ x: cursorPos.x, y: cursorPos.y, layerId: preview.layerId },
+				...preview.parallelLanes.map(lane => ({
+					x: cursorPos.x + lane.dx, y: cursorPos.y + lane.dy, layerId: lane.layerId,
+				})),
+			];
+		}
+		if (preview?.previewCurveLanes?.length) {
+			return [
+				{ x: cursorPos.x, y: cursorPos.y, layerId: preview.layerId },
+				...preview.previewCurveLanes.flatMap(lane => {
+					const tip = lane.pts[lane.pts.length - 1];
+					return tip ? [{ x: tip.x, y: tip.y, layerId: lane.layerId }] : [];
+				}),
+			];
+		}
+		// Not drawing yet - stagger one circle per queued layer along a fixed axis at the cursor
+		// instead of the real offset (not knowable yet). Fans out to the real offsets above the
+		// moment drawing actually starts.
+		if (hasQueuedCorridor) {
+			return activeLayers.map((l, i) => ({
+				x: cursorPos.x + i * CURSOR_CIRCLE_STAGGER_PX, y: cursorPos.y, layerId: l.id,
+			}));
+		}
+		return primaryLayer ? [{ x: cursorPos.x, y: cursorPos.y, layerId: primaryLayer.id }] : [];
+	})();
 
 	return (
 		<>
@@ -449,6 +498,7 @@ const DrawingCanvas: React.FC = () => {
 		>
 			<defs>
 				<style>{layerCSS}</style>
+				<circle id="cursor-circle-template" cx="0" cy="0" r="5" />
 			</defs>
 
 
@@ -561,20 +611,35 @@ const DrawingCanvas: React.FC = () => {
 				opacity={indicator ? 1 : 0}
 				style={{ pointerEvents: 'none' }}
 			/>
-			{showCursor && (
-				<circle
-					cx={cursorPos.x} cy={cursorPos.y} r={5}
-					fill="rgba(250,204,21,0.25)" stroke="#facc15" strokeWidth={1.5}
-					style={{ pointerEvents: 'none' }}
-				/>
-			)}
+			{previewCircles.map((c, i) => (
+				// <use> cloning one shared template circle, styled via a matched CSS class
+				// (sp-cursor-{layerId}, see buildLayerCSS) on the wrapping <g> - not inline `style` on
+				// the <use> itself, which didn't propagate into shadow content (confirmed 2026-09-15).
+				// Class-driven styling is the one <use> mechanism actually proven to work in this
+				// engine (same as the old line-clone approach, before that hit the separate
+				// stroke-dasharray leak - a different property than what's used here).
+				<g key={`cursor-circle-${i}`} className={`sp-cursor-${c.layerId}`}>
+					<use xlinkHref="#cursor-circle-template" transform={`translate(${c.x},${c.y})`} style={{ pointerEvents: 'none' }} />
+				</g>
+			))}
 		</svg>
 		{hasQueuedCorridor && cursorPos && !viewMode && (
 			<FloatingMouseTooltip
 				position={cursorPos}
 				screenSpacePosition
 				forceVisible
-				tooltip={<span>{preview?.parallelSpacing ?? FALLBACK_PARALLEL_SPACING_M}m spacing</span>}
+				tooltip={
+					<span className={styles.spacing_hint}>
+						<span>{preview?.parallelSpacing ?? FALLBACK_PARALLEL_SPACING_M}m spacing</span>
+						<span className={styles.key_cap}>Shift</span>
+						{/* Base game's own scroll-wheel icon, referenced by its asset path directly -
+						    same "Media/..." path scheme game-ui/.../control-icons.tsx uses for mouse
+						    icons (Media/Mouse/Scrollwheel.svg). No keyboard equivalent exists for
+						    Shift in the game's own asset set (see dev_doc.md) - it renders that as a
+						    plain text key-cap too, same as the span above. */}
+						<img src="Media/Mouse/Scrollwheel.svg" className={styles.wheel_icon} />
+					</span>
+				}
 			/>
 		)}
 		</>

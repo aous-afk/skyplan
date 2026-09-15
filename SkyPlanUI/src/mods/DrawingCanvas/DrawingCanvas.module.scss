@@ -1,0 +1,27 @@
+// Not imported from the base game - GameFace's own input-hint key-cap classes are internal, hashed,
+// unversioned module CSS (game-ui/common/input-events/action-hints/input-hint/input-hint.module.scss),
+// not a stable API a mod can safely reference. This copies the *look* (a small rounded/bordered box
+// around the key name) with our own class instead.
+.key_cap {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: var(--skyplan-font-size-2xs);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+}
+
+.wheel_icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.spacing_hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
