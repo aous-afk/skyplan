@@ -163,15 +163,10 @@ const DrawingCanvas: React.FC = () => {
 		Object.fromEntries(allLayers.map(l => [l.id, l])),
 		[allLayers]
 	);
-	const { shapes, preview, highlightId, indicator, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions } = useDrawingContext();
+	const { shapes, preview, highlightId, indicator, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions, parallelSpacing, onParallelSpacingChange } = useDrawingContext();
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
-	// Mirrors Skyplan/Systems/DrawingSystem.cs's DefaultParallelSpacing - only needed as a hover-time
-	// display fallback before a preview exists (drawing hasn't started, so there's no server-computed
-	// preview.parallelSpacing yet). Update this alongside that constant until spacing becomes
-	// server-driven/configurable.
-	const FALLBACK_PARALLEL_SPACING_M = 8;
 	// Same "more than one lane queued" check SkyplanContext's setParallelLayers effect uses - true as
 	// soon as the corridor is queued in the toolbar, before drawing has even started. Gated by the
 	// same allowMultiSelect flag Toolbar.tsx uses, not a hardcoded tool id - stays correct as more
@@ -196,14 +191,32 @@ const DrawingCanvas: React.FC = () => {
 	// What's New) is open - same semantics as viewModeRef already had, just OR'd with the panel
 	// state so nothing extra needs to change at each of the many gate sites below.
 	const blockInputRef = useRef(true);
+	const parallelSpacingRef = useRef(parallelSpacing);
+	const hasQueuedCorridorRef = useRef(false);
 
 	useEffect(() => { toolRef.current = activeTool; }, [activeTool]);
 	useEffect(() => { viewModeRef.current = viewMode; }, [viewMode]);
 	useEffect(() => { blockInputRef.current = viewMode || showWhatsNew; }, [viewMode, showWhatsNew]);
+	useEffect(() => { parallelSpacingRef.current = parallelSpacing; }, [parallelSpacing]);
+	useEffect(() => { hasQueuedCorridorRef.current = hasQueuedCorridor; }, [hasQueuedCorridor]);
 	useEffect(() => {
 		hasActiveLayerRef.current = activeLayers.length > 0;
 		if (activeLayers.length === 0) trigger('skyplan', 'clearIndicator', '');
 	}, [activeLayers]);
+
+	// Shift+wheel adjusts corridor spacing live - only while a corridor is actually queued, so
+	// ordinary camera zoom (wheel with no Shift, or Shift with nothing queued) is untouched.
+	useEffect(() => {
+		const onWheel = (e: WheelEvent) => {
+			if (!e.shiftKey || viewModeRef.current || !hasQueuedCorridorRef.current) return;
+			e.preventDefault();
+			e.stopPropagation();
+			const step = e.deltaY < 0 ? 1 : -1;
+			onParallelSpacingChange(Math.max(1, parallelSpacingRef.current + step));
+		};
+		document.addEventListener('wheel', onWheel, { capture: true, passive: false });
+		return () => document.removeEventListener('wheel', onWheel, true);
+	}, [onParallelSpacingChange]);
 
 	useEffect(() => {
 		const onMove = (e: MouseEvent) => {
@@ -450,9 +463,10 @@ const DrawingCanvas: React.FC = () => {
 
 	// Screen-pixel stagger for the pre-click case only - there's no real line/curve direction yet
 	// (needs two points), so there's no true perpendicular offset to compute; not meter-accurate,
-	// just a visual size reference. Reuses the actual spacing setting (not a disconnected magic
-	// number) so this stays in sync once spacing becomes user-configurable.
-	const CURSOR_CIRCLE_STAGGER_PX = preview?.parallelSpacing ?? FALLBACK_PARALLEL_SPACING_M;
+	// just a visual size reference. Reads the real persisted setting (DrawingContext's
+	// parallelSpacing$ binding) rather than the transient preview object, so it's correct even before
+	// a preview exists, and stays live once shift+wheel lands.
+	const CURSOR_CIRCLE_STAGGER_PX = parallelSpacing;
 
 	// One unified list instead of a solo cursor circle plus separate per-lane-type maps - the
 	// primary is entry 0, every queued lane (line or curve) is another entry. Each carries a layerId,
@@ -624,21 +638,34 @@ const DrawingCanvas: React.FC = () => {
 			))}
 		</svg>
 		{hasQueuedCorridor && cursorPos && !viewMode && (
+			// One tooltip, stacked rows - matches a real captured game tooltip's shape (group >
+			// row-item, row-item), not separate tooltip components. Confirmed 2026-09-15 from the
+			// game's own DOM (a building info tooltip: name row + LMB "Info Panel" hint row).
 			<FloatingMouseTooltip
 				position={cursorPos}
 				screenSpacePosition
 				forceVisible
 				tooltip={
-					<span className={styles.spacing_hint}>
-						<span>{preview?.parallelSpacing ?? FALLBACK_PARALLEL_SPACING_M}m spacing</span>
-						<span className={styles.key_cap}>Shift</span>
-						{/* Base game's own scroll-wheel icon, referenced by its asset path directly -
-						    same "Media/..." path scheme game-ui/.../control-icons.tsx uses for mouse
-						    icons (Media/Mouse/Scrollwheel.svg). No keyboard equivalent exists for
-						    Shift in the game's own asset set (see dev_doc.md) - it renders that as a
-						    plain text key-cap too, same as the span above. */}
-						<img src="Media/Mouse/Scrollwheel.svg" className={styles.wheel_icon} />
-					</span>
+					<div className={styles.group}>
+						<div className={styles.row_item}>{parallelSpacing}m spacing</div>
+						<div className={styles.row_item}>
+							<span className={styles.hint}>
+								<span className={styles.modifier}>
+									<span className={styles.key_cap}>Shift</span>
+								</span>
+								<span className={styles.binding}>
+									{/* Base game's own scroll-wheel icon, referenced by its asset path
+									    directly - same "Media/..." path scheme game-ui/.../control-icons.tsx
+									    uses for mouse icons (Media/Mouse/Scrollwheel.svg). No keyboard
+									    equivalent exists for Shift in the game's own asset set (see
+									    dev_doc.md) - it renders that as a plain text key-cap too, same as
+									    the modifier span above. */}
+									<img src="Media/Mouse/Scrollwheel.svg" className={styles.wheel_icon} />
+								</span>
+								<span className={styles.hint_label}>Adjust spacing</span>
+							</span>
+						</div>
+					</div>
 				}
 			/>
 		)}

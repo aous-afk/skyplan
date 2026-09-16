@@ -49,7 +49,12 @@ namespace Skyplan.Systems {
 		internal int m_NextId;
 		private string m_EraseTarget;
 		private List<ParallelLane> m_QueuedParallelLanes = [];
-		private const float DefaultParallelSpacing = 8f;
+		// Persisted setting, not a constant - same pattern as m_ShowDescriptionsBinding/snapEnabled
+		// below (LoadDisplaySettings/SaveSettings, disk-backed), so a future shift+wheel adjustment
+		// persists across sessions and is available client-side even when no draw is in progress
+		// (unlike piggybacking on the transient preview object).
+		private float m_ParallelSpacing;
+		private ValueBinding<float> m_ParallelSpacingBinding;
 
 		private ValueBinding<bool> m_PanelVisibleBinding;
 		private ValueBinding<string> m_ShapesBinding;
@@ -86,6 +91,8 @@ namespace Skyplan.Systems {
 			m_SnapEnabled = LoadDisplaySettings("snapEnabled", true);
 			m_SnapEnabledBinding = new ValueBinding<bool>("skyplan", "snapEnabled", m_SnapEnabled);
 			m_LayerVisibleBinding = new ValueBinding<string>("skyplan", "layerVisible", "{}");
+			m_ParallelSpacing = LoadDisplaySettings("parallelSpacing", 8f);
+			m_ParallelSpacingBinding = new ValueBinding<float>("skyplan", "parallelSpacing", m_ParallelSpacing);
 
 			AddBinding(m_PanelVisibleBinding);
 			AddBinding(m_ShapesBinding);
@@ -96,6 +103,7 @@ namespace Skyplan.Systems {
 			AddBinding(m_IndicatorBinding);
 			AddBinding(m_SnapEnabledBinding);
 			AddBinding(m_LayerVisibleBinding);
+			AddBinding(m_ParallelSpacingBinding);
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setSnapEnabled", val => {
 				m_SnapEnabled = val == "true";
@@ -117,6 +125,16 @@ namespace Skyplan.Systems {
 				bool newValue = val == "true";
 				m_ShowDescriptionsBinding.Update(newValue);
 				SaveSettings("showDescriptions", newValue);
+			}));
+
+			// For the planned shift+wheel adjustment - not wired to any input yet, but the persisted
+			// setting + trigger round-trip is in place so that work only needs to add the client-side
+			// wheel handler.
+			AddBinding(new TriggerBinding<string>("skyplan", "setParallelSpacing", val => {
+				if (!float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out float newValue)) return;
+				m_ParallelSpacing = newValue;
+				m_ParallelSpacingBinding.Update(newValue);
+				SaveSettings("parallelSpacing", newValue);
 			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "drawStart", csv => {
@@ -365,7 +383,7 @@ namespace Skyplan.Systems {
 					// Mirrors the queued parallel lanes onto the preview, same as the line case in
 					// UpdatePreviewJson - shows the full corridor before the curve is even committed.
 					ParallelLanes = [.. m_QueuedParallelLanes],
-					ParallelSpacing = DefaultParallelSpacing,
+					ParallelSpacing = m_ParallelSpacing,
 				};
 				m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
 				return;
@@ -509,7 +527,7 @@ namespace Skyplan.Systems {
 								id = $"s{m_NextId++}",
 								Type = Tools.curve,
 								layer = new LayerDefDto { Id = lane.LayerId },
-								pts = CurveMath.OffsetPolyline(sampled, DefaultParallelSpacing * laneIndex),
+								pts = CurveMath.OffsetPolyline(sampled, m_ParallelSpacing * laneIndex),
 							};
 							extraCurve.CalcBounds();
 							m_Shapes.Add(extraCurve);
@@ -531,7 +549,7 @@ namespace Skyplan.Systems {
 			HandleDrawMove(sx, sy);
 			if (m_ActiveShape.pts.Count >= 2) {
 				m_ActiveShape.ParallelLanes = [.. m_QueuedParallelLanes];
-				m_ActiveShape.ParallelSpacing = DefaultParallelSpacing;
+				m_ActiveShape.ParallelSpacing = m_ParallelSpacing;
 				m_ActiveShape.CalcBounds();
 				m_Shapes.Add(m_ActiveShape);
 				PushUndo(new Op { type = OpType.Draw, shape = m_ActiveShape });
@@ -614,6 +632,18 @@ namespace Skyplan.Systems {
 			foreach (var s in m_Shapes) {
 				float d = Vector2.Distance(ShapeScreenCentroid(s), cursor);
 				if (d < best) { best = d; found = s.id; }
+				// Line-corridor lanes are rendering-only dx/dy hints on this same Shape (not separate
+				// Shapes - see ParallelLaneDto), so hovering a visible clone still needs to resolve
+				// back to s.id here, not a new identity - deleting s already removes every clone with
+				// it, nothing extra to find/delete. GetParallelLaneOffsets already no-ops for
+				// non-line shapes (curve lanes are real independent Shapes, already covered by the
+				// outer loop on their own).
+				foreach ((_, Vector3 offset) in s.GetParallelLaneOffsets()) {
+					Vector3 worldCentroid = ((s.pts[0] + s.pts[1]) / 2f) + offset;
+					if (!m_Camera.WorldToSVG(worldCentroid, out Vector2 screenCentroid)) continue;
+					float cd = Vector2.Distance(screenCentroid, cursor);
+					if (cd < best) { best = cd; found = s.id; }
+				}
 			}
 			string newTarget = (found != null && best <= Threshold) ? found : null;
 			if (newTarget == m_EraseTarget) return;
@@ -700,7 +730,7 @@ namespace Skyplan.Systems {
 				List<Vector3> sampled = CurveMath.Sample(shape.pts, shape.handles);
 				int laneIndex = 1;
 				foreach (ParallelLane lane in shape.ParallelLanes) {
-					List<Vector3> offsetPts = CurveMath.OffsetPolyline(sampled, DefaultParallelSpacing * laneIndex);
+					List<Vector3> offsetPts = CurveMath.OffsetPolyline(sampled, m_ParallelSpacing * laneIndex);
 					PreviewCurveLaneDto laneDto = new() { LayerId = lane.LayerId };
 					bool ok = true;
 					foreach (Vector3 p in offsetPts) {
@@ -777,7 +807,7 @@ namespace Skyplan.Systems {
 				// Mirror the queued parallel lanes onto the preview too, so the rubber-band shows
 				// the full corridor before the line is even committed.
 				ParallelLanes = [.. m_QueuedParallelLanes],
-				ParallelSpacing = DefaultParallelSpacing,
+				ParallelSpacing = m_ParallelSpacing,
 			};
 			m_PreviewBinding.Update(ShapeToJSON(temp) ?? "");
 		}
@@ -795,6 +825,30 @@ namespace Skyplan.Systems {
 		}
 
 		private static void SaveSettings(string key, bool value) {
+			try {
+				string path = Paths.DisplaySettingsPath;
+				Directory.CreateDirectory(Path.GetDirectoryName(path));
+				JObject json = File.Exists(path) ? JObject.Parse(File.ReadAllText(path)) : [];
+				json[key] = value;
+				File.WriteAllText(path, json.ToString(Formatting.Indented));
+			} catch (Exception ex) {
+				Mod.log.Warn($"[Skyplan] Failed to save display settings: {ex.Message}");
+			}
+		}
+
+		private static float LoadDisplaySettings(string key, float defaultValue) {
+			try {
+				string path = Paths.DisplaySettingsPath;
+				if (!File.Exists(path)) return defaultValue;
+				var json = JObject.Parse(File.ReadAllText(path));
+				return json[key]?.Value<float>() ?? defaultValue;
+			} catch (Exception ex) {
+				Mod.log.Warn($"[Skyplan] Failed to load display settings: {ex.Message}");
+				return defaultValue;
+			}
+		}
+
+		private static void SaveSettings(string key, float value) {
 			try {
 				string path = Paths.DisplaySettingsPath;
 				Directory.CreateDirectory(Path.GetDirectoryName(path));

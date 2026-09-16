@@ -20,8 +20,40 @@
   display: block;
 }
 
-.spacing_hint {
+// Matches a real captured game tooltip's shape (a building info tooltip, "High School" + an LMB "Info
+// Panel" hint) - ONE tooltip container, stacked ROWS inside it (group > row-item, row-item), not
+// separate tooltip components. Confirmed 2026-09-15 from the game's own DOM.
+// Layout only, no background/padding here - FloatingMouseTooltip's own wrapper div already boxes
+// whatever content it's given; adding a second background here just stacks a duplicate box on top.
+.group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.row_item {
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+// Same shape as the base game's own input-hint markup (<span class="hint">
+// <span class="modifier">...</span><span class="binding">...</span><span class="hint-label">...
+// </span></span>) - own classes, not the game's hashed ones (see the note on .key_cap above), same
+// structural pattern.
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.modifier, .binding {
+  display: flex;
+  align-items: center;
+}
+
+.hint_label {
+  font-size: var(--skyplan-font-size-2xs);
+  color: rgba(255, 255, 255, 0.7);
 }
