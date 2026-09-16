@@ -199,8 +199,6 @@ namespace Skyplan.Systems {
 			AddBinding(new TriggerBinding<string>("skyplan", "setShapeLabel", HandleSetShapeLabel));
 			AddBinding(new TriggerBinding<string>("skyplan", "setShapeNote", HandleSetShapeNote));
 			AddBinding(new TriggerBinding<string>("skyplan", "commitText", HandleCommitText));
-			AddBinding(new TriggerBinding<string>("skyplan", "setLaneLabel", HandleSetLaneLabel));
-			AddBinding(new TriggerBinding<string>("skyplan", "setLaneNote", HandleSetLaneNote));
 		}
 
 		protected override void OnUpdate() {
@@ -239,29 +237,6 @@ namespace Skyplan.Systems {
 			Shape shape = m_Shapes.Find(s => s.id == id);
 			if (shape == null) return;
 			shape.Description = string.IsNullOrEmpty(note) ? null : note;
-			if (m_Camera.IsReady) UpdateShapesJson();
-		}
-
-		// shapeId|layerId|value - scoped to one ParallelLane, not the whole shape (setShapeLabel/
-		// setShapeNote above are id|value, shape-scoped). Split(3) so a value containing '|' still
-		// lands whole in the last part, same tolerance the shape-scoped handlers already have.
-		private void HandleSetLaneLabel(string payload) {
-			string[] parts = payload.Split('|', 3);
-			if (parts.Length < 3) return;
-			Shape shape = m_Shapes.Find(s => s.id == parts[0]);
-			ParallelLane lane = shape?.ParallelLanes.Find(l => l.LayerId == parts[1]);
-			if (lane == null) return;
-			lane.Label = string.IsNullOrEmpty(parts[2]) ? null : parts[2];
-			if (m_Camera.IsReady) UpdateShapesJson();
-		}
-
-		private void HandleSetLaneNote(string payload) {
-			string[] parts = payload.Split('|', 3);
-			if (parts.Length < 3) return;
-			Shape shape = m_Shapes.Find(s => s.id == parts[0]);
-			ParallelLane lane = shape?.ParallelLanes.Find(l => l.LayerId == parts[1]);
-			if (lane == null) return;
-			lane.Description = string.IsNullOrEmpty(parts[2]) ? null : parts[2];
 			if (m_Camera.IsReady) UpdateShapesJson();
 		}
 
@@ -548,8 +523,29 @@ namespace Skyplan.Systems {
 
 			HandleDrawMove(sx, sy);
 			if (m_ActiveShape.pts.Count >= 2) {
-				m_ActiveShape.ParallelLanes = [.. m_QueuedParallelLanes];
-				m_ActiveShape.ParallelSpacing = m_ParallelSpacing;
+				// Each extra queued layer becomes its own real, independent Tools.path Shape (not a
+				// shared render hint), so it can be erased/edited independently of the others.
+				if (m_QueuedParallelLanes.Count > 0) {
+					// Temporarily set purely so GetParallelLaneOffsets (perpendicular-normal math,
+					// shared with the preview) can compute the world-space offsets - cleared below.
+					m_ActiveShape.ParallelLanes = [.. m_QueuedParallelLanes];
+					m_ActiveShape.ParallelSpacing = m_ParallelSpacing;
+					foreach ((ParallelLane lane, Vector3 offset) in m_ActiveShape.GetParallelLaneOffsets()) {
+						Shape extraLine = new() {
+							id = $"s{m_NextId++}",
+							Type = Tools.path,
+							layer = new LayerDefDto { Id = lane.LayerId },
+							pts = [m_ActiveShape.pts[0] + offset, m_ActiveShape.pts[1] + offset],
+						};
+						extraLine.CalcBounds();
+						m_Shapes.Add(extraLine);
+						PushUndo(new Op { type = OpType.Draw, shape = extraLine });
+					}
+					// Primary has no lane metadata of its own - it's an ordinary shape, the extras
+					// above are independent Shapes.
+					m_ActiveShape.ParallelLanes = [];
+					m_ActiveShape.ParallelSpacing = 0f;
+				}
 				m_ActiveShape.CalcBounds();
 				m_Shapes.Add(m_ActiveShape);
 				PushUndo(new Op { type = OpType.Draw, shape = m_ActiveShape });
@@ -632,18 +628,6 @@ namespace Skyplan.Systems {
 			foreach (var s in m_Shapes) {
 				float d = Vector2.Distance(ShapeScreenCentroid(s), cursor);
 				if (d < best) { best = d; found = s.id; }
-				// Line-corridor lanes are rendering-only dx/dy hints on this same Shape (not separate
-				// Shapes - see ParallelLaneDto), so hovering a visible clone still needs to resolve
-				// back to s.id here, not a new identity - deleting s already removes every clone with
-				// it, nothing extra to find/delete. GetParallelLaneOffsets already no-ops for
-				// non-line shapes (curve lanes are real independent Shapes, already covered by the
-				// outer loop on their own).
-				foreach ((_, Vector3 offset) in s.GetParallelLaneOffsets()) {
-					Vector3 worldCentroid = ((s.pts[0] + s.pts[1]) / 2f) + offset;
-					if (!m_Camera.WorldToSVG(worldCentroid, out Vector2 screenCentroid)) continue;
-					float cd = Vector2.Distance(screenCentroid, cursor);
-					if (cd < best) { best = cd; found = s.id; }
-				}
 			}
 			string newTarget = (found != null && best <= Threshold) ? found : null;
 			if (newTarget == m_EraseTarget) return;
@@ -693,20 +677,12 @@ namespace Skyplan.Systems {
 				if (!m_Camera.WorldToSVG(h, out Vector2 hp)) return null;
 				shapeDto.Handles.Add(new ScreenPt { x = hp.x, y = hp.y });
 			}
-			// Lines only - curves compute their own offset geometry client-side.
-			// One extra reprojected world point per lane, converted to a
-			// screen-space translate delta relative to the line's own first anchor - a straight
-			// line's perpendicular offset is a uniform vector everywhere along it, so a single delta
-			// is exact (not an approximation). Each lane keeps its own LayerId so the client can
-			// render its own independent <path> styled for that layer, not necessarily this shape's.
-			//
-			// Only the EXTRA queued layers get an entry here (laneIndex starts at 1 in
-			// GetParallelLaneOffsets) - the shape's own layer renders normally as a real styled path,
-			// same as any other shape. No self-lane-0 entry anymore: that only existed to work around
-			// <use xlink:href> cloning the shape's own styled path as lane 0's source (GameFace leaked
-			// stroke-dasharray between sibling <use> instances of shared geometry - confirmed
-			// 2026-09-13, see dev_doc.md). Since lanes are independent <path> elements now, not <use>
-			// clones, the shape's own real render no longer competes with anything.
+			// Mid-draw preview only (the temp "__preview__" shape - see HandleDrawMove/HandleDrawEnd;
+			// real committed line shapes never carry ParallelLanes, each lane is baked into its own
+			// independent Shape at commit time, same as curves). One extra reprojected world point per
+			// lane, converted to a screen-space translate delta relative to the line's own first anchor
+			// - a straight line's perpendicular offset is a uniform vector everywhere along it, so a
+			// single delta is exact for this live rubber-band preview.
 			if (shape.Type == Tools.path && shape.pts.Count == 2 && shape.ParallelLanes.Count > 0
 					&& m_Camera.WorldToSVG(shape.pts[0], out Vector2 anchorScreen)) {
 				shapeDto.ParallelSpacing = shape.ParallelSpacing;
@@ -716,8 +692,6 @@ namespace Skyplan.Systems {
 						LayerId = lane.LayerId,
 						Dx = offsetScreen.x - anchorScreen.x,
 						Dy = offsetScreen.y - anchorScreen.y,
-						Label = lane.Label,
-						Description = lane.Description,
 					});
 				}
 			}

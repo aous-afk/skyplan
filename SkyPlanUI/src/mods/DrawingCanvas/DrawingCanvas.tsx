@@ -103,9 +103,6 @@ function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string
 
 	switch (s.tag) {
 		case Tag.path: {
-			// Renders normally even with parallelLanes - those are only the EXTRA queued layers now
-			// (see parallelClonesByLayer in DrawingCanvas), rendered as their own independent <path>s
-			// alongside this one, not instead of it.
 			const d = buildPath(s.pts);
 			if (!d) return null;
 			return <path key={s.id} id={s.id} className={cn} d={d} style={style} />;
@@ -423,37 +420,7 @@ const DrawingCanvas: React.FC = () => {
 
 	}, [shapes]);
 
-	// Parallel-lane clones, keyed by the TARGET layer they're styled as (not the source shape's own
-	// layer) - a lane targeting a layer with zero real shapes drawn still needs its own group below,
-	// so the render loop iterates the union of both maps' keys, not just this one's.
-	//
-	// Independent real <path> per lane, not a shared <use xlink:href> - confirmed 2026-09-13 that
-	// GameFace leaks stroke-dasharray between sibling <use> instances of the same referenced
-	// geometry regardless of which element in the ancestor chain carries the class (tried: class on
-	// the <use> itself, on a <g> wrapping just that <use>, on the shared per-layer <g>, in every
-	// combination - dasharray from whichever lane paints first always won). Looks like a paint-state
-	// caching bug in the rasterizer keyed off the shared geometry, upstream of CSS resolution
-	// entirely - no class placement can fix it. A plain independent <path> has no shared source to
-	// leak from, at the cost of recomputing the same `d` string per lane instead of cloning it once.
-	const parallelClonesByLayer = useMemo(() => {
-		const map = new Map<string, { shapeId: string; d: string; dx: number; dy: number; labelPos: { x: number; y: number } | null; label?: string; description?: string }[]>();
-		for (const s of shapes) {
-			if (!s.parallelLanes || s.parallelLanes.length === 0) continue;
-			const d = buildPath(s.pts);
-			if (!d) continue;
-			const labelPos = labelPosition(s);
-			for (const lane of s.parallelLanes) {
-				if (!map.has(lane.layerId)) map.set(lane.layerId, []);
-				map.get(lane.layerId)!.push({ shapeId: s.id, d, dx: lane.dx, dy: lane.dy, labelPos, label: lane.label, description: lane.description });
-			}
-		}
-		return map;
-	}, [shapes]);
-
-	const allGroupLayerIds = useMemo(
-		() => Array.from(new Set([...shapesByLayer.keys(), ...parallelClonesByLayer.keys()])),
-		[shapesByLayer, parallelClonesByLayer]
-	);
+	const allGroupLayerIds = useMemo(() => Array.from(shapesByLayer.keys()), [shapesByLayer]);
 
 	const hasHighlight = highlightId !== null;
 	const layerCSS = buildLayerCSS(shapes, preview, layerDefsMap, activeLayers.map(l => l.id));
@@ -523,14 +490,6 @@ const DrawingCanvas: React.FC = () => {
 					<g key={layerId} className={`sp-${layerId}`} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
 						{layerShapes.map(s => renderShape(s, layerDefsMap[layerId]?.icon, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
 
-						{/* class comes from the wrapping <g> above, not restated per-path */}
-						{parallelClonesByLayer.get(layerId)?.map((clone, i) => (
-							<path key={`${clone.shapeId}-lane-${i}`} d={clone.d}
-								transform={`translate(${clone.dx},${clone.dy})`}
-								style={hasHighlight ? { opacity: clone.shapeId === highlightId ? '1' : '0.3' } : undefined}
-							/>
-						))}
-
 						{layerLabels[layerId] && layerShapes.map(s => {
 							if (s.tag === Tag.text) return null;
 							if (!s.label) return null;
@@ -549,40 +508,8 @@ const DrawingCanvas: React.FC = () => {
 							);
 						})}
 
-						{layerLabels[layerId] && parallelClonesByLayer.get(layerId)?.map((clone, i) => {
-							if (!clone.label || !clone.labelPos) return null;
-							return (
-								<text key={`lbl-${clone.shapeId}-lane-${i}`}
-									x={clone.labelPos.x + clone.dx} y={clone.labelPos.y + clone.dy}
-									textAnchor="middle" dominantBaseline="middle"
-									fontSize={ls.fontSize} fill={ls.color}
-									fontWeight={ls.fontWeight} opacity={ls.opacity}
-									style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 3 }}
-								>
-									{clone.label}
-								</text>
-							);
-						})}
-
 						{showDescriptions
 							&& layerShapes.map(s => renderText(s, ls))}
-
-						{showDescriptions && parallelClonesByLayer.get(layerId)?.map((clone, i) => {
-							if (!clone.description || !clone.labelPos) return null;
-							const descFontSize = Math.max(8, ls.fontSize ?? 10 - 2);
-							const descOpacity = ls.opacity ?? 1 * 0.7;
-							return (
-								<text key={`desc-${clone.shapeId}-lane-${i}`}
-									x={clone.labelPos.x + clone.dx} y={clone.labelPos.y + clone.dy + 16}
-									textAnchor="middle" dominantBaseline="middle"
-									fontSize={descFontSize} fill={ls.color}
-									opacity={descOpacity}
-									style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
-								>
-									{clone.description}
-								</text>
-							);
-						})}
 					</g>
 				);
 			})}
@@ -627,11 +554,9 @@ const DrawingCanvas: React.FC = () => {
 			/>
 			{previewCircles.map((c, i) => (
 				// <use> cloning one shared template circle, styled via a matched CSS class
-				// (sp-cursor-{layerId}, see buildLayerCSS) on the wrapping <g> - not inline `style` on
-				// the <use> itself, which didn't propagate into shadow content (confirmed 2026-09-15).
-				// Class-driven styling is the one <use> mechanism actually proven to work in this
-				// engine (same as the old line-clone approach, before that hit the separate
-				// stroke-dasharray leak - a different property than what's used here).
+				// (sp-cursor-{layerId}, see buildLayerCSS) on the wrapping <g> - GameFace doesn't
+				// propagate a `style` set directly on <use> into its shadow content, only a matched
+				// CSS class reaches it.
 				<g key={`cursor-circle-${i}`} className={`sp-cursor-${c.layerId}`}>
 					<use xlinkHref="#cursor-circle-template" transform={`translate(${c.x},${c.y})`} style={{ pointerEvents: 'none' }} />
 				</g>

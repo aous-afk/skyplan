@@ -60,15 +60,13 @@ export interface ShapeData {
 	inFrame: boolean;
 	label?: string;
 	description?: string;
-	// Lines only - one independent <path> per entry, placed inside that entry's own layer group
-	// (not necessarily this shape's own layer) and translated by dx/dy. label/description are the
-	// lane's own, independent of this shape's own label/description - set via setLaneLabel/setLaneNote.
-	parallelLanes?: { layerId: string; dx: number; dy: number; label?: string; description?: string }[];
+	// Mid-draw preview only, lines - appears on the transient preview shape while dragging. One
+	// independent <path> per entry, placed inside that entry's own layer group, translated by dx/dy.
+	parallelLanes?: { layerId: string; dx: number; dy: number }[];
 	// World-unit (metre) spacing between adjacent lanes - only meaningful alongside parallelLanes
 	parallelSpacing?: number;
-	// Curve mid-draw preview only - real committed curve lanes are ordinary independent shapes in
-	// the main `shapes` list, not entries here. A curve lane can't use a single dx/dy delta like a
-	// line lane, so each carries its own already-offset/projected point list.
+	// Curve mid-draw preview only. A curve lane can't use a single dx/dy delta like a line lane, so
+	// each carries its own already-offset/projected point list.
 	previewCurveLanes?: { layerId: string; pts: { x: number; y: number }[] }[];
 }
 
