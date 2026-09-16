@@ -25,6 +25,20 @@ namespace Skyplan.Models{
 		public string? Description;
 		[JsonProperty("planId")]
 		public int PlanId;
+		[JsonProperty("parallelLanes")]
+		public List<ParallelLane> ParallelLanes = [];
+		[JsonProperty("parallelSpacing")]
+		public float ParallelSpacing;
 		public Bounds Extents;
+	}
+
+	// One entry per lane, in click order - a flat list (not grouped by layer with a count) so
+	// repeated layers, e.g. Train, Subway, Train, preserve their actual click order. Only ever
+	// populated transiently (the queue itself, and the preview shape while dragging) - a committed
+	// Shape's own ParallelLanes is always empty, since each lane bakes into its own independent
+	// Shape at draw-commit time instead (see DrawingSystem.HandleDrawEnd).
+	public class ParallelLane {
+		[JsonProperty("layerId")]
+		public string LayerId;
 	}
 }

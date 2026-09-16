@@ -6,7 +6,11 @@ import {ToolId, LayerDef, LabelStyle} from './types';
 interface SkyplanCtx {
 	visible: boolean;
 	activeTool: ToolId | null;
-	activeLayer: LayerDef | null;
+	// Flat, ordered, duplicates allowed - literally the click sequence (Train, Subway, Train stays
+	// three entries in that order), not grouped-by-layer-with-a-count. A {layer,count} shape can't
+	// represent interleaved repeats of the same layer; only the raw sequence can. See dev_doc.md.
+	activeLayers: LayerDef[];
+	primaryLayer: LayerDef | null;
 	visibleLayers: LayerDef[];
 	allLayers: LayerDef[];
 	globalLabelStyle: LabelStyle;
@@ -16,7 +20,9 @@ interface SkyplanCtx {
 	onOpenWhatsNew: () => void;
 	onCloseWhatsNew: () => void;
 	onToolChange: (t: ToolId | null) => void;
-	onLayerChange: (l: LayerDef | null) => void;
+	onLayerAdd: (l: LayerDef) => void;
+	onLayerRemove: (l: LayerDef) => void;
+	onLayerSelect: (l: LayerDef) => void;
 	onUndo: () => void;
 	onRedo: () => void;
 	onClear: () => void;
@@ -43,9 +49,11 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	}, [layersConfigJson]);
 
 	const [activeTool, setActiveTool] = useState<ToolId | null>('path');
-	const [activeLayer, setActiveLayer] = useState<LayerDef | null>(null);
+	const [activeLayers, setActiveLayers] = useState<LayerDef[]>([]);
 	const [viewMode, setViewMode] = useState(false);
 	const [showWhatsNew, setShowWhatsNew] = useState(false);
+
+	const primaryLayer = activeLayers[0] ?? null;
 
 	const visibleLayers = activeTool ? layerConfig.layers.filter(l => l.allowedTools.includes(activeTool)) : [];
 
@@ -55,43 +63,64 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		const justOpened = visible && !prevVisibleRef.current;
 		prevVisibleRef.current = visible;
 		if (justOpened) {
-			setActiveLayer(null);
+			setActiveLayers([]);
 			return;
 		}
 		if (!visible || !activeTool) return;
 		const visibleForTool = layerConfig.layers.filter(l => l.allowedTools.includes(activeTool));
-		if (visibleForTool.length > 0 && !visibleForTool.find(l => l.id === activeLayer?.id))
-			setActiveLayer(visibleForTool[0]);
+		if (visibleForTool.length > 0 && !visibleForTool.find(l => l.id === primaryLayer?.id))
+			setActiveLayers([visibleForTool[0]]);
 	}, [activeTool, layerConfig, visible]);
 
 	useEffect(() => {
-		if (!visible || !activeLayer) return;
+		if (!visible || !primaryLayer) return;
 		const dto = {
-			...activeLayer,
-			style: Object.fromEntries(Object.entries(activeLayer.style).map(([k, v]) => [k, String(v)])),
+			...primaryLayer,
+			style: Object.fromEntries(Object.entries(primaryLayer.style).map(([k, v]) => [k, String(v)])),
 		};
 		trigger('skyplan', 'setLayer', JSON.stringify(dto));
-	}, [visible, activeLayer]);
+	}, [visible, primaryLayer]);
+
+	// Everything beyond the one real shape that'll actually get drawn: the primary (first queued)
+	// entry's own lane IS the real shape, so only the tail is "extra" - sent in the same order it was
+	// queued, so C# (and everything downstream) sees the actual click sequence, not a per-layer tally.
+	useEffect(() => {
+		if (!visible) return;
+		const extraLanes = activeLayers.slice(1).map(l => ({ layerId: l.id }));
+		trigger('skyplan', 'setParallelLayers', JSON.stringify(extraLanes));
+	}, [visible, activeLayers]);
 
 	const onToolChange = useCallback((t: ToolId | null) => {
 		setActiveTool(t);
 		if (t) trigger('skyplan', 'setTool', t);
 	}, []);
 
-	const onLayerChange = useCallback((l: LayerDef | null) => {
-		setActiveLayer(l);
-		if (!l) return;
-		const dto = {
-			...l,
-			style: Object.fromEntries(Object.entries(l.style).map(([k, v]) => [k, String(v)])),
-		};
-		trigger('skyplan', 'setLayer', JSON.stringify(dto));
+	// Always appends - clicking the same layer twice queues it twice, in order, rather than merging
+	// into one entry with a count (see activeLayers' own comment above for why that distinction matters).
+	const onLayerAdd = useCallback((l: LayerDef) => {
+		setActiveLayers(prev => [...prev, l]);
+	}, []);
+
+	// For tools without allowMultiSelect (see types.ts's TOOLS) - clicking a layer replaces the whole
+	// queue with just this one, single-select-style, instead of adding/incrementing.
+	const onLayerSelect = useCallback((l: LayerDef) => {
+		setActiveLayers([l]);
+	}, []);
+
+	// Removes the LAST occurrence of this layer id - undoes the most recent click of that specific
+	// layer, not an arbitrary one, matching onLayerAdd always appending at the end.
+	const onLayerRemove = useCallback((l: LayerDef) => {
+		setActiveLayers(prev => {
+			const idx = prev.map(x => x.id).lastIndexOf(l.id);
+			if (idx === -1) return prev;
+			return [...prev.slice(0, idx), ...prev.slice(idx + 1)];
+		});
 	}, []);
 
 	const onClear = useCallback(() => {
-		if (!activeLayer) return;
-		trigger('skyplan', 'clearLayer', activeLayer.id);
-	}, [activeLayer]);
+		if (!primaryLayer) return;
+		trigger('skyplan', 'clearLayer', primaryLayer.id);
+	}, [primaryLayer]);
 
 	const onClearAll = useCallback(() => trigger('skyplan', 'clearAll', ''), []);
 	const onClose = useCallback(() => trigger('skyplan', 'panelClosed', ''), []);
@@ -104,7 +133,8 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const value: SkyplanCtx = {
 		visible,
 		activeTool,
-		activeLayer,
+		activeLayers,
+		primaryLayer,
 		visibleLayers,
 		allLayers: layerConfig.layers,
 		globalLabelStyle: layerConfig.labelStyle ?? {},
@@ -114,7 +144,9 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		onOpenWhatsNew,
 		onCloseWhatsNew,
 		onToolChange,
-		onLayerChange,
+		onLayerAdd,
+		onLayerRemove,
+		onLayerSelect,
 		onUndo,
 		onRedo,
 		onClear,

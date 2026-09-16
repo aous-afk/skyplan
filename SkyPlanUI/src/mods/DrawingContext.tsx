@@ -1,6 +1,6 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {useValue, trigger} from 'cs2/api';
-import {shapes$, preview$, highlight$, showDescriptions$, indicator$, snapEnabled$, layerVisible$} from '../bindings';
+import {shapes$, preview$, highlight$, showDescriptions$, indicator$, snapEnabled$, layerVisible$, parallelSpacing$} from '../bindings';
 import {ShapeData} from './types';
 
 export interface SnapIndicator {
@@ -21,12 +21,14 @@ interface DrawingCtx {
 	layerLabels: Record<string, boolean>;
 	showDescriptions: boolean;
 	snapEnabled: boolean;
+	parallelSpacing: number;
 	onGlobalOpacityChange: (v: number) => void;
 	onLayerOpacityChange: (layerId: string, v: number) => void;
 	onLayerVisibleToggle: (layerId: string) => void;
 	onLayerLabelsToggle: (layerId: string) => void;
 	onShowDescriptionsToggle: () => void;
 	onSnapEnabledToggle: () => void;
+	onParallelSpacingChange: (v: number) => void;
 	onHoverShape: (id: string | null) => void;
 }
 
@@ -46,6 +48,7 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const indicatorRaw = useValue(indicator$);
 	const snapEnabled = useValue(snapEnabled$);
 	const layerVisibleRaw = useValue(layerVisible$);
+	const parallelSpacing = useValue(parallelSpacing$);
 
 	const shapes = useMemo<ShapeData[]>(() => {
 		try { return JSON.parse(shapesJson) ?? []; }
@@ -106,6 +109,11 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		trigger('skyplan', 'setSnapEnabled', (!snapEnabled).toString());
 	}, [snapEnabled]);
 
+	// For the planned shift+wheel adjustment - not wired to any input yet.
+	const onParallelSpacingChange = useCallback((v: number) => {
+		trigger('skyplan', 'setParallelSpacing', v.toString());
+	}, []);
+
 	const onHoverShape = useCallback((id: string | null) => {
 		setHoverShapeId(id);
 	}, []);
@@ -122,12 +130,14 @@ export const DrawingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 		layerLabels,
 		showDescriptions,
 		snapEnabled,
+		parallelSpacing,
 		onGlobalOpacityChange: setGlobalOpacity,
 		onLayerOpacityChange,
 		onLayerVisibleToggle,
 		onLayerLabelsToggle,
 		onShowDescriptionsToggle,
 		onSnapEnabledToggle,
+		onParallelSpacingChange,
 		onHoverShape,
 	};
 

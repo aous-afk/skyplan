@@ -12,3 +12,4 @@ export const catchment$ = bindValue<string>('skyplan', 'catchment', '');
 export const indicator$ = bindValue<string>('skyplan', 'indicator', '');
 export const snapEnabled$ = bindValue<boolean>('skyplan', 'snapEnabled', true);
 export const layerVisible$ = bindValue<string>('skyplan', 'layerVisible', '{}');
+export const parallelSpacing$ = bindValue<number>('skyplan', 'parallelSpacing', 8);

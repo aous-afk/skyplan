@@ -4,33 +4,45 @@ export const TOOLS = [
   { id: 'path',
 	label: 'Line',
 	icon: faRoad,
-	activeStyle: {}
+	activeStyle: {},
+	allowMultiSelect: true
   },
 
   { id: 'polygon',
 	label: 'Polygon',
 	icon: faDrawPolygon,
-	activeStyle: {} },
+	activeStyle: {},
+	allowMultiSelect: false
+  },
 
   { id: 'curve',
 	label: 'Curve',
 	icon: faBezierCurve,
-	activeStyle: {} },
+	activeStyle: {},
+	allowMultiSelect: true
+  },
 
   { id: 'point',
 	label: 'Point',
 	icon: faLocationDot,
-	activeStyle: {} },
+	activeStyle: {},
+	// Revisit later - server-side placement existed briefly (offset extra layers along +X) but
+	// looked wrong visually and was reverted; disabled here until a real design lands.
+	allowMultiSelect: false
+  },
 
   { id: 'text',
 	label: 'Annotate',
 	icon: faFont,
-	activeStyle: {} },
+	activeStyle: {},
+	allowMultiSelect: false
+  },
 
   { id: 'erase',
 	label: 'Erase',
 	icon: faEraser,
-	activeStyle: { background: '#3a1a00', color: '#ffaa55' }
+	activeStyle: { background: '#3a1a00', color: '#ffaa55' },
+	allowMultiSelect: false
   },
 
 ] as const;
@@ -48,6 +60,14 @@ export interface ShapeData {
 	inFrame: boolean;
 	label?: string;
 	description?: string;
+	// Mid-draw preview only, lines - appears on the transient preview shape while dragging. One
+	// independent <path> per entry, placed inside that entry's own layer group, translated by dx/dy.
+	parallelLanes?: { layerId: string; dx: number; dy: number }[];
+	// World-unit (metre) spacing between adjacent lanes - only meaningful alongside parallelLanes
+	parallelSpacing?: number;
+	// Curve mid-draw preview only. A curve lane can't use a single dx/dy delta like a line lane, so
+	// each carries its own already-offset/projected point list.
+	previewCurveLanes?: { layerId: string; pts: { x: number; y: number }[] }[];
 }
 
 export interface LabelStyle {
