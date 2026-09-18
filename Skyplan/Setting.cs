@@ -36,6 +36,9 @@ namespace Skyplan {
 			set { DrawingSystem.instance?.TogglePanel(); }
 		}
 
+		[SettingsUISection(kSection, kPanelGroup)]
+		public bool DisableWorldClicksWhileDrawing { get; set; } = true;
+
 		// GeoJSON export (hidden from UI — CRS fields kept for future use)
 		internal SridOption Srid { get; set; } = SridOption.Epsg4326;
 		internal string OriginX { get; set; } = "0";
@@ -140,6 +143,7 @@ namespace Skyplan {
 			ExportPlanName = "Plan";
 			ExportIteration = "";
 			ImportFileName = "";
+			DisableWorldClicksWhileDrawing = true;
 		}
 	}
 
@@ -164,6 +168,9 @@ namespace Skyplan {
 
 				{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.ToggleBinding)), "Toggle key" },
 				{ m_Setting.GetOptionDescLocaleID(nameof(Setting.ToggleBinding)), "Keyboard shortcut to open / close the drawing panel." },
+
+				{ m_Setting.GetOptionLabelLocaleID(nameof(Setting.DisableWorldClicksWhileDrawing)), "Disable world clicks while drawing" },
+				{ m_Setting.GetOptionDescLocaleID(nameof(Setting.DisableWorldClicksWhileDrawing)), "While in Draw mode, mouse clicks only draw - building selection and other world/tool interactions are blocked so a draw click doesn't also interact with the game underneath." },
 
 				// GeoJSON locale entries (commented out — fields hidden from UI)
 				// { m_Setting.GetOptionLabelLocaleID(nameof(Setting.Srid)), "Coordinate System (SRID)" },

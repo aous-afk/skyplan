@@ -126,7 +126,11 @@ export const SkyplanProvider: React.FC<{ children: React.ReactNode }> = ({ child
 	const onClose = useCallback(() => trigger('skyplan', 'panelClosed', ''), []);
 	const onUndo = useCallback(() => trigger('skyplan', 'undo', ''), []);
 	const onRedo = useCallback(() => trigger('skyplan', 'redo', ''), []);
-	const onViewModeToggle = useCallback(() => setViewMode(v => !v), []);
+	const onViewModeToggle = useCallback(() => setViewMode(v => {
+		const next = !v;
+		trigger('skyplan', 'setViewMode', next ? 'true' : 'false');
+		return next;
+	}), []);
 	const onOpenWhatsNew = useCallback(() => setShowWhatsNew(true), []);
 	const onCloseWhatsNew = useCallback(() => setShowWhatsNew(false), []);
 

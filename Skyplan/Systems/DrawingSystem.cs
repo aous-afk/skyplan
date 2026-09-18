@@ -34,6 +34,11 @@ namespace Skyplan.Systems {
 
 		private ICameraSystem m_Camera;
 		private bool m_PanelVisible;
+		private bool m_ViewMode;
+		// Blocks the same "Tool" action map vanilla tools already block against each other
+		// (Game.Tools.ToolSystem: CreateMapBarrier("Tool", ...)) so a draw click doesn't also
+		// select/interact with the game underneath. Camera move/rotate/zoom is a separate map, untouched.
+		private Game.Input.InputBarrier m_DrawModeBarrier;
 
 		internal readonly List<Shape> m_Shapes = [];
 		private readonly List<Op> m_UndoStack = [];
@@ -80,6 +85,7 @@ namespace Skyplan.Systems {
 			instance = this;
 			m_Camera = World.GetOrCreateSystemManaged<CameraSystem>();
 			Mod.log.Info("DrawingSystem.OnCreate");
+			m_DrawModeBarrier = Game.Input.InputManager.instance.CreateMapBarrier("Tool", "SkyplanDraw");
 
 			m_PanelVisibleBinding = new ValueBinding<bool>("skyplan", "panelVisible", false);
 			m_ShapesBinding = new ValueBinding<string>("skyplan", "shapes", "[]");
@@ -104,6 +110,11 @@ namespace Skyplan.Systems {
 			AddBinding(m_SnapEnabledBinding);
 			AddBinding(m_LayerVisibleBinding);
 			AddBinding(m_ParallelSpacingBinding);
+
+			AddBinding(new TriggerBinding<string>("skyplan", "setViewMode", val => {
+				m_ViewMode = val == "true";
+				UpdateDrawModeBarrier();
+			}));
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setSnapEnabled", val => {
 				m_SnapEnabled = val == "true";
@@ -256,6 +267,11 @@ namespace Skyplan.Systems {
 			if (m_Camera.IsReady) UpdateShapesJson();
 		}
 
+		protected override void OnDestroy() {
+			m_DrawModeBarrier?.Dispose();
+			base.OnDestroy();
+		}
+
 		private void HidePanel() {
 			m_PanelVisible = false;
 			m_ActiveShape = null;
@@ -265,6 +281,13 @@ namespace Skyplan.Systems {
 			m_PreviewBinding.Update("");
 			m_IndicatorBinding.Update("");
 			PlanPersistenceSystem.instance?.SavePlan();
+			UpdateDrawModeBarrier();
+		}
+
+		// Blocked only while the panel is open, in Draw (not View) mode, and the setting is enabled -
+		// released the moment any of those stops being true, so world input never stays stuck blocked.
+		private void UpdateDrawModeBarrier() {
+			m_DrawModeBarrier.blocked = m_PanelVisible && !m_ViewMode && (Mod.setting?.DisableWorldClicksWhileDrawing ?? true);
 		}
 
 		public void TogglePanel() {
@@ -282,6 +305,7 @@ namespace Skyplan.Systems {
 				PlanPersistenceSystem.instance?.SavePlan();
 			}
 			m_PanelVisibleBinding.Update(m_PanelVisible);
+			UpdateDrawModeBarrier();
 			Mod.log.Info($"Skyplan panel {(m_PanelVisible ? "shown" : "hidden")}");
 		}
 

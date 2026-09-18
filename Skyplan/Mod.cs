@@ -15,6 +15,7 @@ namespace Skyplan {
 		public static string modPath;
 
 		private Setting m_Setting;
+		public static Setting setting => instance?.m_Setting;
 
 		public static ProxyAction m_ToggleAction;
 		public const string kToggleActionName = "ToggleDrawingPanel";
