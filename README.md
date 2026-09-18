@@ -32,9 +32,11 @@ This is a beta version - a lot of the feedback I got on Reddit isn't implemented
 ## Features
 
 - Line, polygon, curve, point, and annotation drawing tools: plan roads, mark zones, drop points of interest
-- **35 built-in layers** - Transit (Train, Subway, Tram, Bus), Roads (Highway to Local), Zones (Residential incl. Low/Medium/High/Mixed-Use, Commercial incl. High, Industrial, Office), Public Services, and Points of Interest (incl. custom icons), each with its own colour and style
+- **38 built-in layers** - Transit (Train, Subway, Tram, Bus), Roads (Highway to Local), Zones (Residential incl. Low/Medium/High/Mixed-Use, Commercial incl. High, Industrial, Office), Public Services, and Points of Interest (incl. custom icons), each with its own colour and style
+- Multi-layer parallel corridors: queue multiple layers in the toolbar (Shift+click) and draw once to get parallel lanes in that exact order, for both lines and curves. Adjust spacing live with Shift+scroll wheel
 - Custom icons for point layers: define `icon: {path, color}` per layer in `layers_default.json`, rendered in-game and in SVG export/import
 - Snapping: lines and polygons snap to existing shapes, with an indicator shown on hover
+- World clicks (building select/placement) blocked while in Draw mode by default, so a draw click doesn't also interact with the game underneath (toggleable in mod settings)
 - Fully customisable layers: edit `layers_default.json` to add, remove, or restyle any layer. Changes hot-swap without a game restart
 - World-space coordinates: shapes stay pinned to the map as you pan and zoom
 - Erase tool with hover highlight

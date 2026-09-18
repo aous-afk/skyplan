@@ -33,11 +33,12 @@ This is a beta version, a lot of the feedback that i got on reddit is not yet im
 
 The next minor beta version (milestone) will include:
 
-v0.1.3:
+v0.1.4:
 
-* select multiable lines to create parallel lines.
-* Improve curve tool.
-* create more custom Icons.
+* rework Labeling system
+* add early version of Style Manager to allow changing styles
+* improve Erase tool
+* add delete option in Shape Manager
 
 ### Experimental Features
 
@@ -47,8 +48,10 @@ v0.1.3:
 ### Features
 
 * Line, polygon, curve, point and annotation drawing tools: plan roads, mark zones, drop points of interest
-* 35 built-in layers: Transit (Train, Subway, Tram, Bus), Roads (Highway to Local), Zones (Residential incl. Low/Medium/High/Mixed-Use, Commercial incl. High, Industrial, Office), Public Services, and Points of Interest (incl. custom icons), each with its own colour and style
+* 38 built-in layers: Transit (Train, Subway, Tram, Bus), Roads (Highway to Local), Zones (Residential incl. Low/Medium/High/Mixed-Use, Commercial incl. High, Industrial, Office), Public Services, and Points of Interest (incl. custom icons), each with its own colour and style
+* Multi-layer parallel corridors: queue multiple layers in the toolbar (Shift+click) and draw once to get parallel lanes in that exact order, for both lines and curves. Adjust spacing live with Shift+scroll wheel
 * Snapping: lines and polygons snap to existing shapes, with an indicator shown on hover
+* World clicks (building select/placement) blocked while in Draw mode by default, toggleable in mod settings
 * Deselect active tool/layer with right-click
 * Fully customisable layers: edit `layers.json` to add, remove, or restyle any layer. Changes hot-swap without a game restart
 * Custom icons for point layers: define `icon: {path, color}` per layer in `layers.json`, renders in-game and in SVG export/import
@@ -95,7 +98,7 @@ I plan to push experimental features to help planing, if you have suggestions, b
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/skyplan-support-and-feedback.1936742/#post-31440244" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.1.2-beta" />
+	<ModVersion Value="0.1.3-beta" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.6.*" />
 	<!--Dependency for the mod, can be set multiple times-->
@@ -104,15 +107,13 @@ I plan to push experimental features to help planing, if you have suggestions, b
 	<RequiredDLC Value="" />
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
 	<ChangeLog>
-## 0.1.2-beta
-- Added: Curve Tool.
-- Added: Custom Icons for the Point Tool
-- Added: snapping, lines and polygon do snap to other shapes, with indentifier on the overview.
+## 0.1.3-beta
+- Added: multi-layer parallel corridors, queue several layers (e.g. Train, Subway, Train) and draw once to get parallel lanes in that exact order, for both lines and curves. Each lane is independently erasable/editable.
+- Added: Shift+scroll wheel adjusts corridor spacing live while drawing.
+- Added: 3 new custom point layers, Telecom, Garbage, Cemetery.
 - UX enhancements:
-  - you can now deselect tools and layers with right-click.
-- Improve performance. 
-- Bug-fixes:
-  - fix a bug where shapes become distorted when zooming..
+  - layer picker now single-selects on plain click; Shift+click adds another lane to a corridor.
+  - world clicks (building select/placement) are now blocked while in Draw mode, so a draw click doesn't also interact with the game underneath (toggleable in mod settings).
 	</ChangeLog>
 	<!--External link, can be set multiple times. supported types are "discord", "github", "youtube", "twitch", "x", "paypal", "patreon", "buymeacoffee", "kofi", "crowdin", "gitlab", "gofundme"-->
 	<ExternalLink Type="github" Url="https://github.com/aous-afk/skyplan" />
