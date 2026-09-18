@@ -217,7 +217,11 @@ const DrawingCanvas: React.FC = () => {
 
 	useEffect(() => {
 		const onMove = (e: MouseEvent) => {
-			if (!viewModeRef.current) {
+			// Same guard the draw start/move/end handlers already use to ignore clicks on Skyplan's
+			// own UI (toolbar, panels) - cursorPos drives the preview circles and spacing tooltip, so
+			// without this they'd keep tracking/showing over the toolbar too, since this listener is
+			// document-wide, not canvas-scoped.
+			if (!viewModeRef.current && !(e.target as Element).closest('[data-skyplan-ui]')) {
 				setCursorPos({ x: e.clientX, y: e.clientY });
 			}
 			else {

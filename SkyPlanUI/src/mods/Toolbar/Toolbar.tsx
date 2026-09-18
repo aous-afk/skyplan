@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {trigger} from 'cs2/api';
+import {getModule} from 'cs2/modding';
 import {TOOLS, Tag} from '../types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faUndo, faRedo, faMagnet} from '@fortawesome/free-solid-svg-icons'
@@ -7,6 +8,18 @@ import styles from './Toolbar.module.scss';
 import {useSkyplan} from '../SkyplanContext';
 import {useDrawingContext} from "mods/DrawingContext";
 import ShapeManager from "mods/ShapeManager/ShapeManager";
+
+// Native hover-tooltip used for real toolbar-button hints elsewhere in the game (title + optional
+// shortcut/description) - wraps its child and shows/hides itself on real hover internally, no
+// manual position tracking or mount/unmount juggling needed on our side. Switched to this from a
+// hand-driven FloatingMouseTooltip after that approach kept leaving a stale/duplicate tooltip node
+// behind on every mousemove-triggered mount-unmount cycle - the same class of GameFace quirk
+// documented for the snap indicator circle (never toggle a node in/out, GameFace doesn't always
+// clean it up) - see Coherent-GameFace-Quirks in the wiki.
+const DescriptionTooltip = getModule(
+	'game-ui/common/tooltip/description-tooltip/description-tooltip.tsx',
+	'DescriptionTooltip'
+) as any;
 
 const Toolbar: React.FC = () => {
 	const {
@@ -157,11 +170,11 @@ const Toolbar: React.FC = () => {
 							{visibleLayers.map(l => {
 								const count = activeLayers.filter(x => x.id === l.id).length;
 								const active = count > 0;
-								return (
+								const btn = (
 									<button key={l.id}
 										data-layer-btn
 										data-layer-id={l.id}
-										onClick={() => multiSelectAllowed ? onLayerAdd(l) : onLayerSelect(l)}
+										onClick={e => multiSelectAllowed && e.shiftKey ? onLayerAdd(l) : onLayerSelect(l)}
 										className={`${styles.layer_btn} ${active ? styles.layer_btn_active : ''}`}
 										style={{
 											border: active ? `2px solid ${l.style.stroke}` : '2px solid transparent',
@@ -171,6 +184,11 @@ const Toolbar: React.FC = () => {
 										{count > 1 && <span className={styles.layer_btn_count}>{count}</span>}
 									</button>
 								);
+								return multiSelectAllowed && activeLayers.length >= 1 ? (
+									<DescriptionTooltip key={l.id} title={l.label} description="Shift+click to add another lane">
+										{btn}
+									</DescriptionTooltip>
+								) : btn;
 							})}
 						</div>
 					)}
