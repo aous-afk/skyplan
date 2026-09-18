@@ -529,6 +529,54 @@
       }
     },
     {
+      "id": "post",
+      "label": "Telecom",
+      "allowedTools": [
+        "point"
+      ],
+      "style": {
+        "fill": "#66cccc",
+        "stroke": "#66cccc",
+        "stroke-width": 1
+      },
+      "labelStyle": {},
+      "icon": {
+        "path": "M-4.8,-3.2 L5,-3.2 L5,0.8 L-4.8,0.8 Z M-0.8,0.8 L3,0.8 L3,4.3 Z"
+      }
+    },
+    {
+      "id": "garbage-point",
+      "label": "Garbage",
+      "allowedTools": [
+        "point"
+      ],
+      "style": {
+        "fill": "#996633",
+        "stroke": "#996633",
+        "stroke-width": 1
+      },
+      "labelStyle": {},
+      "icon": {
+        "path": "M-4,-4 L4,-4 L4,-2.5 L3,-2.5 L2,4 L-2,4 L-3,-2.5 L-4,-2.5 Z"
+      }
+    },
+    {
+      "id": "cemetery",
+      "label": "Cemetery",
+      "allowedTools": [
+        "point"
+      ],
+      "style": {
+        "fill": "#8866aa",
+        "stroke": "#8866aa",
+        "stroke-width": 1
+      },
+      "labelStyle": {},
+      "icon": {
+        "path": "M-3,4 L-3,-1 A3,3 0 0 1 3,-1 L3,4 Z"
+      }
+    },
+    {
       "id": "annotations",
       "label": "Annotations",
       "allowedTools": [

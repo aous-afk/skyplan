@@ -132,7 +132,10 @@ function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string
 				<React.Fragment key={s.id}>
 					<circle className={cn} cx={p.x} cy={p.y} r={POINT_RADIUS_WITH_ICON} style={style} />
 					<g transform={`translate(${p.x},${p.y}) scale(${iconScale})`} style={style}>
-						<path d={icon.path} fill={icon.color ?? 'black'} fillRule="evenodd" />
+						{/* paintOrder puts the stroke under the fill so it reads as an outline rather
+						    than eating into the icon's own silhouette. */}
+						<path d={icon.path} fill={icon.color ?? 'black'} fillRule="evenodd"
+							stroke="black" strokeWidth={0.4} strokeLinejoin="round" style={{ paintOrder: 'stroke' }} />
 					</g>
 				</React.Fragment>
 			);
