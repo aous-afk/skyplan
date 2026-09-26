@@ -2,7 +2,7 @@ import React, {useMemo, useState, useCallback} from 'react';
 import {trigger} from 'cs2/api';
 import {FOCUS_DISABLED} from 'cs2/input';
 import {getModule} from 'cs2/modding';
-import {faChevronDown, faChevronRight, faDrawPolygon, faEye, faEyeSlash, faFont, faLocationDot, faRoad} from '@fortawesome/free-solid-svg-icons';
+import {faChevronDown, faChevronRight, faDrawPolygon, faEye, faEyeSlash, faFont, faLocationDot, faRoad, faTrash} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {ShapeData, Tag} from 'mods/types';
 import {useDrawingContext} from 'mods/DrawingContext';
@@ -89,6 +89,14 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 		trigger('skyplan', 'setShapeNote', `${shapeId}|${value}`);
 	}, []);
 
+	// The row unmounts without firing onMouseLeave, so the hover highlight has to be dropped here or
+	// every other shape stays dimmed.
+	const deleteShape = useCallback((shapeId: string) => {
+		onHoverShape(null);
+		setEditingShapeId(prev => prev === shapeId ? null : prev);
+		trigger('skyplan', 'deleteShape', shapeId);
+	}, [onHoverShape]);
+
 	return (
 		<div className={styles.container}>
 			<div className={shared.opacity_row}>
@@ -163,6 +171,13 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 											>
 												<FontAwesomeIcon icon={tagIcon(s.tag)} className={styles.shape_row_icon} />
 												<span className={styles.shape_row_name} style={{ color: 'rgba(255,255,255,0.8)' }}>{s.label || fallback}</span>
+												<button
+													className={styles.row_delete}
+													onClick={e => { e.stopPropagation(); deleteShape(s.id); }}
+													title="Delete"
+												>
+													<FontAwesomeIcon icon={faTrash} className={shared.svg} />
+												</button>
 											</div>
 											{isEditing && (
 												<div className={styles.shape_row_edit}>
