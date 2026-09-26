@@ -135,6 +135,29 @@
   text-overflow: ellipsis;
 }
 
+// Row whose shape is open in the Style Manager.
+.shape_row_styling {
+  outline: 1px solid rgba(74, 144, 217, 0.8);
+}
+
+.row_style {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+  font-size: var(--skyplan-font-size-xs);
+  flex-shrink: 0;
+
+  // shared .svg sets color on the icon itself, so the button's color never reaches it - target the svg.
+  svg {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  &:hover svg {
+    color: rgba(74, 144, 217, 1);
+  }
+}
+
 .row_delete {
   background: none;
   border: none;

@@ -2,7 +2,7 @@ import React, {useMemo, useState, useCallback} from 'react';
 import {trigger} from 'cs2/api';
 import {FOCUS_DISABLED} from 'cs2/input';
 import {getModule} from 'cs2/modding';
-import {faChevronDown, faChevronRight, faDrawPolygon, faEye, faEyeSlash, faFont, faLocationDot, faRoad, faTrash} from '@fortawesome/free-solid-svg-icons';
+import {faChevronDown, faChevronRight, faDrawPolygon, faEye, faEyeSlash, faFont, faLocationDot, faPalette, faRoad, faTrash} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {ShapeData, Tag} from 'mods/types';
 import {useDrawingContext} from 'mods/DrawingContext';
@@ -42,7 +42,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 	layerLabels, onLayerLabelsToggle,
 }) => {
 	const { onHoverShape, showDescriptions, onShowDescriptionsToggle } = useDrawingContext();
-	const { layerById } = useStyle();
+	const { layerById, styleTarget, onStyleTarget } = useStyle();
 	const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
 	const [editName, setEditName] = useState('');
 	const [editNote, setEditNote] = useState('');
@@ -90,8 +90,9 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 	const deleteShape = useCallback((shapeId: string) => {
 		onHoverShape(null);
 		setEditingShapeId(prev => prev === shapeId ? null : prev);
+		if (styleTarget?.shapeId === shapeId) onStyleTarget(null);
 		trigger('skyplan', 'deleteShape', shapeId);
-	}, [onHoverShape]);
+	}, [onHoverShape, styleTarget, onStyleTarget]);
 
 	return (
 		<div className={styles.container}>
@@ -158,7 +159,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 									const isEditing = editingShapeId === s.id;
 									const fallback = `${s.tag === Tag.text ? 'Text' : s.tag === Tag.circle ? 'Point' : s.tag === Tag.polygon ? 'Area' : 'Line'} ${i + 1}`;
 									return (
-										<div key={s.id} className={styles.shape_row}>
+										<div key={s.id} className={`${styles.shape_row} ${styleTarget?.shapeId === s.id ? styles.shape_row_styling : ''}`}>
 											<div
 												className={styles.shape_row_header}
 												onClick={() => isEditing ? setEditingShapeId(null) : startEdit(s)}
@@ -167,6 +168,13 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 											>
 												<FontAwesomeIcon icon={tagIcon(s.tag)} className={styles.shape_row_icon} />
 												<span className={styles.shape_row_name} style={{ color: 'rgba(255,255,255,0.8)' }}>{s.label || fallback}</span>
+												<button
+													className={styles.row_style}
+													onClick={e => { e.stopPropagation(); onStyleTarget({ shapeId: s.id, layerId: s.layerId }); }}
+													title="Style"
+												>
+													<FontAwesomeIcon icon={faPalette} className={shared.svg} />
+												</button>
 												<button
 													className={styles.row_delete}
 													onClick={e => { e.stopPropagation(); deleteShape(s.id); }}
