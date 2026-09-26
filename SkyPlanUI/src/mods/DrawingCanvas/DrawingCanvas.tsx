@@ -4,6 +4,7 @@ import {getModule} from 'cs2/modding';
 import {TOOLS, ToolId, ShapeData, Tag, LayerDef, LayerIcon, LabelStyle} from '../types';
 import {buildPath, buildPolygon, buildCurve, centroid} from 'mods/utils/buildSvg';
 import {useSkyplan} from '../SkyplanContext';
+import {useStyle} from '../StyleContext';
 import {useDrawingContext} from 'mods/DrawingContext';
 import styles from './DrawingCanvas.module.scss';
 
@@ -40,15 +41,6 @@ function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null, layerDefs
 	// or preview yet, so they'd otherwise get no .sp-cursor-{layerId} rule at all.
 	extraLayerIds.forEach(ensure);
 	return rules.join('');
-}
-
-function resolveLabelStyle(layerDef: LayerDef | undefined, global: LabelStyle): Required<LabelStyle> {
-	return {
-		color: layerDef?.labelStyle?.color ?? global.color ?? '#ffffff',
-		fontSize: layerDef?.labelStyle?.fontSize ?? global.fontSize ?? 12,
-		fontWeight: layerDef?.labelStyle?.fontWeight ?? global.fontWeight ?? 'normal',
-		opacity: layerDef?.labelStyle?.opacity ?? global.opacity ?? 1,
-	};
 }
 
 function labelPosition(s: ShapeData): { x: number; y: number } | null {
@@ -168,11 +160,8 @@ function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string
 }
 
 const DrawingCanvas: React.FC = () => {
-	const { activeTool, activeLayers, primaryLayer, viewMode, globalLabelStyle, allLayers, showWhatsNew } = useSkyplan();
-	const layerDefsMap = useMemo(() =>
-		Object.fromEntries(allLayers.map(l => [l.id, l])),
-		[allLayers]
-	);
+	const { activeTool, activeLayers, primaryLayer, viewMode, showWhatsNew } = useSkyplan();
+	const { layerById, labelStyleFor } = useStyle();
 	const { shapes, preview, highlightId, indicator, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions, parallelSpacing, onParallelSpacingChange } = useDrawingContext();
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
@@ -440,7 +429,7 @@ const DrawingCanvas: React.FC = () => {
 	const allGroupLayerIds = useMemo(() => Array.from(shapesByLayer.keys()), [shapesByLayer]);
 
 	const hasHighlight = highlightId !== null;
-	const layerCSS = buildLayerCSS(shapes, preview, layerDefsMap, activeLayers.map(l => l.id));
+	const layerCSS = buildLayerCSS(shapes, preview, layerById, activeLayers.map(l => l.id));
 
 	const showCursor = !!cursorPos && !viewMode;
 	if (shapes.length === 0 && !preview && !showCursor && !indicator) return null;
@@ -502,10 +491,10 @@ const DrawingCanvas: React.FC = () => {
 
 			{allGroupLayerIds.map(layerId => {
 				const layerShapes = shapesByLayer.get(layerId) ?? [];
-				const ls = resolveLabelStyle(layerDefsMap[layerId], globalLabelStyle);
+				const ls = labelStyleFor(layerId);
 				return (
 					<g key={layerId} className={`sp-${layerId}`} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
-						{layerShapes.map(s => renderShape(s, layerDefsMap[layerId]?.icon, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
+						{layerShapes.map(s => renderShape(s, layerById[layerId]?.icon, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
 
 						{layerLabels[layerId] && layerShapes.map(s => {
 							if (s.tag === Tag.text) return null;
@@ -530,7 +519,7 @@ const DrawingCanvas: React.FC = () => {
 					</g>
 				);
 			})}
-			{preview && renderShape(preview, layerDefsMap[preview.layerId]?.icon)}
+			{preview && renderShape(preview, layerById[preview.layerId]?.icon)}
 			{preview && Array.from(
 				preview.parallelLanes?.reduce((map, lane) => {
 					if (!map.has(lane.layerId)) map.set(lane.layerId, []);
