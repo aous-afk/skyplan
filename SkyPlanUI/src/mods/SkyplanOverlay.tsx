@@ -1,6 +1,7 @@
 import React from 'react';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faCircleQuestion} from '@fortawesome/free-solid-svg-icons';
+import {StyleProvider} from './StyleContext';
 import {SkyplanProvider, useSkyplan} from './SkyplanContext';
 import {DrawingProvider} from './DrawingContext';
 import Toolbar from './Toolbar/Toolbar';
@@ -40,11 +41,13 @@ const SkyplanOverlayInner: React.FC = () => {
 };
 
 const SkyplanOverlay: React.FC = () => (
-	<SkyplanProvider>
-		<DrawingProvider>
-			<SkyplanOverlayInner />
-		</DrawingProvider>
-	</SkyplanProvider>
+	<StyleProvider>
+		<SkyplanProvider>
+			<DrawingProvider>
+				<SkyplanOverlayInner />
+			</DrawingProvider>
+		</SkyplanProvider>
+	</StyleProvider>
 );
 
 export default SkyplanOverlay;
