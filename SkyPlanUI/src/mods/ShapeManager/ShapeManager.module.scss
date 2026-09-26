@@ -55,13 +55,17 @@
 .collapse_toggle {
   background: none;
   border: none;
-  color: rgba(74, 144, 217, 0.6);
   padding: 0 2px;
   cursor: pointer;
   font-size: var(--skyplan-font-size-2xs);
   flex-shrink: 0;
 
-  &:hover {
+  // shared .svg sets color on the icon itself, so the button's color never reaches it - target the svg.
+  svg {
+    color: rgba(74, 144, 217, 0.6);
+  }
+
+  &:hover svg {
     color: rgba(74, 144, 217, 1);
   }
 }
