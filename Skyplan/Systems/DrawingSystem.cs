@@ -209,6 +209,7 @@ namespace Skyplan.Systems {
 
 			AddBinding(new TriggerBinding<string>("skyplan", "setShapeLabel", HandleSetShapeLabel));
 			AddBinding(new TriggerBinding<string>("skyplan", "setShapeNote", HandleSetShapeNote));
+			AddBinding(new TriggerBinding<string>("skyplan", "deleteShape", HandleDeleteShape));
 			AddBinding(new TriggerBinding<string>("skyplan", "commitText", HandleCommitText));
 		}
 
@@ -663,6 +664,17 @@ namespace Skyplan.Systems {
 			if (m_EraseTarget == null) return;
 			Shape target = m_Shapes.Find(s => s.id == m_EraseTarget);
 			if (target == null) return;
+			DeleteShape(target);
+		}
+
+		private void HandleDeleteShape(string id) {
+			Shape target = m_Shapes.Find(s => s.id == id);
+			if (target == null) return;
+			DeleteShape(target);
+		}
+
+		// Shared by the erase tool and the Shape Manager's delete button, so both land on the undo stack the same way.
+		private void DeleteShape(Shape target) {
 			PushUndo(new Op { type = OpType.Delete, shape = target });
 			m_Shapes.Remove(target);
 			m_EraseTarget = null;

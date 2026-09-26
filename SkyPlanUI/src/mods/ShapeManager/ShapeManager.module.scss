@@ -69,13 +69,17 @@
 .labels_toggle {
   background: none;
   border: none;
-  color: rgba(74, 144, 217, 0.6);
   padding: 0 4px;
   cursor: pointer;
   font-size: var(--skyplan-font-size-xs);
   margin-right: 4px;
 
-  &:hover {
+  // shared .svg sets color on the icon itself, so the button's color never reaches it - target the svg.
+  svg {
+    color: rgba(74, 144, 217, 0.6);
+  }
+
+  &:hover svg {
     color: rgba(74, 144, 217, 1);
   }
 }
@@ -125,6 +129,24 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.row_delete {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+  font-size: var(--skyplan-font-size-xs);
+  flex-shrink: 0;
+
+  // shared .svg sets color on the icon itself, so the button's color never reaches it - target the svg.
+  svg {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  &:hover svg {
+    color: rgba(255, 90, 90, 1);
+  }
 }
 
 .shape_row_edit {
