@@ -60,41 +60,51 @@ function labelPosition(s: ShapeData): { x: number; y: number } | null {
 	return null;
 }
 
+const LINE_HEIGHT = 1.2;
+
+// GameFace ignores <tspan> positioning (x / y / dy), so each line is its own <text>.
+// Lines are laid out around (0,0) inside a translated <g>, so a rotate() can join the same transform.
+// 'center' centres the block on (x,y); 'top' puts the first line on (x,y) and grows downward.
+function renderLabelBlock(
+	key: string, text: string, x: number, y: number,
+	anchor: 'center' | 'top', fontSize: number, textProps: React.SVGProps<SVGTextElement>,
+): React.ReactElement {
+	const lines = text.split(/\r?\n/);
+	if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+	const lineHeight = fontSize * LINE_HEIGHT;
+	const firstY = anchor === 'center' ? -(lines.length - 1) * lineHeight / 2 : 0;
+	return (
+		<g key={key} transform={`translate(${x} ${y})`}>
+			{lines.map((line, i) => (
+				<text key={i} x={0} y={firstY + i * lineHeight} fontSize={fontSize}
+					textAnchor="middle" dominantBaseline="middle" {...textProps}>
+					{line}
+				</text>
+			))}
+		</g>
+	);
+}
+
 function renderText(s: ShapeData, ls: LabelStyle | undefined): React.ReactElement | null {
 	if (!s.description) return null;
 	if (!ls) return null;
 
-	const descFontSize = Math.max(8, ls.fontSize ?? 10 - 2);
-	const descOpacity = ls.opacity ?? 1 * 0.7;
+	const descFontSize = Math.max(8, (ls.fontSize ?? 10) - 2);
+	const descOpacity = (ls.opacity ?? 1) * 0.7;
+	const textProps: React.SVGProps<SVGTextElement> = {
+		fill: ls.color,
+		opacity: descOpacity,
+		style: { paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 },
+	};
 	// the text needs to be textPath href="#lineAC"
 	if (s.tag === Tag.text) {
 		if (!s.pts[0]) return null;
-		return (
-			<text key={`desc-${s.id}`}
-				x={s.pts[0].x} y={s.pts[0].y + 18}
-				textAnchor="middle" dominantBaseline="middle"
-				fontSize={descFontSize} fill={ls.color}
-				opacity={descOpacity}
-				style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
-			>
-				{s.description}
-			</text>
-		);
+		return renderLabelBlock(`desc-${s.id}`, s.description, s.pts[0].x, s.pts[0].y + 18, 'top', descFontSize, textProps);
 	}
 	const pos = labelPosition(s);
 	if (!pos) return null;
 	const descY = s.tag === Tag.circle ? s.pts[0].y + 20 : pos.y + 16;
-	return (
-		<text key={`desc-${s.id}`}
-			x={pos.x} y={descY}
-			textAnchor="middle" dominantBaseline="middle"
-			fontSize={descFontSize} fill={ls.color}
-			opacity={descOpacity}
-			style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.6)', strokeWidth: 2 }}
-		>
-			{s.description}
-		</text>
-	);
+	return renderLabelBlock(`desc-${s.id}`, s.description, pos.x, descY, 'top', descFontSize, textProps);
 }
 
 function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string): React.ReactElement | null {
