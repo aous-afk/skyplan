@@ -4,7 +4,7 @@ import {FOCUS_DISABLED} from 'cs2/input';
 import {getModule} from 'cs2/modding';
 import {faChevronDown, faChevronRight, faDrawPolygon, faEye, faEyeSlash, faFont, faLocationDot, faPalette, faRoad, faTrash} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
-import {ShapeData, Tag} from 'mods/types';
+import {ShapeData, Tag, toolForTag} from 'mods/types';
 import {useDrawingContext} from 'mods/DrawingContext';
 import {useStyle} from 'mods/StyleContext';
 import shared from '../shared.module.scss';
@@ -170,7 +170,7 @@ const ShapeManager: React.FC<ShapeManagerProps> = ({
 												<span className={styles.shape_row_name} style={{ color: 'rgba(255,255,255,0.8)' }}>{s.label || fallback}</span>
 												<button
 													className={styles.row_style}
-													onClick={e => { e.stopPropagation(); onStyleTarget({ shapeId: s.id, layerId: s.layerId }); }}
+													onClick={e => { e.stopPropagation(); onStyleTarget({ shapeId: s.id, layerId: s.layerId, tool: toolForTag(s.tag) }); }}
 													title="Style"
 												>
 													<FontAwesomeIcon icon={faPalette} className={shared.svg} />
