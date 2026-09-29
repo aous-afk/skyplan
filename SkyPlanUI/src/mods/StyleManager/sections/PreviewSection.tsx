@@ -13,7 +13,9 @@ const PreviewSection: React.FC = () => {
 	return (
 		<div className={styles.section}>
 			<span className={styles.section_title}>Preview</span>
-			<svg className={styles.preview} width={240} height={64} viewBox="0 0 240 64">
+			{/* Keyed on the draft so every change remounts the sample: GameFace kept an old inline
+			    stroke-dasharray after it changed (1 22 → Solid still drew dashes). */}
+			<svg key={JSON.stringify(draftStyle)} className={styles.preview} width={240} height={64} viewBox="0 0 240 64">
 				<path d="M 14 44 L 110 20" style={inline} />
 				<rect x={140} y={14} width={80} height={36} />
 				{draftLabelStyle && (
