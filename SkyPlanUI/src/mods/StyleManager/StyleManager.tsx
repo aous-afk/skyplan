@@ -14,6 +14,8 @@ const Separator: React.FC = () => <div className={styles.separator} />;
 
 // Container width (270) plus the panel's own padding/border; only used to place it at the right edge.
 const PANEL_WIDTH = 300;
+// Body is 270 wide; minus header padding (18) and the close button (~37), with some slack.
+const TITLE_MAX_WIDTH = 200;
 const EDGE_MARGIN = 12;
 
 const StyleManager: React.FC = () => {
@@ -39,6 +41,7 @@ const StyleManager: React.FC = () => {
 		<DraggablePanel
 			persistKey="style-manager"
 			title={title}
+			titleMaxWidth={TITLE_MAX_WIDTH}
 			onClose={() => onStyleTarget(null)}
 			defaultPosition={{ left: Math.max(EDGE_MARGIN, window.innerWidth - PANEL_WIDTH - EDGE_MARGIN), top: EDGE_MARGIN }}
 		>

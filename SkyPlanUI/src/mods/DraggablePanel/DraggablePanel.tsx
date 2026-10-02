@@ -15,13 +15,15 @@ interface DraggablePanelProps {
 	// Extra buttons rendered in the header, before the close button (e.g. Toolbar's "?" button).
 	headerExtra?: React.ReactNode;
 	defaultPosition?: { left: number; top: number };
+	// Longer titles wrap at this width instead of widening the panel.
+	titleMaxWidth?: number;
 	className?: string;
 	children: React.ReactNode;
 }
 
 const DEFAULT_POSITION = { left: 12, top: 12 };
 
-const DraggablePanel: React.FC<DraggablePanelProps> = ({persistKey, title, onClose, headerExtra, defaultPosition, className, children}) => {
+const DraggablePanel: React.FC<DraggablePanelProps> = ({persistKey, title, onClose, headerExtra, defaultPosition, titleMaxWidth, className, children}) => {
 	const [pos, setPos] = useState(() => getPanelPosition(persistKey, defaultPosition ?? DEFAULT_POSITION));
 
 	const panelEl = useRef<HTMLDivElement>(null);
@@ -76,7 +78,7 @@ const DraggablePanel: React.FC<DraggablePanelProps> = ({persistKey, title, onClo
 			pointerEvents: 'auto', userSelect: 'none',
 		}}>
 			<div ref={dragHandleEl} className={styles.drag_handle}>
-				<span className={styles.title}>{title}</span>
+				<span className={styles.title} style={titleMaxWidth !== undefined ? { maxWidth: titleMaxWidth } : undefined}>{title}</span>
 				<div className={styles.btn_group}>
 					{headerExtra}
 					<button onClick={onClose} className={`${styles.btn_base} ${styles.btn_right}`}>
