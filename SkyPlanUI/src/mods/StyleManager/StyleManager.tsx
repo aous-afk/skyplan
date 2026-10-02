@@ -3,6 +3,7 @@ import DraggablePanel from '../DraggablePanel/DraggablePanel';
 import {useStyle} from '../StyleContext';
 import {useSkyplan} from '../SkyplanContext';
 import {useDrawingContext} from '../DrawingContext';
+import {ToolId} from '../types';
 import PreviewSection from './sections/PreviewSection';
 import WidthSection from './sections/WidthSection';
 import DashSection from './sections/DashSection';
@@ -11,6 +12,9 @@ import LabelSection from './sections/LabelSection';
 import styles from './StyleManager.module.scss';
 
 const Separator: React.FC = () => <div className={styles.separator} />;
+
+// Tools whose shapes have a stroke worth dashing.
+const DASH_TOOLS: ToolId[] = ['path', 'curve', 'polygon'];
 
 // Container width (270) plus the panel's own padding/border; only used to place it at the right edge.
 const PANEL_WIDTH = 300;
@@ -50,8 +54,10 @@ const StyleManager: React.FC = () => {
 				<Separator />
 				<WidthSection />
 				<Separator />
-				<DashSection />
-				<Separator />
+				{DASH_TOOLS.includes(styleTarget.tool) && <>
+					<DashSection />
+					<Separator />
+				</>}
 				<ColorSection />
 				<Separator />
 				<LabelSection />
