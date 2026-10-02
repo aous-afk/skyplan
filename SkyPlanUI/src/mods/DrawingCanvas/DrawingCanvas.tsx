@@ -111,36 +111,39 @@ function renderShape(
 	const cn = `sp-${s.layerId}`;
 	const style = opacity !== undefined ? { opacity } : undefined;
 	const shapeStyle = override ? { ...toInlineStyle(override), ...style } : style;
+	// With a draft, the key changes with it so each edit remounts this shape: GameFace kept drawing an
+	// old inline stroke-dasharray after it changed (dashes → Solid). Wiki: Coherent-GameFace-Quirks.
+	const key = override ? `${s.id}|${JSON.stringify(override)}` : s.id;
 
 	switch (s.tag) {
 		case Tag.path: {
 			const d = buildPath(s.pts);
 			if (!d) return null;
-			return <path key={s.id} id={s.id} className={cn} d={d} style={shapeStyle} />;
+			return <path key={key} id={s.id} className={cn} d={d} style={shapeStyle} />;
 		}
 		case Tag.polygon: {
 			if (s.pts.length < 3) {
 				const d = buildPath(s.pts);
 				if (!d) return null;
-				return <path key={s.id} className={cn} d={d} style={shapeStyle} />;
+				return <path key={key} className={cn} d={d} style={shapeStyle} />;
 			}
 			const points = buildPolygon(s.pts);
-			return <polygon key={s.id} className={cn} points={points} style={shapeStyle} />;
+			return <polygon key={key} className={cn} points={points} style={shapeStyle} />;
 		}
 		case Tag.curve: {
 			const d = buildCurve(s.pts, s.handles);
 			if (!d) return null;
-			return <path key={s.id} className={cn} d={d} style={shapeStyle} />;
+			return <path key={key} className={cn} d={d} style={shapeStyle} />;
 		}
 		case Tag.circle: {
 			const p = s.pts[0];
-			if (!icon) return <circle key={s.id} className={cn} cx={p.x} cy={p.y} r={6} style={shapeStyle} />;
+			if (!icon) return <circle key={key} className={cn} cx={p.x} cy={p.y} r={6} style={shapeStyle} />;
 			// Icon paths are authored against a r=6 baseline circle - scale them with whatever
 			// radius the icon-carrying circle actually uses so the two stay proportional.
 			const POINT_RADIUS_WITH_ICON = 10;
 			const iconScale = POINT_RADIUS_WITH_ICON / 6;
 			return (
-				<React.Fragment key={s.id}>
+				<React.Fragment key={key}>
 					<circle className={cn} cx={p.x} cy={p.y} r={POINT_RADIUS_WITH_ICON} style={shapeStyle} />
 					<g transform={`translate(${p.x},${p.y}) scale(${iconScale})`} style={style}>
 						{/* paintOrder puts the stroke under the fill so it reads as an outline rather

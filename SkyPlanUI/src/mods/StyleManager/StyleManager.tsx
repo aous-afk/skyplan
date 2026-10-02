@@ -15,6 +15,8 @@ const Separator: React.FC = () => <div className={styles.separator} />;
 
 // Tools whose shapes have a stroke worth dashing.
 const DASH_TOOLS: ToolId[] = ['path', 'curve', 'polygon'];
+// Text shapes only use the label style, so the shape-style sections (width, colour) don't apply.
+const SHAPE_STYLE_TOOLS: ToolId[] = ['path', 'curve', 'polygon', 'point'];
 
 // Container width (270) plus the panel's own padding/border; only used to place it at the right edge.
 const PANEL_WIDTH = 300;
@@ -52,14 +54,18 @@ const StyleManager: React.FC = () => {
 			<div className={styles.container}>
 				<PreviewSection />
 				<Separator />
-				<WidthSection />
-				<Separator />
+				{SHAPE_STYLE_TOOLS.includes(styleTarget.tool) && <>
+					<WidthSection />
+					<Separator />
+				</>}
 				{DASH_TOOLS.includes(styleTarget.tool) && <>
 					<DashSection />
 					<Separator />
 				</>}
-				<ColorSection />
-				<Separator />
+				{SHAPE_STYLE_TOOLS.includes(styleTarget.tool) && <>
+					<ColorSection />
+					<Separator />
+				</>}
 				<LabelSection />
 				<Separator />
 				<div className={styles.footer}>
