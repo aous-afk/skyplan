@@ -100,7 +100,8 @@ function renderText(s: ShapeData, ls: LabelStyle | undefined): React.ReactElemen
 	return renderLabelBlock(`desc-${s.id}`, s.description, pos.x, descY, 'top', descFontSize, textProps);
 }
 
-// textStyle: the global label style, used by text-tool shapes.
+// textStyle: the shape's resolved label style (layer → global → defaults, or the Style Manager's
+// draft for its target), used by text-tool shapes.
 // override: the Style Manager's draft for this shape. Inline style beats the .sp-{layerId} class
 // rule, so only this shape shows the unsaved style.
 function renderShape(
@@ -172,7 +173,7 @@ function renderShape(
 
 const DrawingCanvas: React.FC = () => {
 	const { activeTool, activeLayers, primaryLayer, viewMode, showWhatsNew } = useSkyplan();
-	const { layerById, labelStyleFor, styleTarget, draftStyle, draftLabelStyle, globalLabelStyle } = useStyle();
+	const { layerById, labelStyleFor, styleTarget, draftStyle, draftLabelStyle } = useStyle();
 	const { shapes, preview, highlightId, indicator, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions, parallelSpacing, onParallelSpacingChange } = useDrawingContext();
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
@@ -507,7 +508,7 @@ const DrawingCanvas: React.FC = () => {
 				const lsFor = (s: ShapeData) => s.id === styleTarget?.shapeId && draftLabelStyle ? draftLabelStyle : layerLs;
 				return (
 					<g key={layerId} className={`sp-${layerId}`} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
-						{layerShapes.map(s => renderShape(s, layerById[layerId]?.icon, globalLabelStyle, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined,
+						{layerShapes.map(s => renderShape(s, layerById[layerId]?.icon, lsFor(s), hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined,
 							s.id === styleTarget?.shapeId ? draftStyle ?? undefined : undefined))}
 
 						{layerLabels[layerId] && layerShapes.map(s => {
@@ -534,7 +535,7 @@ const DrawingCanvas: React.FC = () => {
 					</g>
 				);
 			})}
-			{preview && renderShape(preview, layerById[preview.layerId]?.icon, globalLabelStyle)}
+			{preview && renderShape(preview, layerById[preview.layerId]?.icon, labelStyleFor(preview.layerId))}
 			{preview && Array.from(
 				preview.parallelLanes?.reduce((map, lane) => {
 					if (!map.has(lane.layerId)) map.set(lane.layerId, []);

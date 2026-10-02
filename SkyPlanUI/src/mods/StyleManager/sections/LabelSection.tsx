@@ -7,7 +7,7 @@ import shared from '../../shared.module.scss';
 import styles from '../StyleManager.module.scss';
 
 const MIN_FONT = 8;
-const MAX_FONT = 32;
+const MAX_FONT = 40;
 
 // Edits the layer's labelStyle: shape names and descriptions (descriptions derive their size and
 // opacity from it).
