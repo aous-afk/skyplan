@@ -99,3 +99,14 @@ export enum Tag {
   circle = 'circle',
   text = 'text',
 }
+
+// The tool that draws a given shape tag (points render as <circle>).
+export function toolForTag(tag: Tag): ToolId {
+  switch (tag) {
+    case Tag.polygon: return 'polygon';
+    case Tag.curve:   return 'curve';
+    case Tag.circle:  return 'point';
+    case Tag.text:    return 'text';
+    default:          return 'path';
+  }
+}

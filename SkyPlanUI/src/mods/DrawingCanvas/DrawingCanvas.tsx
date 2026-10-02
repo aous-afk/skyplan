@@ -3,6 +3,7 @@ import {trigger} from 'cs2/api';
 import {getModule} from 'cs2/modding';
 import {TOOLS, ToolId, ShapeData, Tag, LayerDef, LayerIcon, LabelStyle} from '../types';
 import {buildPath, buildPolygon, buildCurve, centroid} from 'mods/utils/buildSvg';
+import {toInlineStyle} from 'mods/utils/style';
 import {useSkyplan} from '../SkyplanContext';
 import {useStyle} from '../StyleContext';
 import {useDrawingContext} from 'mods/DrawingContext';
@@ -99,40 +100,51 @@ function renderText(s: ShapeData, ls: LabelStyle | undefined): React.ReactElemen
 	return renderLabelBlock(`desc-${s.id}`, s.description, pos.x, descY, 'top', descFontSize, textProps);
 }
 
-function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string): React.ReactElement | null {
+// textStyle: the shape's resolved label style (layer → global → defaults, or the Style Manager's
+// draft for its target), used by text-tool shapes.
+// override: the Style Manager's draft for this shape. Inline style beats the .sp-{layerId} class
+// rule, so only this shape shows the unsaved style.
+function renderShape(
+	s: ShapeData, icon: LayerIcon | undefined, textStyle: LabelStyle,
+	opacity?: string, override?: Record<string, string>,
+): React.ReactElement | null {
 	const cn = `sp-${s.layerId}`;
 	const style = opacity !== undefined ? { opacity } : undefined;
+	const shapeStyle = override ? { ...toInlineStyle(override), ...style } : style;
+	// With a draft, the key changes with it so each edit remounts this shape: GameFace kept drawing an
+	// old inline stroke-dasharray after it changed (dashes → Solid). Wiki: Coherent-GameFace-Quirks.
+	const key = override ? `${s.id}|${JSON.stringify(override)}` : s.id;
 
 	switch (s.tag) {
 		case Tag.path: {
 			const d = buildPath(s.pts);
 			if (!d) return null;
-			return <path key={s.id} id={s.id} className={cn} d={d} style={style} />;
+			return <path key={key} id={s.id} className={cn} d={d} style={shapeStyle} />;
 		}
 		case Tag.polygon: {
 			if (s.pts.length < 3) {
 				const d = buildPath(s.pts);
 				if (!d) return null;
-				return <path key={s.id} className={cn} d={d} style={style} />;
+				return <path key={key} className={cn} d={d} style={shapeStyle} />;
 			}
 			const points = buildPolygon(s.pts);
-			return <polygon key={s.id} className={cn} points={points} style={style} />;
+			return <polygon key={key} className={cn} points={points} style={shapeStyle} />;
 		}
 		case Tag.curve: {
 			const d = buildCurve(s.pts, s.handles);
 			if (!d) return null;
-			return <path key={s.id} className={cn} d={d} style={style} />;
+			return <path key={key} className={cn} d={d} style={shapeStyle} />;
 		}
 		case Tag.circle: {
 			const p = s.pts[0];
-			if (!icon) return <circle key={s.id} className={cn} cx={p.x} cy={p.y} r={6} style={style} />;
+			if (!icon) return <circle key={key} className={cn} cx={p.x} cy={p.y} r={6} style={shapeStyle} />;
 			// Icon paths are authored against a r=6 baseline circle - scale them with whatever
 			// radius the icon-carrying circle actually uses so the two stay proportional.
 			const POINT_RADIUS_WITH_ICON = 10;
 			const iconScale = POINT_RADIUS_WITH_ICON / 6;
 			return (
-				<React.Fragment key={s.id}>
-					<circle className={cn} cx={p.x} cy={p.y} r={POINT_RADIUS_WITH_ICON} style={style} />
+				<React.Fragment key={key}>
+					<circle className={cn} cx={p.x} cy={p.y} r={POINT_RADIUS_WITH_ICON} style={shapeStyle} />
 					<g transform={`translate(${p.x},${p.y}) scale(${iconScale})`} style={style}>
 						{/* paintOrder puts the stroke under the fill so it reads as an outline rather
 						    than eating into the icon's own silhouette. */}
@@ -147,8 +159,11 @@ function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string
 			if (!p || !s.label) return null;
 			return (
 				<text key={s.id} x={p.x} y={p.y}
-					textAnchor="middle" dominantBaseline="middle"
-					fontSize={13} fill="#facc15"
+					  textAnchor="middle" dominantBaseline="middle"
+					  fontSize={textStyle.fontSize ?? 15}
+					  fill={textStyle.color ?? '#ffffff'}
+					  fontWeight={textStyle.fontWeight ?? 'normal'}
+					  opacity={textStyle.opacity ?? 1}
 					style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.7)', strokeWidth: 3, ...style }}
 				>
 					{s.label}
@@ -161,7 +176,7 @@ function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string
 
 const DrawingCanvas: React.FC = () => {
 	const { activeTool, activeLayers, primaryLayer, viewMode, showWhatsNew } = useSkyplan();
-	const { layerById, labelStyleFor } = useStyle();
+	const { layerById, labelStyleFor, styleTarget, draftStyle, draftLabelStyle } = useStyle();
 	const { shapes, preview, highlightId, indicator, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions, parallelSpacing, onParallelSpacingChange } = useDrawingContext();
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
@@ -491,16 +506,20 @@ const DrawingCanvas: React.FC = () => {
 
 			{allGroupLayerIds.map(layerId => {
 				const layerShapes = shapesByLayer.get(layerId) ?? [];
-				const ls = labelStyleFor(layerId);
+				const layerLs = labelStyleFor(layerId);
+				// The Style Manager's unsaved label style shows on its target shape only.
+				const lsFor = (s: ShapeData) => s.id === styleTarget?.shapeId && draftLabelStyle ? draftLabelStyle : layerLs;
 				return (
 					<g key={layerId} className={`sp-${layerId}`} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
-						{layerShapes.map(s => renderShape(s, layerById[layerId]?.icon, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
+						{layerShapes.map(s => renderShape(s, layerById[layerId]?.icon, lsFor(s), hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined,
+							s.id === styleTarget?.shapeId ? draftStyle ?? undefined : undefined))}
 
 						{layerLabels[layerId] && layerShapes.map(s => {
 							if (s.tag === Tag.text) return null;
 							if (!s.label) return null;
 							const pos = labelPosition(s);
 							if (!pos) return null;
+							const ls = lsFor(s);
 							return (
 								<text key={`lbl-${s.id}`}
 									x={pos.x} y={pos.y}
@@ -515,11 +534,11 @@ const DrawingCanvas: React.FC = () => {
 						})}
 
 						{showDescriptions
-							&& layerShapes.map(s => renderText(s, ls))}
+							&& layerShapes.map(s => renderText(s, lsFor(s)))}
 					</g>
 				);
 			})}
-			{preview && renderShape(preview, layerById[preview.layerId]?.icon)}
+			{preview && renderShape(preview, layerById[preview.layerId]?.icon, labelStyleFor(preview.layerId))}
 			{preview && Array.from(
 				preview.parallelLanes?.reduce((map, lane) => {
 					if (!map.has(lane.layerId)) map.set(lane.layerId, []);

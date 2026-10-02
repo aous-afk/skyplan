@@ -3,9 +3,10 @@ import {trigger} from 'cs2/api';
 import {getModule} from 'cs2/modding';
 import {TOOLS, Tag} from '../types';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
-import {faUndo, faRedo, faMagnet} from '@fortawesome/free-solid-svg-icons'
+import {faUndo, faRedo, faMagnet, faPalette} from '@fortawesome/free-solid-svg-icons'
 import styles from './Toolbar.module.scss';
 import {useSkyplan} from '../SkyplanContext';
+import {useStyle} from '../StyleContext';
 import {useDrawingContext} from "mods/DrawingContext";
 import ShapeManager from "mods/ShapeManager/ShapeManager";
 
@@ -45,6 +46,15 @@ const Toolbar: React.FC = () => {
 	  snapEnabled,
 	  onSnapEnabledToggle,
 	} = useDrawingContext();
+
+	const { styleTarget, onStyleTarget } = useStyle();
+
+	// Only the main selected layer goes to the Style Manager; the rest of a multi-select queue is ignored.
+	const canStyleLayer = !!primaryLayer && !!activeTool && activeTool !== 'erase';
+	const onToggleLayerStyle = () => {
+		if (styleTarget) onStyleTarget(null);
+		else if (canStyleLayer) onStyleTarget({ layerId: primaryLayer!.id, tool: activeTool! });
+	};
 
 	const [pendingTextId, setPendingTextId] = useState<string | null>(null);
 
@@ -139,9 +149,16 @@ const Toolbar: React.FC = () => {
 							<span className={styles.tooltip}>{t.label}</span>
 						</button>;
 					})}
+					<button onClick={onToggleLayerStyle}
+						disabled={!canStyleLayer}
+						className={`${styles.btn_base} ${styleTarget ? styles.btn_active : ''}`}
+						style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10 }}
+					>
+						<FontAwesomeIcon className={`${styles.svg} ${styleTarget ? styles.svg_active : ''}`} icon={faPalette} />
+						<span className={styles.tooltip}>Style layer</span>
+					</button>
 					<button onClick={onSnapEnabledToggle}
 						className={`${styles.btn_base} ${snapEnabled ? styles.btn_active : ''}`}
-						style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10 }}
 					>
 						<FontAwesomeIcon className={`${styles.svg} ${snapEnabled ? styles.svg_active : ''}`} icon={faMagnet} />
 						<span className={styles.tooltip}>Snap {snapEnabled ? 'on' : 'off'}</span>
