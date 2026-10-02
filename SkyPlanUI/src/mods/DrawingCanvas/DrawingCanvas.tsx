@@ -100,9 +100,13 @@ function renderText(s: ShapeData, ls: LabelStyle | undefined): React.ReactElemen
 	return renderLabelBlock(`desc-${s.id}`, s.description, pos.x, descY, 'top', descFontSize, textProps);
 }
 
+// textStyle: the global label style, used by text-tool shapes.
 // override: the Style Manager's draft for this shape. Inline style beats the .sp-{layerId} class
 // rule, so only this shape shows the unsaved style.
-function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string, override?: Record<string, string>): React.ReactElement | null {
+function renderShape(
+	s: ShapeData, icon: LayerIcon | undefined, textStyle: LabelStyle,
+	opacity?: string, override?: Record<string, string>,
+): React.ReactElement | null {
 	const cn = `sp-${s.layerId}`;
 	const style = opacity !== undefined ? { opacity } : undefined;
 	const shapeStyle = override ? { ...toInlineStyle(override), ...style } : style;
@@ -151,8 +155,11 @@ function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string
 			if (!p || !s.label) return null;
 			return (
 				<text key={s.id} x={p.x} y={p.y}
-					textAnchor="middle" dominantBaseline="middle"
-					fontSize={13} fill="#facc15"
+					  textAnchor="middle" dominantBaseline="middle"
+					  fontSize={textStyle.fontSize ?? 15}
+					  fill={textStyle.color ?? '#ffffff'}
+					  fontWeight={textStyle.fontWeight ?? 'normal'}
+					  opacity={textStyle.opacity ?? 1}
 					style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.7)', strokeWidth: 3, ...style }}
 				>
 					{s.label}
@@ -165,7 +172,7 @@ function renderShape(s: ShapeData, icon: LayerIcon | undefined, opacity?: string
 
 const DrawingCanvas: React.FC = () => {
 	const { activeTool, activeLayers, primaryLayer, viewMode, showWhatsNew } = useSkyplan();
-	const { layerById, labelStyleFor, styleTarget, draftStyle, draftLabelStyle } = useStyle();
+	const { layerById, labelStyleFor, styleTarget, draftStyle, draftLabelStyle, globalLabelStyle } = useStyle();
 	const { shapes, preview, highlightId, indicator, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions, parallelSpacing, onParallelSpacingChange } = useDrawingContext();
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
@@ -500,7 +507,7 @@ const DrawingCanvas: React.FC = () => {
 				const lsFor = (s: ShapeData) => s.id === styleTarget?.shapeId && draftLabelStyle ? draftLabelStyle : layerLs;
 				return (
 					<g key={layerId} className={`sp-${layerId}`} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
-						{layerShapes.map(s => renderShape(s, layerById[layerId]?.icon, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined,
+						{layerShapes.map(s => renderShape(s, layerById[layerId]?.icon, globalLabelStyle, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined,
 							s.id === styleTarget?.shapeId ? draftStyle ?? undefined : undefined))}
 
 						{layerLabels[layerId] && layerShapes.map(s => {
@@ -527,7 +534,7 @@ const DrawingCanvas: React.FC = () => {
 					</g>
 				);
 			})}
-			{preview && renderShape(preview, layerById[preview.layerId]?.icon)}
+			{preview && renderShape(preview, layerById[preview.layerId]?.icon, globalLabelStyle)}
 			{preview && Array.from(
 				preview.parallelLanes?.reduce((map, lane) => {
 					if (!map.has(lane.layerId)) map.set(lane.layerId, []);
