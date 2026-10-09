@@ -65,12 +65,12 @@ namespace Skyplan.Systems {
 		private ValueBinding<string> m_ShapesBinding;
 		private ValueBinding<string> m_PreviewBinding;
 		private ValueBinding<string> m_HighlightBinding;
-		private ValueBinding<string> m_LayersConfigBinding;
 		private ValueBinding<bool> m_ShowDescriptionsBinding;
 		private ValueBinding<string> m_IndicatorBinding;
 		private ValueBinding<bool> m_SnapEnabledBinding;
 		private ValueBinding<string> m_LayerVisibleBinding;
 		private readonly Dictionary<string, bool> m_LayerVisible = [];
+		private LayerConfigSystem _config;
 
 		protected override void OnGamePreload(Colossal.Serialization.Entities.Purpose purpose, GameMode mode) {
 			try {
@@ -84,6 +84,7 @@ namespace Skyplan.Systems {
 			base.OnCreate();
 			instance = this;
 			m_Camera = World.GetOrCreateSystemManaged<CameraSystem>();
+			_config = World.GetOrCreateSystemManaged<LayerConfigSystem>();
 			Mod.log.Info("DrawingSystem.OnCreate");
 			m_DrawModeBarrier = Game.Input.InputManager.instance.CreateMapBarrier("Tool", "SkyplanDraw");
 
@@ -91,7 +92,6 @@ namespace Skyplan.Systems {
 			m_ShapesBinding = new ValueBinding<string>("skyplan", "shapes", "[]");
 			m_PreviewBinding = new ValueBinding<string>("skyplan", "preview", "");
 			m_HighlightBinding = new ValueBinding<string>("skyplan", "highlight", "");
-			m_LayersConfigBinding = new ValueBinding<string>("skyplan", "layersConfig", "{\"layers\":[]}");
 			m_ShowDescriptionsBinding = new ValueBinding<bool>("skyplan", "showDescriptions", LoadDisplaySettings("showDescriptions"));
 			m_IndicatorBinding = new ValueBinding<string>("skyplan", "indicator", "");
 			m_SnapEnabled = LoadDisplaySettings("snapEnabled", true);
@@ -104,7 +104,6 @@ namespace Skyplan.Systems {
 			AddBinding(m_ShapesBinding);
 			AddBinding(m_PreviewBinding);
 			AddBinding(m_HighlightBinding);
-			AddBinding(m_LayersConfigBinding);
 			AddBinding(m_ShowDescriptionsBinding);
 			AddBinding(m_IndicatorBinding);
 			AddBinding(m_SnapEnabledBinding);
@@ -294,8 +293,7 @@ namespace Skyplan.Systems {
 		public void TogglePanel() {
 			m_PanelVisible = !m_PanelVisible;
 			if (m_PanelVisible) {
-				JObject merged = LayerMerger.LoadAndMerge(Paths.DefaultLayers, Paths.UserLayers);
-				m_LayersConfigBinding.Update(merged.ToString(Formatting.None));
+				_config.Reload();
 				if (m_Camera.IsReady) {
 					UpdateShapesJson();
 				}

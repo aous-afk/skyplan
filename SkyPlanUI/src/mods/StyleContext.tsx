@@ -1,13 +1,21 @@
 import React, {createContext, useContext, useMemo, useCallback, useState} from 'react';
-import {useValue} from 'cs2/api';
+import {trigger, useValue} from 'cs2/api';
 import {layersConfig$} from '../bindings';
-import {LayerDef, LabelStyle, ToolId} from './types';
+import {LayerDef, LabelStyle, ToolId, SaveLayerStyleDto, SaveLayerStyleAsDto} from './types';
 
-// Layer mode (from the toolbar): layerId + tool. Shape mode (from the Shape Manager): also shapeId.
+// Case-insensitive, like C#'s layer lookup.
+function uniqueLayerId(label: string, layerById: Record<string, LayerDef>): string {
+	const base = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'layer';
+	const taken = new Set(Object.keys(layerById).map(id => id.toLowerCase()));
+	let id = base;
+	for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
+	return id;
+}
+
+// Opened from the toolbar or a Shape Manager layer card.
 export interface StyleTarget {
 	layerId: string;
 	tool: ToolId;
-	shapeId?: string;
 }
 
 interface Draft {
@@ -26,8 +34,8 @@ interface StyleCtx {
 
 	// Style Manager: what's being restyled, and the unsaved values for the target's tool + layer.
 	// Drafts are kept per tool and layer for the whole game session (closing the panel keeps them);
-	// the first open of a tool/layer pair seeds it from the layer. In shape mode the draft is drawn
-	// on the target shape; in layer mode only in the panel's preview.
+	// the first open of a tool/layer pair seeds it from the layer. The draft is drawn only in the
+	// panel's preview.
 	styleTarget: StyleTarget | null;
 	draftStyle: Record<string, string> | null;
 	draftLabelStyle: Required<LabelStyle> | null;
@@ -35,6 +43,8 @@ interface StyleCtx {
 	onDraftStyleChange: (patch: Record<string, string>) => void;
 	onDraftLabelStyleChange: (patch: Partial<LabelStyle>) => void;
 	onResetDraft: () => void;
+	onSave: () => void;
+	onSaveAs: (label: string) => string | null;
 }
 
 const StyleContext = createContext<StyleCtx | null>(null);
@@ -115,6 +125,40 @@ export const StyleProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 		setDrafts(prev => setDraft(prev, styleTarget.tool, seedDraft(styleTarget.layerId)));
 	}, [styleTarget, seedDraft]);
 
+	const onSave = useCallback(() => {
+		if (!styleTarget || !draft) return;
+		const { tool, layerId } = styleTarget;
+		const dto: SaveLayerStyleDto = { layerId, style: draft.style, labelStyle: draft.labelStyle };
+		trigger('skyplan', 'saveLayerStyle', JSON.stringify(dto));
+		setDrafts(prev => Object.fromEntries(Object.entries(prev).map(([t, byLayer]) => {
+			if (t === tool || !byLayer?.[layerId]) return [t, byLayer];
+			const { [layerId]: _, ...rest } = byLayer;
+			return [t, rest];
+		})));
+	}, [styleTarget, draft]);
+
+	const onSaveAs = useCallback((label: string): string | null => {
+		const name = label.trim();
+		if (!styleTarget || !draft || !name) return null;
+		const { tool, layerId } = styleTarget;
+		const newId = uniqueLayerId(name, layerById);
+		const dto: SaveLayerStyleAsDto = {
+			layerId,
+			style: draft.style,
+			labelStyle: draft.labelStyle,
+			newId,
+			label: name,
+		};
+		trigger('skyplan', 'saveLayerStyleAs', JSON.stringify(dto));
+		setDrafts(prev => {
+			const { [layerId]: _, ...rest } = prev[tool] ?? {};
+			return { ...prev, [tool]: { ...rest, [newId]: { ...draft, layerId: newId } } };
+		});
+		// The target isn't moved here: StyleManager selects the new layer in the toolbar once it exists,
+		// and the toolbar change moves the target.
+		return newId;
+	}, [styleTarget, draft, layerById]);
+
 	const draftStyle = draft?.style ?? null;
 	const draftLabelStyle = draft?.labelStyle ?? null;
 
@@ -130,8 +174,10 @@ export const StyleProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 		onDraftStyleChange,
 		onDraftLabelStyleChange,
 		onResetDraft,
+		onSave,
+		onSaveAs
 	}), [allLayers, layerById, globalLabelStyle, labelStyleFor, styleTarget, draftStyle, draftLabelStyle,
-		onStyleTarget, onDraftStyleChange, onDraftLabelStyleChange, onResetDraft]);
+		onStyleTarget, onDraftStyleChange, onDraftLabelStyleChange, onResetDraft, onSave, onSaveAs]);
 
 	return (
 		<StyleContext.Provider value={value}>
