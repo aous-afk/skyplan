@@ -34,7 +34,8 @@ namespace Skyplan.Systems {
 
 			Mod.log.Info($"Exporting {shapes.Count} shapes to svg as {fileName}");
 
-			string svg = SVGExporter.Export(shapes);
+			LayerConfigSystem layerConfig = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<LayerConfigSystem>();
+			string svg = SVGExporter.Export(shapes, layerConfig.GetLayer);
 
 			Directory.CreateDirectory(Paths.ModDataPath);
 			File.WriteAllText(Path.Combine(Paths.ModDataPath, fileName), svg);
