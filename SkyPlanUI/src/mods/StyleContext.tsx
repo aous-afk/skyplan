@@ -125,6 +125,8 @@ export const StyleProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 		setDrafts(prev => setDraft(prev, styleTarget.tool, seedDraft(styleTarget.layerId)));
 	}, [styleTarget, seedDraft]);
 
+	// TODO: isDirty (draft differs from seedDraft(layerId)) to disable Save when nothing changed. Harmless
+	// without it: saving an unchanged draft writes the same values back.
 	const onSave = useCallback(() => {
 		if (!styleTarget || !draft) return;
 		const { tool, layerId } = styleTarget;

@@ -130,5 +130,11 @@
     }
   }
 }
-.btn_right { margin-left: auto; }
-.btn_left  { margin-right: auto; }
+
+// GameFace ignores the `disabled` attribute and `:disabled` (hover and clicks still go through), so
+// disabled buttons get this class instead. Top-level, after .btn_base, so it wins on source order.
+.btn_disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}

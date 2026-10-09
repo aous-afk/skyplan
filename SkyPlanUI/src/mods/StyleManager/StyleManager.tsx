@@ -114,7 +114,7 @@ const StyleManager: React.FC = () => {
 								}}
 							/>
 							<div className={styles.name_buttons}>
-								<button onClick={confirmSaveAs} disabled={!saveAsName.trim()} className={`${shared.btn_base} ${styles.button_ok}`}>OK</button>
+								<button onClick={confirmSaveAs} className={`${shared.btn_base} ${styles.button_ok} ${saveAsName.trim() ? '' : shared.btn_disabled}`}>OK</button>
 								<button onClick={() => setSaveAsName(null)} className={`${shared.btn_base} ${styles.button_danger}`}>Cancel</button>
 							</div>
 						</div>
