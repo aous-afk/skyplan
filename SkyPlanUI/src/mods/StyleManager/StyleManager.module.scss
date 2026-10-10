@@ -89,7 +89,59 @@
 
 .footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 6px;
   padding: 6px 10px 2px;
+}
+
+.footer_group {
+  display: flex;
+  gap: 6px;
+}
+
+.name_row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 10px;
+}
+
+.name_buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  background: rgba(74, 144, 217, 0.07);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.button_ok {
+  background: rgba(74, 144, 217, 0.15);
+  border: 2px solid rgba(74, 144, 217, 0.4);
+  border-radius: 4px;
+}
+
+.button_danger {
+  color: #ff7070;
+
+  &:hover {
+    color: #fff;
+  }
+}
+
+.name_input {
+  width: 100%;
+  background: rgba(10, 30, 60, 0.8);
+  border: 1px solid rgba(74, 144, 217, 0.4);
+  color: #fff !important;
+  font-size: var(--skyplan-font-size-sm);
+  padding: 4px 10px;
+  box-sizing: border-box;
+  border-radius: 4px;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
 }

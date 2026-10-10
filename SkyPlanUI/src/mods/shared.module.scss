@@ -62,3 +62,79 @@
     color: #9c6d6d !important;
   }
 }
+
+.btn_base {
+  color: #bbb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 2px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: var(--skyplan-font-size-lg);
+  font-weight: 600;
+  position: relative;
+  background: transparent;
+
+  &:hover {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+
+    .svg {
+      color: #fff;
+    }
+  }
+
+  .tooltip {
+    z-index: 1;
+    position: absolute;
+    top: 100%;
+    margin-top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(18,18,18,0.95);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 2px;
+    padding: 4px 8px;
+    font-size: var(--skyplan-font-size-sm);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  &:hover .tooltip {
+    opacity: 1;
+  }
+
+  &.btn_active {
+    color: #3e80d7;
+    background: rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.35);
+  }
+
+  &.btn_clear {
+    color: #ff7070;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+
+  &.btn_clear_all {
+    color: #ff4444;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+}
+
+// GameFace ignores the `disabled` attribute and `:disabled` (hover and clicks still go through), so
+// disabled buttons get this class instead. Top-level, after .btn_base, so it wins on source order.
+.btn_disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}

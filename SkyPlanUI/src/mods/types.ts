@@ -91,6 +91,19 @@ export interface LayerDef {
 	icon?: LayerIcon;
 }
 
+// Payload of the `saveLayerStyle` trigger (C# SaveLayerStyleDto).
+export interface SaveLayerStyleDto {
+	layerId: string; // Save as: the source layer
+	style: Record<string, string>;
+	labelStyle: LabelStyle;
+}
+
+// Payload of the `saveLayerStyleAs` trigger (C# SaveLayerStyleAsDto).
+export interface SaveLayerStyleAsDto extends SaveLayerStyleDto {
+	newId: string;
+	label: string;
+}
+
 export enum Tag {
   none = 'none',
   path = 'path',

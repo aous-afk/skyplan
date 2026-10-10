@@ -176,7 +176,7 @@ function renderShape(
 
 const DrawingCanvas: React.FC = () => {
 	const { activeTool, activeLayers, primaryLayer, viewMode, showWhatsNew } = useSkyplan();
-	const { layerById, labelStyleFor, styleTarget, draftStyle, draftLabelStyle } = useStyle();
+	const { layerById, labelStyleFor } = useStyle();
 	const { shapes, preview, highlightId, indicator, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions, parallelSpacing, onParallelSpacingChange } = useDrawingContext();
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
@@ -507,19 +507,16 @@ const DrawingCanvas: React.FC = () => {
 			{allGroupLayerIds.map(layerId => {
 				const layerShapes = shapesByLayer.get(layerId) ?? [];
 				const layerLs = labelStyleFor(layerId);
-				// The Style Manager's unsaved label style shows on its target shape only.
-				const lsFor = (s: ShapeData) => s.id === styleTarget?.shapeId && draftLabelStyle ? draftLabelStyle : layerLs;
 				return (
 					<g key={layerId} className={`sp-${layerId}`} display={layerVisible[layerId] === false ? 'none' : undefined} opacity={layerOpacities[layerId] ?? 1}>
-						{layerShapes.map(s => renderShape(s, layerById[layerId]?.icon, lsFor(s), hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined,
-							s.id === styleTarget?.shapeId ? draftStyle ?? undefined : undefined))}
+						{layerShapes.map(s => renderShape(s, layerById[layerId]?.icon, layerLs, hasHighlight ? (s.id === highlightId ? '1' : '0.3') : undefined))}
 
 						{layerLabels[layerId] && layerShapes.map(s => {
 							if (s.tag === Tag.text) return null;
 							if (!s.label) return null;
 							const pos = labelPosition(s);
 							if (!pos) return null;
-							const ls = lsFor(s);
+							const ls = layerLs;
 							return (
 								<text key={`lbl-${s.id}`}
 									x={pos.x} y={pos.y}
@@ -534,7 +531,7 @@ const DrawingCanvas: React.FC = () => {
 						})}
 
 						{showDescriptions
-							&& layerShapes.map(s => renderText(s, lsFor(s)))}
+							&& layerShapes.map(s => renderText(s, layerLs))}
 					</g>
 				);
 			})}

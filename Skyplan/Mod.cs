@@ -41,6 +41,7 @@ namespace Skyplan {
 			m_ToggleAction.shouldBeEnabled = true;
 
 			updateSystem.UpdateAt<DrawingSystem>(SystemUpdatePhase.UIUpdate);
+			updateSystem.UpdateAt<LayerConfigSystem>(SystemUpdatePhase.UIUpdate);
 			updateSystem.UpdateAt<PlanPersistenceSystem>(SystemUpdatePhase.MainLoop);
 			updateSystem.UpdateAt<ServiceCatchmentSystem>(SystemUpdatePhase.UIUpdate);
 
