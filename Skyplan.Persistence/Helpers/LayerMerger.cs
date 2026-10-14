@@ -48,6 +48,52 @@ namespace Skyplan.Persistence.Helpers {
 			return merged;
 		}
 
+		// A shape's layer as seen in the plan: its id, label, style snapshot and the tool that drew it.
+		public class UsedLayer {
+			public string Id { get; }
+			public string Label { get; }
+			public IDictionary<string, string> Style { get; }
+			public string Tool { get; }
+
+			public UsedLayer(string id, string label, IDictionary<string, string> style, string tool) {
+				Id = id;
+				Label = label;
+				Style = style;
+				Tool = tool;
+			}
+		}
+
+		// Shapes can reference layers the config doesn't have (imported SVGs, a user layer deleted
+		// from layers.json). The UI only styles config layers, so those shapes would draw invisible.
+		// Appends one layer per missing id, built from the first shape's style snapshot, with
+		// allowedTools = every tool used on it. Not persisted; the config is rebuilt on each load.
+		public static int AppendMissingLayers(JObject merged, IEnumerable<UsedLayer> used) {
+			if (merged["layers"] is not JArray layers) {
+				layers = [];
+				merged["layers"] = layers;
+			}
+			HashSet<string> known = new(
+				layers.OfType<JObject>().Select(l => l["id"]?.Value<string>()).OfType<string>(),
+				StringComparer.OrdinalIgnoreCase);
+
+			int added = 0;
+			foreach (IGrouping<string, UsedLayer> group in used
+				.Where(u => !string.IsNullOrEmpty(u.Id) && !known.Contains(u.Id))
+				.GroupBy(u => u.Id, StringComparer.OrdinalIgnoreCase)) {
+				UsedLayer first = group.First();
+				layers.Add(new JObject {
+					["id"] = first.Id,
+					["label"] = string.IsNullOrEmpty(first.Label) ? first.Id : first.Label,
+					["allowedTools"] = new JArray(group.Select(u => u.Tool).Distinct()),
+					["style"] = JObject.FromObject(first.Style),
+					["labelStyle"] = new JObject(),
+				});
+				added++;
+			}
+			if (added > 0) LogInfo?.Invoke($"[LayerMerger] appended {added} layer(s) used by shapes but missing from the config");
+			return added;
+		}
+
 		public static JObject MergeObjects(JObject @default, JObject user) {
 			JObject clonedDefaults = (JObject)@default.DeepClone();
 			clonedDefaults.Merge(user, new JsonMergeSettings {

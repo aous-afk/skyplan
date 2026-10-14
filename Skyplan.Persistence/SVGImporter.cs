@@ -56,20 +56,27 @@ namespace Skyplan.Persistence {
 				.Split(',', StringSplitOptions.RemoveEmptyEntries)
 				.Select(s => Attr(s) ?? 0f)];
 
+			// A command may carry several coordinate sets ("L x1 y1,x2 y2,..." or "M x y x2 y2"): per the
+			// SVG spec the extra sets repeat the command (after M they're implicit L). Other SVG tools
+			// (e.g. city-roads) write whole polylines this way.
 			foreach (Match m in Regex.Matches(d, @"([MLQ])\s*([^MLQ]*)")) {
 				string cmd = m.Groups[1].Value;
 				float[] nums = [.. m.Groups[2].Value
 					.Split([' ', ',', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
 					.Select(t => float.Parse(t, NumberStyles.Float, CultureInfo.InvariantCulture))];
 
-				if ((cmd == "M" || cmd == "L") && nums.Length >= 2) {
-					float y = pts.Count < yPts.Length ? yPts[pts.Count] : 0f;
-					pts.Add(new Vector3(nums[0], y, nums[1]));
-				} else if (cmd == "Q" && nums.Length >= 4) {
-					float hy = handles.Count < yHandles.Length ? yHandles[handles.Count] : 0f;
-					handles.Add(new Vector3(nums[0], hy, nums[1]));
-					float py = pts.Count < yPts.Length ? yPts[pts.Count] : 0f;
-					pts.Add(new Vector3(nums[2], py, nums[3]));
+				if (cmd == "M" || cmd == "L") {
+					for (int i = 0; i + 1 < nums.Length; i += 2) {
+						float y = pts.Count < yPts.Length ? yPts[pts.Count] : 0f;
+						pts.Add(new Vector3(nums[i], y, nums[i + 1]));
+					}
+				} else if (cmd == "Q") {
+					for (int i = 0; i + 3 < nums.Length; i += 4) {
+						float hy = handles.Count < yHandles.Length ? yHandles[handles.Count] : 0f;
+						handles.Add(new Vector3(nums[i], hy, nums[i + 1]));
+						float py = pts.Count < yPts.Length ? yPts[pts.Count] : 0f;
+						pts.Add(new Vector3(nums[i + 2], py, nums[i + 3]));
+					}
 				}
 			}
 			if (pts.Count < 2) return null;
@@ -169,16 +176,39 @@ namespace Skyplan.Persistence {
 			};
 		}
 
+		// Shapes from SVGs not written by Skyplan have no data-layer; they share this layer, which
+		// DrawingSystem adds to the layers config (LayerMerger.AppendMissingLayers) so it renders.
+		public const string ImportedLayerId = "imported";
+
+		private static readonly string[] StyleAttributes = [
+			"stroke", "stroke-width", "stroke-opacity", "stroke-dasharray", "stroke-linecap", "stroke-linejoin",
+			"fill", "fill-opacity", "opacity",
+		];
+
 		private static LayerDefDto ParseLayer(XElement el) {
-			string id = el.Attribute("data-layer")?.Value ?? "unknown";
+			string? layerId = el.Attribute("data-layer")?.Value;
+			return new LayerDefDto {
+				Id = layerId ?? ImportedLayerId,
+				Label = layerId ?? "Imported",
+				Style = InheritedStyle(el),
+			};
+		}
+
+		// Presentation attributes and style="" from the outermost ancestor down to the element, so
+		// nearer values win, as in SVG itself (e.g. <g stroke="#1a1a1a"> around plain <path>s).
+		private static Dictionary<string, string> InheritedStyle(XElement el) {
 			Dictionary<string, string> style = [];
-			foreach (string? part in (el.Attribute("style")?.Value ?? "").Split(';')) {
-				int colon = part.IndexOf(':');
-				if (colon > 0) {
-					style[part[..colon].Trim()] = part[(colon + 1)..].Trim();
+			foreach (XElement node in el.AncestorsAndSelf().Reverse()) {
+				foreach (string name in StyleAttributes) {
+					string? v = node.Attribute(name)?.Value;
+					if (!string.IsNullOrWhiteSpace(v)) style[name] = v.Trim();
+				}
+				foreach (string part in (node.Attribute("style")?.Value ?? "").Split(';')) {
+					int colon = part.IndexOf(':');
+					if (colon > 0) style[part[..colon].Trim()] = part[(colon + 1)..].Trim();
 				}
 			}
-			return new LayerDefDto { Id = id, Label = id, Style = style };
+			return style;
 		}
 
 		private static float? Attr(XElement el, string name) => Attr(el.Attribute(name)?.Value);

@@ -290,9 +290,17 @@ namespace Skyplan.Systems {
 			m_DrawModeBarrier.blocked = m_PanelVisible && !m_ViewMode && (Mod.setting?.DisableWorldClicksWhileDrawing ?? true);
 		}
 
+		// Tells LayerConfigSystem which layers the shapes use, so it can add the ones the config lacks.
+		private void SyncShapeLayers() {
+			_config.SetShapeLayers(m_Shapes
+				.Where(s => s.layer != null)
+				.Select(s => new LayerMerger.UsedLayer(s.layer.Id, s.layer.Label, s.layer.Style ?? [], s.Type.ToString())));
+		}
+
 		public void TogglePanel() {
 			m_PanelVisible = !m_PanelVisible;
 			if (m_PanelVisible) {
+				SyncShapeLayers();
 				_config.Reload();
 				if (m_Camera.IsReady) {
 					UpdateShapesJson();
@@ -783,6 +791,9 @@ namespace Skyplan.Systems {
 			}
 			if (raised > 0) Mod.log.Info($"[Skyplan] Raised {raised} loaded points to the water / ground surface");
 			m_Shapes.AddRange(imported);
+			// Imported shapes may bring layers the config lacks; while the panel is closed, its next open reloads.
+			SyncShapeLayers();
+			if (m_PanelVisible) _config.Reload();
 			if (m_Camera.IsReady) {
 				UpdateShapesJson();
 			}
@@ -804,6 +815,8 @@ namespace Skyplan.Systems {
 				}
 			}
 			if (raised > 0) Mod.log.Info($"[Skyplan] Raised {raised} imported points to the water / ground surface");
+			SyncShapeLayers();
+			if (m_PanelVisible) _config.Reload();
 			if (m_Camera.IsReady) {
 				UpdateShapesJson();
 			}
