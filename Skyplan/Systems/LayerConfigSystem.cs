@@ -16,6 +16,10 @@ namespace Skyplan.Systems {
 		private ValueBinding<string> m_LayersConfigBinding;
 		private readonly Dictionary<string, LayerDefDto> m_LayerById = new(StringComparer.OrdinalIgnoreCase);
 		private JObject m_Merged = [];
+		// Layers the plan's shapes use. Reload adds the ones the config lacks (imported SVGs, a user layer
+		// deleted by hand) so those shapes still render; kept here so every reload, including the one after
+		// a Save, keeps them.
+		private List<LayerMerger.UsedLayer> m_ShapeLayers = [];
 
 		protected override void OnCreate() {
 			base.OnCreate();
@@ -69,7 +73,16 @@ namespace Skyplan.Systems {
 				JObject userRoot = JObject.Parse(File.ReadAllText(Paths.UserLayers));
 				// The default layer, not the merged one: the merged one already contains the user's own values.
 				JObject defaults = JObject.Parse(File.ReadAllText(Paths.DefaultLayers));
-				UserLayersWriter.SaveStyle(userRoot, dto, UserLayersWriter.FindLayer(defaults, dto.LayerId), m_Merged["labelStyle"] as JObject);
+				JObject defaultLayer = UserLayersWriter.FindLayer(defaults, dto.LayerId);
+				// A layer only added for shapes (AppendMissingLayers, e.g. "imported") is in neither file; SaveStyle
+				// would append just {id, style, labelStyle}, which would then replace the full layer (no label,
+				// no allowedTools). Write the whole layer first so the saved one stays complete.
+				JObject appended = UserLayersWriter.FindLayer(m_Merged, dto.LayerId);
+				if (defaultLayer == null && UserLayersWriter.FindLayer(userRoot, dto.LayerId) == null && appended != null) {
+					if (userRoot["layers"] is not JArray userLayers) userRoot["layers"] = userLayers = [];
+					userLayers.Add(appended.DeepClone());
+				}
+				UserLayersWriter.SaveStyle(userRoot, dto, defaultLayer, m_Merged["labelStyle"] as JObject);
 				File.WriteAllText(Paths.UserLayers, userRoot.ToString(Formatting.Indented));
 			} catch (Exception ex) {
 				Mod.log.Error($"[LayerConfig] saveLayerStyle failed: {ex.Message}");
@@ -78,8 +91,11 @@ namespace Skyplan.Systems {
 			Reload();
 		}
 
+		public void SetShapeLayers(IEnumerable<LayerMerger.UsedLayer> used) => m_ShapeLayers = used.ToList();
+
 		public void Reload() {
 			JObject merged = LayerMerger.LoadAndMerge(Paths.DefaultLayers, Paths.UserLayers);
+			LayerMerger.AppendMissingLayers(merged, m_ShapeLayers);
 			m_Merged = merged;
 			m_LayersConfigBinding.Update(merged.ToString(Formatting.None));
 

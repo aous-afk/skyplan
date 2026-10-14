@@ -164,5 +164,44 @@ namespace Skyplan.Tests {
 
 			Assert.True(result.Any(l => l["id"]?.Value<string>() == "custom"));
 		}
+
+		// AppendMissingLayers
+
+		static LayerMerger.UsedLayer Used(string id, string tool, string stroke = "#1a1a1a") =>
+			new(id, id, new Dictionary<string, string> { ["stroke"] = stroke }, tool);
+
+		[Fact]
+		public void AppendMissingLayers_KnownId_NotAdded() {
+			var merged = DefaultLayers();
+
+			int added = LayerMerger.AppendMissingLayers(merged, [Used("train", "path"), Used("TRAIN", "curve")]);
+
+			Assert.Equal(0, added);
+			Assert.Equal(2, ((JArray)merged["layers"]!).Count);
+		}
+
+		[Fact]
+		public void AppendMissingLayers_UnknownId_AddedOnceWithAllTools() {
+			var merged = DefaultLayers();
+
+			int added = LayerMerger.AppendMissingLayers(merged,
+				[Used("imported", "path", "#111111"), Used("imported", "curve", "#222222"), Used("imported", "path")]);
+
+			Assert.Equal(1, added);
+			var layer = ((JArray)merged["layers"]!).OfType<JObject>().Single(l => l["id"]?.Value<string>() == "imported");
+			Assert.Equal(["path", "curve"], layer["allowedTools"]!.Values<string>());
+			// Style comes from the first shape.
+			Assert.Equal("#111111", layer["style"]?["stroke"]?.Value<string>());
+			Assert.NotNull(layer["labelStyle"]);
+		}
+
+		[Fact]
+		public void AppendMissingLayers_NoLayersArray_Created() {
+			var merged = new JObject();
+
+			LayerMerger.AppendMissingLayers(merged, [Used("imported", "path")]);
+
+			Assert.Single((JArray)merged["layers"]!);
+		}
 	}
 }
