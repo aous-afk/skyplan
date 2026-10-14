@@ -12,12 +12,14 @@ namespace Skyplan.Systems {
 		private Quaternion m_LastRot;
 		private float m_LastFov;
 		private TerrainSystem m_TerrainSystem;
+		private WaterSystem m_WaterSystem;
 
 		public bool IsReady => GetCamera() != null;
 
 		protected override void OnCreate() {
 			base.OnCreate();
 			m_TerrainSystem = World.GetOrCreateSystemManaged<TerrainSystem>();
+			m_WaterSystem = World.GetOrCreateSystemManaged<WaterSystem>();
 		}
 
 		protected override void OnUpdate() { }
@@ -57,21 +59,31 @@ namespace Skyplan.Systems {
 			if (t0 < 0f) { world = Vector3.zero; return false; }
 			Vector3 approx = ray.origin + (ray.direction * t0);
 
-			// Step 2: sample actual terrain Y at that XZ
-			float terrainY = SampleTerrainHeight(approx.x, approx.z);
+			// Step 2: sample the surface Y at that XZ (water surface where there is water)
+			float surfaceY = SampleSurfaceHeight(approx.x, approx.z);
 
-			// Step 3: re-intersect ray with Y=terrainY plane
-			float dt = ray.origin.y - terrainY;
+			// Step 3: re-intersect ray with Y=surfaceY plane
+			float dt = ray.origin.y - surfaceY;
 			float t1 = dt / (-ray.direction.y);
-			world = t1 > 0f ? ray.origin + ray.direction * t1 : approx;
-			world.y = terrainY;
+			world = t1 > 0f ? ray.origin + (ray.direction * t1) : approx;
+			world.y = surfaceY;
 			return true;
 		}
 
-		private float SampleTerrainHeight(float wx, float wz) {
+		// Terrain alone is the riverbed / lake bottom, which puts points under the water. Sampled the same
+		// way as the game's CameraController: water surface when the water data exists, terrain otherwise.
+		public float SampleSurfaceHeight(float wx, float wz) {
 			if (m_TerrainSystem == null) return 0f;
 			TerrainHeightData heightData = m_TerrainSystem.GetHeightData();
-			return TerrainUtils.SampleHeight(ref heightData, new float3(wx, 0, wz));
+			// Not ready yet (e.g. the plan auto-loads early): 0 leaves every stored height as it is.
+			if (!heightData.isCreated) return 0f;
+			float3 position = new(wx, 0f, wz);
+			if (m_WaterSystem != null) {
+				WaterSurfaceData<SurfaceWater> waterData = m_WaterSystem.GetSurfaceData(out Unity.Jobs.JobHandle deps);
+				deps.Complete();
+				if (waterData.isCreated) return WaterUtils.SampleHeight(ref waterData, ref heightData, position);
+			}
+			return TerrainUtils.SampleHeight(ref heightData, position);
 		}
 
 		private static Camera GetCamera() =>

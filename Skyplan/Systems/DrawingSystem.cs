@@ -776,7 +776,12 @@ namespace Skyplan.Systems {
 			m_Shapes.Clear();
 			m_UndoStack.Clear();
 			m_ActiveShape = null;
-			foreach (Shape s in imported) s.CalcBounds();
+			int raised = 0;
+			foreach (Shape s in imported) {
+				raised += CapToSurface(s);
+				s.CalcBounds();
+			}
+			if (raised > 0) Mod.log.Info($"[Skyplan] Raised {raised} loaded points to the water / ground surface");
 			m_Shapes.AddRange(imported);
 			if (m_Camera.IsReady) {
 				UpdateShapesJson();
@@ -790,16 +795,43 @@ namespace Skyplan.Systems {
 				return;
 			}
 			HashSet<string> existingIds = [.. m_Shapes.Select(s => s.id)];
+			int raised = 0;
 			foreach (Shape s in imported) {
 				if (existingIds.Add(s.id)) {
+					raised += CapToSurface(s);
 					s.CalcBounds();
 					m_Shapes.Add(s);
 				}
 			}
+			if (raised > 0) Mod.log.Info($"[Skyplan] Raised {raised} imported points to the water / ground surface");
 			if (m_Camera.IsReady) {
 				UpdateShapesJson();
 			}
 			m_PreviewBinding.Update("");
+		}
+
+		// Stored heights can be under the surface: plans saved before points sampled the water surface sit
+		// on the riverbed, and imported SVGs without data-y come in at y = 0. Points already at or above
+		// the surface are kept. A handle equal to its point (the "no drag" sentinel) stays equal, since
+		// both are raised to the same sampled height.
+		private int CapToSurface(Shape s) {
+			int raised = 0;
+			for (int i = 0; i < s.pts.Count; i++) {
+			  raised += CapPoint(s.pts, i);
+			}
+			for (int i = 0; i < s.handles.Count; i++) {
+			  raised += CapPoint(s.handles, i);
+			}
+			return raised;
+		}
+
+		private int CapPoint(List<Vector3> points, int i) {
+			Vector3 p = points[i];
+			float surface = m_Camera.SampleSurfaceHeight(p.x, p.z);
+			if (p.y >= surface) return 0;
+			p.y = surface;
+			points[i] = p;
+			return 1;
 		}
 
 		private void UpdatePreviewJson() {
