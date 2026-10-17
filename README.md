@@ -44,7 +44,8 @@ This is a beta version - a lot of the feedback I got on Reddit isn't implemented
 - Auto Save/Load: the game auto-saves your shapes per city and loads them on start
 - Undo/Redo: (Ctrl+Z)/(Ctrl+Y)
 - Draggable toolbar
-- Shape Manager: view all shapes grouped by layer, edit each shape's name and description, toggle layer visibility and label display
+- Style Manager: edit any layer's colour, line width, dash pattern and label style with a live preview, then Save, or Save as a new layer (stored in your `layers.json`)
+- Shape Manager: view all shapes grouped by layer, edit each shape's name and description, delete shapes, toggle layer visibility and label display
 - Canvas labels: shape names can be toggled to appear on the map at the shape's anchor point
 - Visual: global and per-layer opacity sliders
 - Per-layer visibility toggle

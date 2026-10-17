@@ -31,14 +31,9 @@ Right-click a selected tool or layer in the toolbar to deselect it.
 
 This is a beta version, a lot of the feedback that i got on reddit is not yet implemented. even the Thumbnail is under development.
 
-The next minor beta version (milestone) will include:
+The features for the next version (v0.2.1) will be decided on GitHub. Follow the planned work in the milestone: https://github.com/aous-afk/skyplan/milestone/7
 
-v0.1.4:
-
-* rework Labeling system
-* add early version of Style Manager to allow changing styles
-* improve Erase tool
-* add delete option in Shape Manager
+Suggest your own in the issues: https://github.com/aous-afk/skyplan/issues
 
 ### Experimental Features
 
@@ -61,7 +56,8 @@ v0.1.4:
 * Auto Save/Load: the game will auto save your shapes per city, and will load them on start
 * Undo/Redo: (Ctrl+Z)/(Ctrl+Y)
 * Draggable toolbar
-* Shape Manager: view all shapes grouped by layer, edit the name and description of each shape, toggle layer visibility and label display
+* Style Manager: edit any layer's colour, line width, dash pattern and label style with a live preview, then Save, or Save as a new layer
+* Shape Manager: view all shapes grouped by layer, edit the name and description of each shape, delete shapes, toggle layer visibility and label display
 * Canvas labels: shape names can be toggled to appear on the map at the shape's anchor point
 * Visual: global and per-layer opacity sliders
 * Per-layer visibility toggle
@@ -98,7 +94,7 @@ I plan to push experimental features to help planing, if you have suggestions, b
 	<!--Link to the forum post where the mod can be discussed-->
 	<ForumLink Value="https://forum.paradoxplaza.com/forum/threads/skyplan-support-and-feedback.1936742/#post-31440244" />
 	<!--Version of the mod-->
-	<ModVersion Value="0.1.3-beta" />
+	<ModVersion Value="0.2.0-beta" />
 	<!--Recommended version of the base game to use the mod-->
 	<GameVersion Value="1.6.*" />
 	<!--Dependency for the mod, can be set multiple times-->
@@ -107,13 +103,19 @@ I plan to push experimental features to help planing, if you have suggestions, b
 	<RequiredDLC Value="" />
 	<!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
 	<ChangeLog>
-## 0.1.3-beta
-- Added: multi-layer parallel corridors, queue several layers (e.g. Train, Subway, Train) and draw once to get parallel lanes in that exact order, for both lines and curves. Each lane is independently erasable/editable.
-- Added: Shift+scroll wheel adjusts corridor spacing live while drawing.
-- Added: 3 new custom point layers, Telecom, Garbage, Cemetery.
-- UX enhancements:
-  - layer picker now single-selects on plain click; Shift+click adds another lane to a corridor.
-  - world clicks (building select/placement) are now blocked while in Draw mode, so a draw click doesn't also interact with the game underneath (toggleable in mod settings).
+## 0.2.0-beta: Style Manager
+- Added: Style Manager, edit any layer's colour, line width, dash pattern and label style, with a live preview. Open it from the toolbar.
+- Added: Save / Save as in the Style Manager. Save writes your changes to the layer, Save as creates a new layer from them. Styles are stored in your layers.json and survive restarts.
+- Added: multi-line text, labels with line breaks now render on several lines.
+- UX: panel titles adjust to their length.
+- UI:
+  - hover on the Shape Manager collapse toggle.
+  - delete button on each shape row in the Shape Manager.
+- Bug fixes:
+  - label styles from the layers file were ignored and overwritten.
+  - SVG export used the wrong layer styles.
+  - points and shapes no longer sink below the water surface.
+  - SVGs made in other programs no longer import invisibly; they go into the "Imported" layer and keep their styles.
 	</ChangeLog>
 	<!--External link, can be set multiple times. supported types are "discord", "github", "youtube", "twitch", "x", "paypal", "patreon", "buymeacoffee", "kofi", "crowdin", "gitlab", "gofundme"-->
 	<ExternalLink Type="github" Url="https://github.com/aous-afk/skyplan" />
