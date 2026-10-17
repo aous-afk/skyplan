@@ -215,7 +215,7 @@ const DrawingCanvas: React.FC = () => {
 	useEffect(() => { hasQueuedCorridorRef.current = hasQueuedCorridor; }, [hasQueuedCorridor]);
 	useEffect(() => {
 		hasActiveLayerRef.current = activeLayers.length > 0;
-		if (activeLayers.length === 0) trigger('skyplan', 'clearIndicator', '');
+		if (activeLayers.length === 0) trigger('skyplan', 'clearIndicator');
 	}, [activeLayers]);
 
 	// Shift+wheel adjusts corridor spacing live - only while a corridor is actually queued, so
@@ -247,8 +247,8 @@ const DrawingCanvas: React.FC = () => {
 		};
 		const onLeave = () => {
 			setCursorPos(null);
-			trigger('skyplan', 'clearIndicator', '');
-			trigger('skyplan', 'clearErase', '');
+			trigger('skyplan', 'clearIndicator');
+			trigger('skyplan', 'clearErase');
 		};
 		document.addEventListener('mousemove', onMove, true);
 		document.addEventListener('mouseleave', onLeave, true);
@@ -348,8 +348,8 @@ const DrawingCanvas: React.FC = () => {
 			// (erase highlight, snap indicator) needs clearing, or it sticks until a real canvas
 			// hover happens to land on nothing.
 			if ((e.target as Element).closest('[data-skyplan-ui]')) {
-				trigger('skyplan', 'clearIndicator', '');
-				trigger('skyplan', 'clearErase', '');
+				trigger('skyplan', 'clearIndicator');
+				trigger('skyplan', 'clearErase');
 				return;
 			}
 			if (onMove(e.clientX, e.clientY, 'mouse')) {
@@ -378,8 +378,8 @@ const DrawingCanvas: React.FC = () => {
 			if (blockInputRef.current) return;
 			if (e.buttons & 2) return;
 			if ((e.target as Element).closest('[data-skyplan-ui]')) {
-				trigger('skyplan', 'clearIndicator', '');
-				trigger('skyplan', 'clearErase', '');
+				trigger('skyplan', 'clearIndicator');
+				trigger('skyplan', 'clearErase');
 				return;
 			}
 			if (onMove(e.clientX, e.clientY, 'pointer')) {
@@ -400,7 +400,7 @@ const DrawingCanvas: React.FC = () => {
 			if (blockInputRef.current) return;
 			if (e.key === 'Escape') {
 				drawingRef.current = false;
-				trigger('skyplan', 'panelClosed', '');
+				trigger('skyplan', 'panelClosed');
 				return;
 			}
 			if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
