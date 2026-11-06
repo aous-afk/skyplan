@@ -2,6 +2,7 @@ using Skyplan.Models;
 using Skyplan.Models.dto;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Xml;
 using System.Xml.Linq;
 using UnityEngine;
 
@@ -9,29 +10,42 @@ namespace Skyplan.Persistence {
 	public static class SVGImporter {
 		private static readonly XNamespace SvgNs = "http://www.w3.org/2000/svg";
 
-		public static List<Shape> Import(string svgContent, ref int nextId) {
+		public static Action<string>? LogWarn;
+
+		// A file of thousands of bad paths (city-roads) would otherwise flood the log.
+		private const int MaxLoggedFailures = 5;
+
+		private delegate Shape? ElementParser(XElement el, ref int nextId);
+
+		public static List<Shape> Import(string svgContent, ref int nextId, out int skipped) {
 			List<Shape> shapes = [];
-			XDocument doc = XDocument.Parse(svgContent);
+			XDocument doc = XDocument.Parse(svgContent, LoadOptions.SetLineInfo);
 			XElement root = doc.Root;
 
-			foreach (XElement el in Descendants(root, "path")) {
-				if (el.Attribute("data-icon-glyph") != null) continue;
-				Shape? s = ParsePathLike(el, ref nextId);
-				if (s != null) shapes.Add(s);
-			}
-			foreach (XElement el in Descendants(root, "polygon")) {
-				Shape? s = ParsePolygon(el, ref nextId);
-				if (s != null) shapes.Add(s);
-			}
-			foreach (XElement el in Descendants(root, "circle")) {
-				Shape? s = ParseCircle(el, ref nextId);
-				if (s != null) shapes.Add(s);
-			}
-			foreach (XElement el in Descendants(root, "text")) {
-				Shape? s = ParseText(el, ref nextId);
-				if (s != null) shapes.Add(s);
-			}
+			skipped = 0;
+			skipped += ParseEach(root, "path", ParsePathLike, shapes, skipped, ref nextId);
+			skipped += ParseEach(root, "polygon", ParsePolygon, shapes, skipped, ref nextId);
+			skipped += ParseEach(root, "circle", ParseCircle, shapes, skipped, ref nextId);
+			skipped += ParseEach(root, "text", ParseText, shapes, skipped, ref nextId);
 			return shapes;
+		}
+
+		// One element that fails to parse is skipped, not allowed to abort the whole import.
+		private static int ParseEach(XElement root, string localName, ElementParser parse, List<Shape> shapes, int skippedSoFar, ref int nextId) {
+			int skipped = 0;
+			foreach (XElement el in Descendants(root, localName)) {
+				try {
+					Shape? s = parse(el, ref nextId);
+					if (s != null) shapes.Add(s);
+				} catch (Exception ex) {
+					if (skippedSoFar + skipped < MaxLoggedFailures) {
+						int line = ((IXmlLineInfo)el).LineNumber;
+						LogWarn?.Invoke($"[SVGImporter] skipped <{localName}> at line {line}: {ex.GetType().Name}: {ex.Message}");
+					}
+					skipped++;
+				}
+			}
+			return skipped;
 		}
 
 		// Handles both namespaced and plain elements
@@ -43,6 +57,7 @@ namespace Skyplan.Persistence {
 		// SVGExporter.ExportPathLike's "data-y" list convention (not the old discrete
 		// data-y0/data-y1 attrs a plain 2-point path used before path/curve export merged).
 		private static Shape? ParsePathLike(XElement el, ref int nextId) {
+			if (el.Attribute("data-icon-glyph") != null) return null;
 			string? d = el.Attribute("d")?.Value?.Trim();
 			if (string.IsNullOrEmpty(d)) return null;
 
