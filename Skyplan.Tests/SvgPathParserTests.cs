@@ -2,12 +2,21 @@ using Skyplan.Persistence.Helpers;
 
 namespace Skyplan.Tests {
 	public class SvgPathParserTests {
-		// One string per subpath: "x,y x,y ..." plus " Z" when closed
-		static string[] Parsed(string d) => [.. SvgPathParser.Parse(d).Select(s =>
-			string.Join(" ", s.Points.Select(p => FormattableString.Invariant($"{Round(p.X)},{Round(p.Y)}"))) + (s.Closed ? " Z" : ""))];
+		// One string per subpath: "x,y x,y ...", a curved segment as "Q cx,cy x,y", plus " Z" when closed
+		static string[] Parsed(string d) => [.. SvgPathParser.Parse(d).Select(Format)];
+
+		static string Format(SvgSubpath s) {
+			Assert.Equal(Math.Max(0, s.Points.Count - 1), s.Controls.Count);
+			List<string> parts = [Pt(s.Points[0])];
+			for (int i = 1; i < s.Points.Count; i++) {
+				SvgPoint? c = s.Controls[i - 1];
+				parts.Add(c == null ? Pt(s.Points[i]) : $"Q {Pt(c.Value)} {Pt(s.Points[i])}");
+			}
+			return string.Join(" ", parts) + (s.Closed ? " Z" : "");
+		}
 
 		// Relative coordinates add up float error; compare at the precision Skyplan exports (0.1)
-		static float Round(float v) => (float)Math.Round(v, 1);
+		static string Pt(SvgPoint p) => FormattableString.Invariant($"{Math.Round(p.X, 1)},{Math.Round(p.Y, 1)}");
 
 		[Fact]
 		public void Skyplan_export_is_unchanged() {
@@ -78,9 +87,48 @@ namespace Skyplan.Tests {
 			Assert.Equal(message, ex.Message);
 		}
 
+		[Fact]
+		public void Skyplan_curve_export_is_unchanged() {
+			Assert.Equal(["-5372.3,-4145.1 Q -4575.2,-3736.7 -3685.1,-2909.8 Q -2759.9,-2050.3 -2358.7,-1570.3"],
+				Parsed("M -5372.3 -4145.1 Q -4575.2 -3736.7 -3685.1 -2909.8 Q -2759.9 -2050.3 -2358.7 -1570.3"));
+		}
+
+		[Fact]
+		public void Quadratic_absolute_relative_and_repeated() {
+			Assert.Equal(["0,0 Q 5,10 10,0"], Parsed("M0,0 Q5,10 10,0"));
+			Assert.Equal(["10,10 Q 15,20 20,10"], Parsed("M10,10 q5,10 10,0"));
+			Assert.Equal(["0,0 Q 5,10 10,0 Q 15,-10 20,0"], Parsed("M0,0 Q5,10 10,0 15,-10 20,0"));
+		}
+
+		[Fact]
+		public void Straight_and_curved_segments_keep_their_order() {
+			// The control belongs to the second segment, not the first
+			Assert.Equal(["0,0 10,0 Q 15,5 20,0 30,0"], Parsed("M0,0 L10,0 Q15,5 20,0 L30,0"));
+		}
+
+		[Fact]
+		public void T_mirrors_the_previous_control() {
+			Assert.Equal(["0,0 Q 5,10 10,0 Q 15,-10 20,0"], Parsed("M0,0 Q5,10 10,0 T20,0"));
+			Assert.Equal(["0,0 Q 5,10 10,0 Q 15,-10 20,0 Q 25,10 30,0"], Parsed("M0,0 Q5,10 10,0 T20,0 30,0"));
+			Assert.Equal(["0,0 Q 5,10 10,0 Q 15,-10 20,0"], Parsed("M0,0 Q5,10 10,0 t10,0"));
+		}
+
+		[Fact]
+		public void T_without_a_preceding_curve_is_straight() {
+			// Control = current point
+			Assert.Equal(["0,0 10,0 Q 10,0 20,0"], Parsed("M0,0 L10,0 T20,0"));
+			// An L in between resets the mirror
+			Assert.Equal(["0,0 Q 5,10 10,0 15,0 Q 15,0 20,0"], Parsed("M0,0 Q5,10 10,0 L15,0 T20,0"));
+		}
+
+		[Fact]
+		public void Z_keeps_a_curved_segment_into_the_start() {
+			Assert.Equal(["0,0 10,0 Q 5,10 0,0 Z"], Parsed("M0,0 L10,0 Q5,10 0,0 Z"));
+		}
+
 		[Theory]
 		[InlineData("M0,0 C1,1 2,2 3,3", 'C')]
-		[InlineData("M0,0 q1,1 2,2", 'q')]
+		[InlineData("M0,0 s1,1 2,2", 's')]
 		[InlineData("M0,0 A5,5 0 0 1 10,0", 'A')]
 		public void Curve_commands_are_not_supported_yet(string d, char cmd) {
 			NotSupportedException ex = Assert.Throws<NotSupportedException>(() => SvgPathParser.Parse(d));
