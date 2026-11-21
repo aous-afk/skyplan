@@ -22,6 +22,9 @@ namespace Skyplan.Persistence {
 			List<Shape> shapes = [];
 			XDocument doc = XDocument.Parse(svgContent, LoadOptions.SetLineInfo);
 			XElement root = doc.Root;
+			// Annotated on the document so InheritedStyle can find it from any element without every
+			// parser passing it along
+			doc.AddAnnotation(ReadStylesheet(root));
 
 			skipped = 0;
 			skipped += ParseEach(root, "path", ParsePathLike, shapes, skipped);
@@ -241,19 +244,25 @@ namespace Skyplan.Persistence {
 			};
 		}
 
-		// Presentation attributes and style="" from the outermost ancestor down to the element, so
-		// nearer values win, as in SVG itself (e.g. <g stroke="#1a1a1a"> around plain <path>s).
+		private static SvgStylesheet ReadStylesheet(XElement root) {
+			string css = string.Join("\n", Descendants(root, "style").Select(s => s.Value));
+			return SvgStylesheet.Parse(css);
+		}
+
+		// Presentation attributes, class rules and style="" from the outermost ancestor down to the
+		// element, so nearer values win, as in SVG itself (e.g. <g stroke="#1a1a1a"> around plain
+		// <path>s). On one element, a class rule beats a presentation attribute and style="" beats both.
 		private static Dictionary<string, string> InheritedStyle(XElement el) {
+			SvgStylesheet? sheet = el.Document?.Annotation<SvgStylesheet>();
 			Dictionary<string, string> style = [];
 			foreach (XElement node in el.AncestorsAndSelf().Reverse()) {
 				foreach (string name in StyleAttributes) {
 					string? v = node.Attribute(name)?.Value;
 					if (!string.IsNullOrWhiteSpace(v)) style[name] = v.Trim();
 				}
-				foreach (string part in (node.Attribute("style")?.Value ?? "").Split([';'])) {
-					int colon = part.IndexOf(':');
-					if (colon > 0) style[part[..colon].Trim()] = part[(colon + 1)..].Trim();
-				}
+				sheet?.Apply(node.Attribute("class")?.Value, style);
+				foreach (KeyValuePair<string, string> d in SvgStylesheet.ParseDeclarations(node.Attribute("style")?.Value ?? ""))
+					style[d.Key] = d.Value;
 			}
 			return style;
 		}

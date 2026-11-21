@@ -145,6 +145,14 @@ namespace Skyplan.Tests {
 			], shapes.Select(s => $"{s.Type} {Pts(s.pts)}"));
 			Assert.All(shapes, s => Assert.Equal(SVGImporter.ImportedLayerId, s.layer.Id));
 
+			// Styles come from the classes
+			Assert.Equal("#333333", shapes[0].layer.Style["stroke"]);
+			Assert.Equal("8,2.8571", shapes[0].layer.Style["stroke-dasharray"]);
+			Assert.Equal("#FF4444", shapes[2].layer.Style["stroke"]);
+			Assert.Equal("none", shapes[2].layer.Style["fill"]);
+			Assert.Equal("#00AE1A", shapes[3].layer.Style["fill"]);
+			Assert.Equal("0.5", shapes[3].layer.Style["fill-opacity"]);
+
 			// The cubic curve waits for C/S support
 			Assert.Equal(1, skipped);
 			Assert.Equal("[SVGImporter] skipped <path> at line 13: NotSupportedException: path command 'c' at 14 is not supported yet", Assert.Single(warnings));
@@ -197,6 +205,23 @@ namespace Skyplan.Tests {
 			Shape s = Single("""<g fill="none" stroke="#1a1a1a"><path d="M0,0 h10 v10 z"/></g>""");
 			Assert.Equal(Tools.path, s.Type);
 			Assert.Equal("#1a1a1a", s.layer.Style["stroke"]);
+		}
+
+		[Fact]
+		public void Class_beats_attribute_and_style_beats_class() {
+			List<Shape> shapes = Import("""
+				<svg><style>.a{stroke:#222222;stroke-width:3}</style>
+				<path class="a" stroke="#111111" d="M0,0 L1,1" fill="none"/>
+				<path class="a" style="stroke:#333333" d="M0,0 L1,1" fill="none"/>
+				</svg>
+				""", out _);
+			Assert.Equal(["#222222 3", "#333333 3"], shapes.Select(s => $"{s.layer.Style["stroke"]} {s.layer.Style["stroke-width"]}"));
+		}
+
+		[Fact]
+		public void Class_fill_none_keeps_a_closed_path_a_path() {
+			Shape s = Single("""<style>.line{fill:none;stroke:red}</style><path class="line" d="M0,0 h10 v10 z"/>""");
+			Assert.Equal(Tools.path, s.Type);
 		}
 
 		[Fact]
