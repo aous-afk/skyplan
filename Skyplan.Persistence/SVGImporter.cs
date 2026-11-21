@@ -1,7 +1,7 @@
 using Skyplan.Models;
 using Skyplan.Models.dto;
+using Skyplan.Persistence.Helpers;
 using System.Globalization;
-using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using UnityEngine;
@@ -15,7 +15,8 @@ namespace Skyplan.Persistence {
 		// A file of thousands of bad paths (city-roads) would otherwise flood the log.
 		private const int MaxLoggedFailures = 5;
 
-		private delegate Shape? ElementParser(XElement el, ref int nextId);
+		// One element can give several shapes (a <path> with several subpaths), or none
+		private delegate List<Shape> ElementParser(XElement el);
 
 		public static List<Shape> Import(string svgContent, ref int nextId, out int skipped) {
 			List<Shape> shapes = [];
@@ -23,20 +24,23 @@ namespace Skyplan.Persistence {
 			XElement root = doc.Root;
 
 			skipped = 0;
-			skipped += ParseEach(root, "path", ParsePathLike, shapes, skipped, ref nextId);
-			skipped += ParseEach(root, "polygon", ParsePolygon, shapes, skipped, ref nextId);
-			skipped += ParseEach(root, "circle", ParseCircle, shapes, skipped, ref nextId);
-			skipped += ParseEach(root, "text", ParseText, shapes, skipped, ref nextId);
+			skipped += ParseEach(root, "path", ParsePathLike, shapes, skipped);
+			skipped += ParseEach(root, "polygon", el => One(ParsePolygon(el)), shapes, skipped);
+			skipped += ParseEach(root, "circle", el => One(ParseCircle(el)), shapes, skipped);
+			skipped += ParseEach(root, "text", el => One(ParseText(el)), shapes, skipped);
+
+			foreach (Shape s in shapes) s.id = $"s{nextId++}";
 			return shapes;
 		}
 
+		private static List<Shape> One(Shape? s) => s == null ? [] : [s];
+
 		// One element that fails to parse is skipped, not allowed to abort the whole import.
-		private static int ParseEach(XElement root, string localName, ElementParser parse, List<Shape> shapes, int skippedSoFar, ref int nextId) {
+		private static int ParseEach(XElement root, string localName, ElementParser parse, List<Shape> shapes, int skippedSoFar) {
 			int skipped = 0;
 			foreach (XElement el in Descendants(root, localName)) {
 				try {
-					Shape? s = parse(el, ref nextId);
-					if (s != null) shapes.Add(s);
+					shapes.AddRange(parse(el));
 				} catch (Exception ex) {
 					if (skippedSoFar + skipped < MaxLoggedFailures) {
 						int line = ((IXmlLineInfo)el).LineNumber;
@@ -56,58 +60,93 @@ namespace Skyplan.Persistence {
 		// by whether any "Q" command (and so any handles) turned up at all. Mirrors
 		// SVGExporter.ExportPathLike's "data-y" list convention (not the old discrete
 		// data-y0/data-y1 attrs a plain 2-point path used before path/curve export merged).
-		private static Shape? ParsePathLike(XElement el, ref int nextId) {
-			if (el.Attribute("data-icon-glyph") != null) return null;
-			string? d = el.Attribute("d")?.Value?.Trim();
-			if (string.IsNullOrEmpty(d)) return null;
+		//
+		// Each subpath becomes its own shape. A closed (Z) subpath that is filled becomes a polygon;
+		// Skyplan's own exports never close a path and always set fill="none".
+		private static List<Shape> ParsePathLike(XElement el) {
+			if (el.Attribute("data-icon-glyph") != null) return [];
+			string? d = el.Attribute("d")?.Value;
+			if (d is null || string.IsNullOrWhiteSpace(d)) return [];
 
-			List<Vector3> pts = [];
-			List<Vector3> handles = [];
+			// data-y has one height per point and data-handle-y one per Q control, both in path order
+			// across all subpaths.
+			float[] yPts = Floats(el.Attribute("data-y")?.Value);
+			float[] yHandles = Floats(el.Attribute("data-handle-y")?.Value);
+			int ptIndex = 0, handleIndex = 0;
 
-			float[] yPts = [.. (el.Attribute("data-y")?.Value ?? "")
-				.Split(',', StringSplitOptions.RemoveEmptyEntries)
-				.Select(s => Attr(s) ?? 0f)];
-			float[] yHandles = [.. (el.Attribute("data-handle-y")?.Value ?? "")
-				.Split(',', StringSplitOptions.RemoveEmptyEntries)
-				.Select(s => Attr(s) ?? 0f)];
+			// Unset fill is black in SVG, so only an explicit "none" counts as unfilled
+			bool filled = !InheritedStyle(el).TryGetValue("fill", out string? fill) || fill != "none";
 
-			// A command may carry several coordinate sets ("L x1 y1,x2 y2,..." or "M x y x2 y2"): per the
-			// SVG spec the extra sets repeat the command (after M they're implicit L). Other SVG tools
-			// (e.g. city-roads) write whole polylines this way.
-			foreach (Match m in Regex.Matches(d, @"([MLQ])\s*([^MLQ]*)")) {
-				string cmd = m.Groups[1].Value;
-				float[] nums = [.. m.Groups[2].Value
-					.Split([' ', ',', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-					.Select(t => float.Parse(t, NumberStyles.Float, CultureInfo.InvariantCulture))];
+			List<Shape> shapes = [];
+			foreach (SvgSubpath sub in SvgPathParser.Parse(d)) {
+				List<Vector3> pts = [];
+				foreach (SvgPoint p in sub.Points) pts.Add(At(p, Get(yPts, ptIndex++)));
 
-				if (cmd == "M" || cmd == "L") {
-					for (int i = 0; i + 1 < nums.Length; i += 2) {
-						float y = pts.Count < yPts.Length ? yPts[pts.Count] : 0f;
-						pts.Add(new Vector3(nums[i], y, nums[i + 1]));
-					}
-				} else if (cmd == "Q") {
-					for (int i = 0; i + 3 < nums.Length; i += 4) {
-						float hy = handles.Count < yHandles.Length ? yHandles[handles.Count] : 0f;
-						handles.Add(new Vector3(nums[i], hy, nums[i + 1]));
-						float py = pts.Count < yPts.Length ? yPts[pts.Count] : 0f;
-						pts.Add(new Vector3(nums[i + 2], py, nums[i + 3]));
-					}
-				}
+				List<Vector3?> controls = [];
+				foreach (SvgPoint? c in sub.Controls)
+					controls.Add(c is SvgPoint cp ? At(cp, Get(yHandles, handleIndex++)) : null);
+
+				Shape? shape = sub.Closed && filled ? ClosedToPolygon(pts, controls) : OpenToPath(pts, controls, sub.Closed);
+				if (shape == null) continue;
+				shape.layer = ParseLayer(el);
+				shape.Label = el.Attribute("data-label")?.Value;
+				shape.Description = el.Attribute("data-description")?.Value;
+				shapes.Add(shape);
 			}
+			return shapes;
+		}
+
+		// controls[i] is the control of segment i, null when straight
+		private static Shape? OpenToPath(List<Vector3> pts, List<Vector3?> controls, bool closed) {
+			// The closing segment is straight and comes after every curved one, so it needs no handle
+			if (closed && pts.Count > 1 && !Same(pts[^1], pts[0])) pts.Add(pts[0]);
 			if (pts.Count < 2) return null;
 
+			// handles[i] belongs to segment i, so a straight segment before a curved one needs a
+			// handle too: the midpoint keeps it straight. Trailing straight segments need none.
+			List<Vector3> handles = [];
+			int lastCurved = controls.FindLastIndex(c => c != null);
+			for (int i = 0; i <= lastCurved; i++)
+				handles.Add(controls[i] ?? (pts[i] + pts[i + 1]) * 0.5f);
+
 			return new Shape {
-				id = $"s{nextId++}",
 				Type = handles.Count > 0 ? Tools.curve : Tools.path,
-				layer = ParseLayer(el),
 				pts = pts,
 				handles = handles,
-				Label = el.Attribute("data-label")?.Value,
-				Description = el.Attribute("data-description")?.Value,
 			};
 		}
 
-		private static Shape? ParsePolygon(XElement el, ref int nextId) {
+		// Polygons have no curved edges, so curved segments are sampled into straight pieces
+		private const int PolygonCurveSteps = 8;
+
+		private static Shape? ClosedToPolygon(List<Vector3> pts, List<Vector3?> controls) {
+			List<Vector3> outline = [];
+			for (int i = 0; i < pts.Count; i++) {
+				outline.Add(pts[i]);
+				if (i >= controls.Count || controls[i] is not Vector3 c) continue;
+				Vector3 a = pts[i], b = pts[i + 1];
+				for (int s = 1; s < PolygonCurveSteps; s++) {
+					float t = (float)s / PolygonCurveSteps, u = 1f - t;
+					outline.Add((u * u * a) + (2f * u * t * c) + (t * t * b));
+				}
+			}
+			// A curve back into the start point ends on it; a polygon closes itself
+			if (outline.Count > 1 && Same(outline[^1], outline[0])) outline.RemoveAt(outline.Count - 1);
+			if (outline.Count < 3) return null;
+			return new Shape { Type = Tools.polygon, pts = outline };
+		}
+
+		private static bool Same(Vector3 a, Vector3 b) => Math.Abs(a.x - b.x) < 0.01f && Math.Abs(a.z - b.z) < 0.01f;
+
+		private static Vector3 At(SvgPoint p, float y) => new(p.X, y, p.Y);
+
+		private static float Get(float[] values, int i) => i < values.Length ? values[i] : 0f;
+
+		private static float[] Floats(string? list) => [.. (list ?? "")
+			.Split([','], StringSplitOptions.RemoveEmptyEntries)
+			.Select(s => Attr(s) ?? 0f)];
+
+		private static Shape? ParsePolygon(XElement el) {
 			string? pointsStr = el.Attribute("points")?.Value;
 
 			// the compiler was complaining about it, that pointsStr is possibly null
@@ -116,22 +155,18 @@ namespace Skyplan.Persistence {
 				return null;
 			}
 
-			float[] elevations = el.Attribute("data-y")?.Value
-				.Split(',')
-				.Select(s => Attr(s) ?? 0f)
-				.ToArray() ?? [];
+			float[] elevations = Floats(el.Attribute("data-y")?.Value);
+
+			// Same number grammar as path data, so compact "1-2.5.5" style points parse too
+			List<SvgPathToken> tokens = SvgPathTokenizer.Tokenize(pointsStr);
+			foreach (SvgPathToken t in tokens) {
+				if (t.IsCommand) throw new FormatException($"unexpected '{t.Command}' at {t.Index} in points");
+			}
+			if (tokens.Count % 2 != 0) throw new FormatException($"points has an odd number of coordinates ({tokens.Count})");
 
 			List<Vector3> pts = [];
-			string[] pairs = pointsStr.Trim()
-					.Split([' ', '\t', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
-
-			for (int i = 0; i < pairs.Length; i++) {
-				string[] xy = pairs[i].Split(',');
-				if (xy.Length < 2) continue;
-				float? x = Attr(xy[0]), z = Attr(xy[1]);
-				if (x == null || z == null) continue;
-				float y = i < elevations.Length ? elevations[i] : 0f;
-				pts.Add(new Vector3(x.Value, y, z.Value));
+			for (int i = 0; i < tokens.Count / 2; i++) {
+				pts.Add(new Vector3(tokens[2 * i].Number, Get(elevations, i), tokens[2 * i + 1].Number));
 			}
 
 			// Remove duplicate closing point added by exporter
@@ -141,7 +176,6 @@ namespace Skyplan.Persistence {
 			if (pts.Count < 3) return null;
 
 			return new Shape {
-				id = $"s{nextId++}",
 				Type = Tools.polygon,
 				layer = ParseLayer(el),
 				pts = pts,
@@ -150,7 +184,7 @@ namespace Skyplan.Persistence {
 			};
 		}
 
-		private static Shape? ParseCircle(XElement el, ref int nextId) {
+		private static Shape? ParseCircle(XElement el) {
 			float? cx = Attr(el, "cx"), cz = Attr(el, "cy");
 			if (cx == null || cz == null) return null;
 			float y = Attr(el, "data-y") ?? 0f;
@@ -166,7 +200,6 @@ namespace Skyplan.Persistence {
 			}
 
 			return new Shape {
-				id = $"s{nextId++}",
 				Type = Tools.point,
 				layer = layer,
 				pts = [new Vector3(cx.Value, y, cz.Value)],
@@ -175,14 +208,13 @@ namespace Skyplan.Persistence {
 			};
 		}
 
-		private static Shape? ParseText(XElement el, ref int nextId) {
+		private static Shape? ParseText(XElement el) {
 			float? x = Attr(el, "x"), z = Attr(el, "y");
 			if (x == null || z == null) return null;
 			string? label = el.Value?.Trim();
 			if (string.IsNullOrEmpty(label)) return null;
 			float y = Attr(el, "data-y") ?? 0f;
 			return new Shape {
-				id = $"s{nextId++}",
 				Type = Tools.text,
 				layer = ParseLayer(el),
 				pts = [new Vector3(x.Value, y, z.Value)],
@@ -218,7 +250,7 @@ namespace Skyplan.Persistence {
 					string? v = node.Attribute(name)?.Value;
 					if (!string.IsNullOrWhiteSpace(v)) style[name] = v.Trim();
 				}
-				foreach (string part in (node.Attribute("style")?.Value ?? "").Split(';')) {
+				foreach (string part in (node.Attribute("style")?.Value ?? "").Split([';'])) {
 					int colon = part.IndexOf(':');
 					if (colon > 0) style[part[..colon].Trim()] = part[(colon + 1)..].Trim();
 				}
