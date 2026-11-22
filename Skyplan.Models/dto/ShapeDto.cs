@@ -10,6 +10,10 @@ namespace Skyplan.Models.dto {
 		public Tag Tag;
 		[JsonProperty("layerId")]
 		public string? LayerId;
+		// Imported shapes only: index into layersConfig.shapeStyles, rendered as class sp-s-{styleId}.
+		// Left out of the JSON when unset, so drawn shapes cost nothing extra on every camera move.
+		[JsonProperty("styleId", NullValueHandling = NullValueHandling.Ignore)]
+		public int? StyleId;
 		[JsonProperty("pts")]
 		public List<ScreenPt> Pts = [];
 		[JsonProperty("handles")]

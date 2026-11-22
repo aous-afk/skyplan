@@ -14,6 +14,7 @@ using Skyplan.Models.Results;
 using System;
 using System.IO;
 using Skyplan.Cross;
+using Skyplan.Persistence;
 using Skyplan.Persistence.Helpers;
 
 namespace Skyplan.Systems {
@@ -41,6 +42,9 @@ namespace Skyplan.Systems {
 		private Game.Input.InputBarrier m_DrawModeBarrier;
 
 		internal readonly List<Shape> m_Shapes = [];
+		// Imported shapes -> their index in the style table sent with the layers config (SyncShapeLayers).
+		// Keyed by the Shape object, so a shape brought back by undo keeps its entry.
+		private readonly Dictionary<Shape, int> m_ShapeStyleIds = [];
 		private readonly List<Op> m_UndoStack = [];
 		private readonly List<Op> m_RedoStack = [];
 		private Shape m_ActiveShape;
@@ -295,6 +299,17 @@ namespace Skyplan.Systems {
 			_config.SetShapeLayers(m_Shapes
 				.Where(s => s.layer != null)
 				.Select(s => new LayerMerger.UsedLayer(s.layer.Id, s.layer.Label, s.layer.Style ?? [], s.Type.ToString())));
+
+			// Shapes on the shared "imported" layer each keep the style their file gave them. Only that
+			// layer: a drawn shape's layer.Style is a snapshot from draw time, and the layer's current
+			// style must win for it.
+			ShapeStyleTable table = new();
+			m_ShapeStyleIds.Clear();
+			foreach (Shape s in m_Shapes) {
+				if (s.layer?.Id != SVGImporter.ImportedLayerId || s.layer.Style == null || s.layer.Style.Count == 0) continue;
+				m_ShapeStyleIds[s] = table.Add(s.layer.Style);
+			}
+			_config.SetShapeStyles(table.Styles);
 		}
 
 		public void TogglePanel() {
@@ -700,6 +715,7 @@ namespace Skyplan.Systems {
 			ShapeDto shapeDto = new() {
 				Id = shape.id,
 				LayerId = shape.layer?.Id,
+				StyleId = m_ShapeStyleIds.TryGetValue(shape, out int styleId) ? styleId : null,
 				Label = shape.Label,
 				Description = shape.Description,
 				Tag = shape.Type switch {

@@ -28,6 +28,8 @@ interface Draft {
 interface StyleCtx {
 	allLayers: LayerDef[];
 	layerById: Record<string, LayerDef>;
+	// Styles of imported shapes, indexed by ShapeData.styleId
+	shapeStyles: Record<string, string>[];
 	globalLabelStyle: LabelStyle;
 	// Layer label style over the global one, then hard defaults.
 	labelStyleFor: (layerId: string) => Required<LabelStyle>;
@@ -58,12 +60,13 @@ export const useStyle = (): StyleCtx => {
 export const StyleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 	const layersConfigJson = useValue(layersConfig$);
 
-	const layerConfig = useMemo<{ labelStyle?: LabelStyle; layers: LayerDef[] }>(() => {
+	const layerConfig = useMemo<{ labelStyle?: LabelStyle; layers: LayerDef[]; shapeStyles?: Record<string, string>[] }>(() => {
 		try { return JSON.parse(layersConfigJson); }
 		catch { return { layers: [] }; }
 	}, [layersConfigJson]);
 
 	const allLayers = layerConfig.layers;
+	const shapeStyles = useMemo(() => layerConfig.shapeStyles ?? [], [layerConfig]);
 	const globalLabelStyle = useMemo(() => layerConfig.labelStyle ?? {}, [layerConfig]);
 
 	const layerById = useMemo(() =>
@@ -167,6 +170,7 @@ export const StyleProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 	const value = useMemo<StyleCtx>(() => ({
 		allLayers,
 		layerById,
+		shapeStyles,
 		globalLabelStyle,
 		labelStyleFor,
 		styleTarget,
@@ -178,7 +182,7 @@ export const StyleProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 		onResetDraft,
 		onSave,
 		onSaveAs
-	}), [allLayers, layerById, globalLabelStyle, labelStyleFor, styleTarget, draftStyle, draftLabelStyle,
+	}), [allLayers, layerById, shapeStyles, globalLabelStyle, labelStyleFor, styleTarget, draftStyle, draftLabelStyle,
 		onStyleTarget, onDraftStyleChange, onDraftLabelStyleChange, onResetDraft, onSave, onSaveAs]);
 
 	return (

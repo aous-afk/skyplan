@@ -20,6 +20,8 @@ namespace Skyplan.Systems {
 		// deleted by hand) so those shapes still render; kept here so every reload, including the one after
 		// a Save, keeps them.
 		private List<LayerMerger.UsedLayer> m_ShapeLayers = [];
+		// Index = ShapeDto.StyleId; see DrawingSystem.SyncShapeLayers
+		private List<Dictionary<string, string>> m_ShapeStyles = [];
 
 		protected override void OnCreate() {
 			base.OnCreate();
@@ -93,11 +95,16 @@ namespace Skyplan.Systems {
 
 		public void SetShapeLayers(IEnumerable<LayerMerger.UsedLayer> used) => m_ShapeLayers = used.ToList();
 
+		public void SetShapeStyles(List<Dictionary<string, string>> styles) => m_ShapeStyles = styles;
+
 		public void Reload() {
 			JObject merged = LayerMerger.LoadAndMerge(Paths.DefaultLayers, Paths.UserLayers);
 			LayerMerger.AppendMissingLayers(merged, m_ShapeLayers);
 			m_Merged = merged;
-			m_LayersConfigBinding.Update(merged.ToString(Formatting.None));
+			// Sent here rather than per shape, so the styles go out on a reload, not on every camera move
+			JObject binding = (JObject)merged.DeepClone();
+			binding["shapeStyles"] = JArray.FromObject(m_ShapeStyles);
+			m_LayersConfigBinding.Update(binding.ToString(Formatting.None));
 
 			m_LayerById.Clear();
 			if (merged["layers"] is not JArray layers) return;

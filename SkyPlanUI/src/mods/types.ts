@@ -55,6 +55,8 @@ export interface ShapeData {
 	id: string;
 	tag: Tag;
 	layerId: string;
+	// Imported shapes only: index into the layers config's shapeStyles, rendered as class sp-s-{styleId}
+	styleId?: number;
 	pts: { x: number; y: number }[];
 	handles: { x: number; y: number }[];
 	inFrame: boolean;

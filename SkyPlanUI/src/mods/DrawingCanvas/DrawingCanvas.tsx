@@ -14,7 +14,10 @@ const FloatingMouseTooltip = getModule(
 	'FloatingMouseTooltip'
 ) as any;
 
-function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null, layerDefsMap: Record<string, LayerDef>, extraLayerIds: string[] = []): string {
+function buildLayerCSS(
+	shapes: ShapeData[], preview: ShapeData | null, layerDefsMap: Record<string, LayerDef>,
+	extraLayerIds: string[] = [], shapeStyles: Record<string, string>[] = [],
+): string {
 	const seen = new Set<string>();
 	const rules: string[] = [];
 	const ensure = (layerId: string) => {
@@ -41,6 +44,13 @@ function buildLayerCSS(shapes: ShapeData[], preview: ShapeData | null, layerDefs
 	// Queued-but-not-yet-drawn layers (the pre-click cursor circles) aren't referenced by any shape
 	// or preview yet, so they'd otherwise get no .sp-cursor-{layerId} rule at all.
 	extraLayerIds.forEach(ensure);
+	// Imported shapes' own styles. Same specificity as .sp-{layerId}, so these must come after it to win.
+	const usedStyles = new Set<number>();
+	for (const s of shapes) if (s.styleId !== undefined) usedStyles.add(s.styleId);
+	usedStyles.forEach(i => {
+		const style = shapeStyles[i];
+		if (style) rules.push(`.sp-s-${i}{${Object.entries(style).map(([k, v]) => `${k}:${v}`).join(';')}}`);
+	});
 	return rules.join('');
 }
 
@@ -108,7 +118,7 @@ function renderShape(
 	s: ShapeData, icon: LayerIcon | undefined, textStyle: LabelStyle,
 	opacity?: string, override?: Record<string, string>,
 ): React.ReactElement | null {
-	const cn = `sp-${s.layerId}`;
+	const cn = s.styleId !== undefined ? `sp-${s.layerId} sp-s-${s.styleId}` : `sp-${s.layerId}`;
 	const style = opacity !== undefined ? { opacity } : undefined;
 	const shapeStyle = override ? { ...toInlineStyle(override), ...style } : style;
 	// With a draft, the key changes with it so each edit remounts this shape: GameFace kept drawing an
@@ -176,7 +186,7 @@ function renderShape(
 
 const DrawingCanvas: React.FC = () => {
 	const { activeTool, activeLayers, primaryLayer, viewMode, showWhatsNew } = useSkyplan();
-	const { layerById, labelStyleFor } = useStyle();
+	const { layerById, labelStyleFor, shapeStyles } = useStyle();
 	const { shapes, preview, highlightId, indicator, svgSize, globalOpacity, layerOpacities, layerVisible, layerLabels, showDescriptions, parallelSpacing, onParallelSpacingChange } = useDrawingContext();
 
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
@@ -444,7 +454,7 @@ const DrawingCanvas: React.FC = () => {
 	const allGroupLayerIds = useMemo(() => Array.from(shapesByLayer.keys()), [shapesByLayer]);
 
 	const hasHighlight = highlightId !== null;
-	const layerCSS = buildLayerCSS(shapes, preview, layerById, activeLayers.map(l => l.id));
+	const layerCSS = buildLayerCSS(shapes, preview, layerById, activeLayers.map(l => l.id), shapeStyles);
 
 	const showCursor = !!cursorPos && !viewMode;
 	if (shapes.length === 0 && !preview && !showCursor && !indicator) return null;
