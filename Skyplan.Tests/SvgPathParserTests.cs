@@ -126,13 +126,77 @@ namespace Skyplan.Tests {
 			Assert.Equal(["0,0 10,0 Q 5,10 0,0 Z"], Parsed("M0,0 L10,0 Q5,10 0,0 Z"));
 		}
 
-		[Theory]
-		[InlineData("M0,0 C1,1 2,2 3,3", 'C')]
-		[InlineData("M0,0 s1,1 2,2", 's')]
-		[InlineData("M0,0 A5,5 0 0 1 10,0", 'A')]
-		public void Curve_commands_are_not_supported_yet(string d, char cmd) {
-			NotSupportedException ex = Assert.Throws<NotSupportedException>(() => SvgPathParser.Parse(d));
-			Assert.Equal($"path command '{cmd}' at 5 is not supported yet", ex.Message);
+		[Fact]
+		public void Straight_cubic_is_one_quadratic() {
+			Assert.Equal(["0,0 Q 1.5,0 3,0"], Parsed("M0,0 C1,0 2,0 3,0"));
+		}
+
+		[Fact]
+		public void Cubic_that_is_a_quadratic_gives_that_quadratic_back() {
+			// Q(0,0 5,10 10,0) degree-elevated: controls at 2/3 of the way to the quadratic control
+			Assert.Equal(["0,0 Q 5,10 10,0"], Parsed("M0,0 C3.3333333,6.6666667 6.6666667,6.6666667 10,0"));
+		}
+
+		[Fact]
+		public void Curved_cubic_is_split_within_the_tolerance() {
+			SvgPoint p0 = new(0, 0), c1 = new(0, 100), c2 = new(100, 100), p3 = new(100, 0);
+			SvgSubpath sub = Assert.Single(SvgPathParser.Parse("M0,0 C0,100 100,100 100,0"));
+			Assert.True(sub.Points.Count > 2);
+			Assert.All(sub.Controls, c => Assert.NotNull(c));
+			Assert.Equal(p3.ToString(), sub.Points[sub.Points.Count - 1].ToString());
+
+			// Every point of the cubic is near the quadratics
+			List<SvgPoint> quads = [];
+			for (int i = 0; i < sub.Controls.Count; i++) {
+				for (int s = 0; s <= 50; s++)
+					quads.Add(Quad(sub.Points[i], sub.Controls[i]!.Value, sub.Points[i + 1], s / 50f));
+			}
+			for (int s = 0; s <= 200; s++) {
+				SvgPoint p = Cubic(p0, c1, c2, p3, s / 200f);
+				double nearest = quads.Min(q => Math.Sqrt((q.X - p.X) * (q.X - p.X) + (q.Y - p.Y) * (q.Y - p.Y)));
+				Assert.True(nearest <= SvgPathParser.CubicTolerance, $"{p} is {nearest} from the quadratics");
+			}
+		}
+
+		static SvgPoint Quad(SvgPoint a, SvgPoint c, SvgPoint b, float t) {
+			float u = 1 - t;
+			return new(u * u * a.X + 2 * u * t * c.X + t * t * b.X, u * u * a.Y + 2 * u * t * c.Y + t * t * b.Y);
+		}
+
+		static SvgPoint Cubic(SvgPoint a, SvgPoint c1, SvgPoint c2, SvgPoint b, float t) {
+			float u = 1 - t;
+			return new(u * u * u * a.X + 3 * u * u * t * c1.X + 3 * u * t * t * c2.X + t * t * t * b.X,
+				u * u * u * a.Y + 3 * u * u * t * c1.Y + 3 * u * t * t * c2.Y + t * t * t * b.Y);
+		}
+
+		[Fact]
+		public void Relative_and_repeated_cubics() {
+			Assert.Equal(Parsed("M10,10 C10,20 20,20 20,10"), Parsed("M10,10 c0,10 10,10 10,0"));
+			Assert.Equal(Parsed("M0,0 C0,10 10,10 10,0 C10,-10 20,-10 20,0"), Parsed("M0,0 C0,10 10,10 10,0 10,-10 20,-10 20,0"));
+		}
+
+		[Fact]
+		public void S_mirrors_the_previous_second_control() {
+			Assert.Equal(Parsed("M0,0 C0,10 10,10 10,0 C10,-10 20,-10 20,0"), Parsed("M0,0 C0,10 10,10 10,0 S20,-10 20,0"));
+			Assert.Equal(Parsed("M0,0 C0,10 10,10 10,0 C10,-10 20,-10 20,0"), Parsed("M0,0 C0,10 10,10 10,0 s10,-10 10,0"));
+		}
+
+		[Fact]
+		public void S_without_a_preceding_cubic_starts_at_the_current_point() {
+			Assert.Equal(Parsed("M0,0 L10,0 C10,0 20,10 30,0"), Parsed("M0,0 L10,0 S20,10 30,0"));
+			// A Q's control is not a cubic control
+			Assert.Equal(Parsed("M0,0 Q5,5 10,0 C10,0 20,10 30,0"), Parsed("M0,0 Q5,5 10,0 S20,10 30,0"));
+		}
+
+		[Fact]
+		public void T_after_a_cubic_is_straight() {
+			Assert.EndsWith("10,0 Q 10,0 20,0", Assert.Single(Parsed("M0,0 C0,10 10,10 10,0 T20,0")));
+		}
+
+		[Fact]
+		public void Arcs_are_not_supported_yet() {
+			NotSupportedException ex = Assert.Throws<NotSupportedException>(() => SvgPathParser.Parse("M0,0 A5,5 0 0 1 10,0"));
+			Assert.Equal("path command 'A' at 5 is not supported yet", ex.Message);
 		}
 	}
 }

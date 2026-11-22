@@ -29,6 +29,12 @@ namespace Skyplan.Persistence.Helpers {
 	// Turns path data into absolute subpaths. Each M starts a new subpath, so separate pieces don't get
 	// joined by a straight line.
 	public static class SvgPathParser {
+		// Skyplan shapes are quadratic only, so a cubic is split into quadratics that stay within this
+		// distance of it, in path data units (metres for Skyplan's own exports).
+		public const float CubicTolerance = 0.5f;
+		// 2^8 = 256 pieces at most per cubic segment
+		private const int MaxCubicSplitDepth = 8;
+
 		public static List<SvgSubpath> Parse(string d) {
 			List<SvgPathToken> tokens = SvgPathTokenizer.Tokenize(d);
 			List<SvgSubpath> subpaths = [];
@@ -37,6 +43,8 @@ namespace Skyplan.Persistence.Helpers {
 			SvgPoint start = pos;
 			// T reflects this; only set right after a Q or T
 			SvgPoint? lastQuadControl = null;
+			// S reflects this (the second cubic control); only set right after a C or S
+			SvgPoint? lastCubicControl = null;
 			int i = 0;
 
 			while (i < tokens.Count) {
@@ -52,6 +60,7 @@ namespace Skyplan.Persistence.Helpers {
 					throw new FormatException($"path data must start with M, got '{cmd}' at {cmdToken.Index}");
 
 				SvgPoint? quadControl = null;
+				SvgPoint? cubicControl = null;
 				switch (upper) {
 					case 'M': {
 						SvgPoint p = ReadPoint(tokens, ref i, cmdToken);
@@ -120,6 +129,31 @@ namespace Skyplan.Persistence.Helpers {
 							quadControl = c;
 						} while (NextIsNumber(tokens, i));
 						break;
+					case 'C':
+					case 'S':
+						current = Continue(current!, subpaths, start);
+						do {
+							// S: the first control mirrors the previous cubic's second one; without a preceding
+							// C/S it is the current point.
+							SvgPoint c1;
+							if (upper == 'C') {
+								c1 = ReadPoint(tokens, ref i, cmdToken);
+								if (relative) c1 = Add(pos, c1);
+							} else {
+								SvgPoint prev = cubicControl ?? lastCubicControl ?? pos;
+								c1 = new SvgPoint(2f * pos.X - prev.X, 2f * pos.Y - prev.Y);
+							}
+							SvgPoint c2 = ReadPoint(tokens, ref i, cmdToken);
+							SvgPoint p = ReadPoint(tokens, ref i, cmdToken);
+							if (relative) {
+								c2 = Add(pos, c2);
+								p = Add(pos, p);
+							}
+							AddCubic(current, pos, c1, c2, p, 0);
+							pos = p;
+							cubicControl = c2;
+						} while (NextIsNumber(tokens, i));
+						break;
 					case 'Z':
 						current!.Closed = true;
 						// Illustrator often repeats the start point before Z. Only drop it when that last
@@ -134,9 +168,31 @@ namespace Skyplan.Persistence.Helpers {
 						throw new NotSupportedException($"path command '{cmd}' at {cmdToken.Index} is not supported yet");
 				}
 				lastQuadControl = quadControl;
+				lastCubicControl = cubicControl;
 			}
 			return subpaths;
 		}
+
+		// One quadratic with control (3(c1 + c2) - p0 - p3) / 4 matches the cubic's ends and end
+		// directions; its distance from the cubic is at most sqrt(3)/36 * |p3 - 3c2 + 3c1 - p0|. Too far,
+		// and the cubic is halved (de Casteljau) and each half tried again.
+		private static void AddCubic(SvgSubpath sub, SvgPoint p0, SvgPoint c1, SvgPoint c2, SvgPoint p3, int depth) {
+			float ex = p3.X - 3f * c2.X + 3f * c1.X - p0.X;
+			float ey = p3.Y - 3f * c2.Y + 3f * c1.Y - p0.Y;
+			float error = 0.0481125f * (float)Math.Sqrt(ex * ex + ey * ey);
+			if (error <= CubicTolerance || depth >= MaxCubicSplitDepth) {
+				SvgPoint q = new((3f * (c1.X + c2.X) - p0.X - p3.X) / 4f, (3f * (c1.Y + c2.Y) - p0.Y - p3.Y) / 4f);
+				sub.Add(p3, q);
+				return;
+			}
+			SvgPoint a = Mid(p0, c1), b = Mid(c1, c2), c = Mid(c2, p3);
+			SvgPoint ab = Mid(a, b), bc = Mid(b, c);
+			SvgPoint m = Mid(ab, bc);
+			AddCubic(sub, p0, a, ab, m, depth + 1);
+			AddCubic(sub, m, bc, c, p3, depth + 1);
+		}
+
+		private static SvgPoint Mid(SvgPoint a, SvgPoint b) => new((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f);
 
 		// After Z, a drawing command without a new M starts another subpath at the closed one's start.
 		private static SvgSubpath Continue(SvgSubpath current, List<SvgSubpath> subpaths, SvgPoint start) {

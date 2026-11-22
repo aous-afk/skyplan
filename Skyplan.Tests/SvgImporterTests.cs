@@ -104,6 +104,26 @@ namespace Skyplan.Tests {
 		}
 
 		[Fact]
+		public void Icon_glyph_without_its_marker_is_still_skipped() {
+			// The point icon after an Illustrator re-save: data-icon-glyph stripped, transform baked in
+			Shape s = Single("""
+				<g>
+					<circle class="st2" cx="5560.1" cy="4263" r="57.1"/>
+					<path d="M5536.2,4224.8h28.6c15.8,0,28.6,8.5,28.6,19.1c0,10.5-12.8,19.1-28.6,19.1v38.2h-28.6V4224.8z"/>
+				</g>
+				""");
+			Assert.Equal(Tools.point, s.Type);
+		}
+
+		[Fact]
+		public void Path_in_a_group_with_more_shapes_is_imported() {
+			List<Shape> shapes = ImportSkyplan("""
+				<g><circle cx="0" cy="0"/><path d="M0,0 L1,1" fill="none"/><path d="M2,2 L3,3" fill="none"/></g>
+				""");
+			Assert.Equal(["path", "path", "point"], shapes.Select(s => s.Type.ToString()));
+		}
+
+		[Fact]
 		public void Ids_follow_element_type_then_document_order() {
 			List<Shape> shapes = ImportSkyplan("""
 				<circle cx="0" cy="0"/>
@@ -140,9 +160,12 @@ namespace Skyplan.Tests {
 			Assert.Equal([
 				"path 4469.9,0.0,584.4 4438.4,0.0,610.2",
 				"path 4438.4,0.0,610.2 3938.2,0.0,684.3",
+				// The gentle cubic fits one quadratic
+				"curve 4124.1,0.0,1052.3 4194.3,0.0,1069.9",
 				"path 4194.3,0.0,1069.9 4377.7,0.0,979.7",
 				"polygon 5152.2,0.0,4330.5 4996.9,0.0,4328.1 4998.0,0.0,4232.5 5054.4,0.0,4173.3 5182.6,0.0,4295.5",
 			], shapes.Select(s => $"{s.Type} {Pts(s.pts)}"));
+			Assert.Single(shapes[2].handles);
 			Assert.All(shapes, s => Assert.Equal(SVGImporter.ImportedLayerId, s.layer.Id));
 
 			// Styles come from the classes
@@ -150,12 +173,11 @@ namespace Skyplan.Tests {
 			Assert.Equal("8,2.8571", shapes[0].layer.Style["stroke-dasharray"]);
 			Assert.Equal("#FF4444", shapes[2].layer.Style["stroke"]);
 			Assert.Equal("none", shapes[2].layer.Style["fill"]);
-			Assert.Equal("#00AE1A", shapes[3].layer.Style["fill"]);
-			Assert.Equal("0.5", shapes[3].layer.Style["fill-opacity"]);
+			Assert.Equal("#00AE1A", shapes[4].layer.Style["fill"]);
+			Assert.Equal("0.5", shapes[4].layer.Style["fill-opacity"]);
 
-			// The cubic curve waits for C/S support
-			Assert.Equal(1, skipped);
-			Assert.Equal("[SVGImporter] skipped <path> at line 13: NotSupportedException: path command 'c' at 14 is not supported yet", Assert.Single(warnings));
+			Assert.Equal(0, skipped);
+			Assert.Empty(warnings);
 		}
 
 		// Shapes from other SVG tools
@@ -233,7 +255,7 @@ namespace Skyplan.Tests {
 		[Theory]
 		[InlineData("""<polygon points="0,0 10,0 5"/>""", "FormatException: points has an odd number of coordinates (5)")]
 		[InlineData("""<polygon points="0,0 L10,0 5,5"/>""", "FormatException: unexpected 'L' at 4 in points")]
-		[InlineData("""<path d="M0,0 C1,1 2,2 3,3"/>""", "NotSupportedException: path command 'C' at 5 is not supported yet")]
+		[InlineData("""<path d="M0,0 A5,5 0 0 1 10,0"/>""", "NotSupportedException: path command 'A' at 5 is not supported yet")]
 		public void Bad_element_is_skipped_with_a_warning(string element, string reason) {
 			List<Shape> shapes = Import($"""<svg>{element}<circle cx="1" cy="2"/></svg>""", out int skipped);
 			Assert.Equal(1, skipped);

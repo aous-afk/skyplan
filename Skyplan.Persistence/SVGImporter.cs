@@ -67,7 +67,7 @@ namespace Skyplan.Persistence {
 		// Each subpath becomes its own shape. A closed (Z) subpath that is filled becomes a polygon;
 		// Skyplan's own exports never close a path and always set fill="none".
 		private static List<Shape> ParsePathLike(XElement el) {
-			if (el.Attribute("data-icon-glyph") != null) return [];
+			if (IsIconGlyph(el)) return [];
 			string? d = el.Attribute("d")?.Value;
 			if (d is null || string.IsNullOrWhiteSpace(d)) return [];
 
@@ -97,6 +97,16 @@ namespace Skyplan.Persistence {
 				shapes.Add(shape);
 			}
 			return shapes;
+		}
+
+		// A point's icon is exported as <g><circle/><path data-icon-glyph/></g>. Editors like Illustrator
+		// strip data-* on re-save, so a lone path next to one circle in a <g> counts as the glyph too;
+		// imported as a shape it would be a black blob on the point.
+		private static bool IsIconGlyph(XElement el) {
+			if (el.Attribute("data-icon-glyph") != null) return true;
+			if (el.Parent?.Name.LocalName != "g") return false;
+			List<XElement> siblings = [.. el.Parent.Elements()];
+			return siblings.Count == 2 && siblings.Any(s => s.Name.LocalName == "circle");
 		}
 
 		// controls[i] is the control of segment i, null when straight
