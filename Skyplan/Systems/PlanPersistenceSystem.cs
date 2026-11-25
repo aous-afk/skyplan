@@ -67,12 +67,22 @@ namespace Skyplan.Systems {
 			DrawingSystem drawing = DrawingSystem.instance;
 			if (drawing == null) return;
 
-			string svg = File.ReadAllText(filePath);
-			int nextId = drawing.m_NextId;
-			List<Shape> shapes = SVGImporter.Import(svg, ref nextId);
-			drawing.m_NextId = nextId;
-			drawing.MergeShapes(shapes);
-			Mod.log.Info($"[Skyplan] Imported {shapes.Count} shapes from {fileName}");
+			// Uncaught, the exception goes up through the options UI's trigger binding and lands only in Player.log.
+			try {
+				string svg = File.ReadAllText(filePath);
+				int nextId = drawing.m_NextId;
+				List<Shape> shapes;
+				int skipped;
+				Mod.log.Info($"[Skyplan] Importing {fileName}");
+				using (Mod.log.indent.scoped) {
+					shapes = SVGImporter.Import(svg, ref nextId, out skipped);
+				}
+				drawing.m_NextId = nextId;
+				drawing.MergeShapes(shapes);
+				Mod.log.Info($"[Skyplan] Imported {shapes.Count} shapes from {fileName}, skipped {skipped} that failed to parse");
+			} catch (Exception ex) {
+				Mod.log.Error($"[Skyplan] Import of {fileName} failed: {ex}");
+			}
 		}
 
 		private void LoadPlan() {

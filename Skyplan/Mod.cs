@@ -4,6 +4,7 @@ using Game;
 using Game.Input;
 using Game.Modding;
 using Game.SceneFlow;
+using Skyplan.Persistence;
 using Skyplan.Persistence.Helpers;
 using Skyplan.Systems;
 using System.IO;
@@ -23,9 +24,10 @@ namespace Skyplan {
 		public void OnLoad(UpdateSystem updateSystem) {
 			log.Info(nameof(OnLoad));
 			instance = this;
-			LayerMerger.LogInfo = msg => log.Info(msg);
-			LayerMerger.LogDebug = msg => log.Debug(msg);
-			LayerMerger.LogWarn = msg => log.Warn(msg);
+			LayerMerger.LogInfo = log.Info;
+			LayerMerger.LogDebug = log.Debug;
+			LayerMerger.LogWarn = log.Warn;
+			SVGImporter.LogWarn = log.Warn;
 
 			if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset)) {
 				log.Info($"Current mod asset at {asset.path}");
